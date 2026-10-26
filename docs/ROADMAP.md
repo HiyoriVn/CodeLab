@@ -1,16 +1,18 @@
 # Development roadmap
 
-This roadmap is a plan, not a claim that any phase is implemented. A phase is complete when its exit criteria are met and documented in the repository.
+This roadmap distinguishes work present in a branch from work that has been verified. A phase is complete when its exit criteria are met and documented in the repository.
 
 ## Phase 0 — Product and hardware definition
 
-**Goal:** remove foundational ambiguity before choosing libraries or writing board-specific code.
+**Status:** web-first platform and MVP language are decided; hardware/toolchain definition remains open.
+
+**Goal:** remove foundational ambiguity before writing board-specific code.
 
 **Work**
-- Confirm supported ESP32-S3 board(s), host operating systems, and whether the first release is desktop, browser, or both.
+- Confirm supported ESP32-S3 board(s), host operating systems, and hardware validation setup.
 - Select the external PS4 receiver module; obtain its official protocol/library documentation.
-- Confirm UART or I2C transport, logic voltage, wiring, address/baud rate, reconnect behavior, and packet format.
-- Define MVP robotics peripherals (for example motors, servos, and digital/analog sensors) and safe pin rules.
+- Confirm UART or I2C transport, logic voltage, wiring, address/baud rate, packet format, and reconnect behavior.
+- Define MVP robotics peripherals and safe pin rules.
 - Decide whether compile/upload uses Arduino CLI, PlatformIO, or another supported toolchain.
 
 **Exit criteria**
@@ -18,12 +20,14 @@ This roadmap is a plan, not a claim that any phase is implemented. A phase is co
 - PS4 module/protocol and a minimal input-to-block use case are agreed.
 - MVP acceptance scenarios and supported host platforms are listed.
 
-## Phase 1 — Application foundation
+## Phase 1 — Web application and workspace
 
-**Goal:** establish a maintainable app shell and workspace persistence.
+**Status:** initial React/Vite + Blockly shell, localized toolbox, example workspace, browser-local autosave, and JSON open/save are present on `feat/phase-1-editor-shell`; not yet run or verified.
+
+**Goal:** establish the web app shell and workspace persistence.
 
 **Work**
-- Create application scaffold, navigation, error handling, and accessible editor layout.
+- Create application shell and accessible editor layout.
 - Integrate a visual block workspace and versioned workspace save/open format.
 - Add examples and reset/undo/redo behavior.
 

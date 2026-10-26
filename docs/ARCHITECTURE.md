@@ -1,6 +1,6 @@
 # Proposed architecture
 
-This describes target architecture. It is not a description of code that currently exists in this repository.
+The Phase 1 branch introduces the web app shell and Blockly workspace. Other components below remain target architecture, not implemented functionality.
 
 ## Design principles
 
@@ -10,7 +10,15 @@ This describes target architecture. It is not a description of code that current
 - Separate transport from controller semantics so UART/I2C protocol details do not leak into blocks.
 - Make actions that affect hardware explicit and recoverable.
 
-## Logical components
+## Current Phase 1 scaffold
+
+- **Web shell:** React + Vite entry point and responsive editor layout.
+- **Blockly workspace:** built-in blocks, Vietnamese locale, versioned workspace JSON import/export, and browser-local draft persistence.
+- **Not present yet:** Arduino C++ generation, board profiles, compiler, upload service, native desktop shell, and PS4 protocol implementation.
+
+The current scaffold is on `feat/phase-1-editor-shell` and has not yet been run or verified.
+
+## Target logical components
 
 1. **Editor UI** — block workspace, toolbox, code preview, project open/save, device and compile/upload status.
 2. **Workspace model** — versioned serialized blocks, validation, examples, and migration.
@@ -38,11 +46,12 @@ The receiver does not imply native Bluetooth support on the ESP32-S3. CodeLab ta
 - Build/deploy should accept generated files and a target profile, not Blockly objects.
 - Receiver adapter should expose a stable API such as connection state, named buttons, normalized axes, and timestamps. Exact API waits on the module protocol.
 - Board profiles validate pins and capabilities before code generation.
+- Start with the web app. Before compile/upload, choose whether a native helper/desktop shell is needed for local Arduino toolchains and serial access; do not assume browser APIs cover every supported platform.
 
 ## Open decisions
 
-- Web, desktop (Tauri), or both for the first release.
+- Whether to add desktop packaging after the web editor.
 - Selected Arduino toolchain and how it is installed/updated.
 - Exact ESP32-S3 board(s), flash/partition assumptions, and upload path.
 - Exact PS4 receiver model, protocol, electrical requirements, and licensing.
-- Workspace file extension/schema and compatibility policy.
+- Workspace file extension/schema evolution and compatibility policy.

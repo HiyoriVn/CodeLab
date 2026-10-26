@@ -2,12 +2,13 @@
 
 CodeLab is a planned visual programming environment for ESP32-S3 robotics. Its goal is to let learners assemble Scratch/Blockly-style blocks, inspect the generated Arduino C++, and deploy programs to a board.
 
-> **Repository status:** this repository was empty when planning began. The documents in this branch describe intended work; they do not claim that the editor, compiler, firmware, or hardware integration already exists.
+> **Repository status:** the Phase 1 editor shell and Blockly workspace are present on the `feat/phase-1-editor-shell` branch. They have not yet been run or verified. Arduino generation, compilation, upload, and hardware support remain planned.
 
 ## Product decisions
 
 - **MVP target:** ESP32-S3.
 - **MVP language:** Arduino C++ generated from blocks. MicroPython is out of scope for the MVP.
+- **Initial platform:** browser-based web app using React, Vite, and Blockly. Desktop packaging can be evaluated later.
 - **Visual editor:** Blockly-inspired, with Scratch-like approachable interactions and beginner-focused categories.
 - **PS4 input:** support an external PS4 receiver module connected to the ESP32-S3 over UART or I2C. The exact receiver, wiring, and data protocol must be selected and documented before implementation.
 - **Delivery:** phased development with observable acceptance criteria; hardware-dependent features are validated on real boards.
@@ -20,7 +21,7 @@ CodeLab is a planned visual programming environment for ESP32-S3 robotics. Its g
 4. Include starter robotics blocks and a documented board/pin configuration.
 5. Add a PS4 receiver abstraction only after the target module protocol is confirmed.
 
-See [the roadmap](docs/ROADMAP.md) for phases and exit criteria, [architecture](docs/ARCHITECTURE.md) for system boundaries, and [development setup](docs/DEVELOPMENT.md) for the planned local workflow.
+See [the roadmap](docs/ROADMAP.md) for phases and exit criteria, [architecture](docs/ARCHITECTURE.md) for system boundaries, and [development setup](docs/DEVELOPMENT.md) for the local workflow.
 
 ## Reference archive
 
@@ -31,12 +32,13 @@ The supplied NewmaniaCodeLab archive is treated as a design and implementation r
 - [AGENTS.md](AGENTS.md): instructions for AI coding agents and contributors.
 - [Roadmap](docs/ROADMAP.md): phased plan and completion criteria.
 - [Architecture](docs/ARCHITECTURE.md): proposed modules, code flow, and hardware boundary.
-- [Development setup](docs/DEVELOPMENT.md): setup guide, to be completed alongside the application scaffold.
+- [Development setup](docs/DEVELOPMENT.md): local web workflow and current limitations.
 - [Testing strategy](docs/TESTING.md): verification layers and release gates.
 - [Contributing](CONTRIBUTING.md): contribution workflow and review expectations.
 
 ## Status legend
 
-- **Verified in this repository:** repository inspection only; at planning time it contained no application code.
+- **Implemented in branch, unverified:** source code exists but has not been run or verified.
+- **Verified in this repository:** the behavior has been exercised and its result recorded.
 - **Reference archive:** observed or reported in NewmaniaCodeLab; not part of this repository.
 - **Planned:** future CodeLab work, subject to phase acceptance and hardware validation.
