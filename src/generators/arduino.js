@@ -212,7 +212,7 @@ function registerBlocks(generator) {
 
 
   const pinWarnings = (pin, gen, label, analog = false) => {
-    const numericPin = /^-?\\d+$/.test(pin) ? Number(pin) : null;
+    const numericPin = /^-?\d+$/.test(pin) ? Number(pin) : null;
     if (numericPin === null) {
       gen.diagnostics_.add(label + ': chân GPIO phải là một số nguyên cố định.');
       return;
