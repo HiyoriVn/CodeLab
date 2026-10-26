@@ -1,3 +1,42 @@
 # CodeLab
 
-Repository initialization. Project documentation is being prepared on a feature branch.
+CodeLab is a planned visual programming environment for ESP32-S3 robotics. Its goal is to let learners assemble Scratch/Blockly-style blocks, inspect the generated Arduino C++, and deploy programs to a board.
+
+> **Repository status:** this repository was empty when planning began. The documents in this branch describe intended work; they do not claim that the editor, compiler, firmware, or hardware integration already exists.
+
+## Product decisions
+
+- **MVP target:** ESP32-S3.
+- **MVP language:** Arduino C++ generated from blocks. MicroPython is out of scope for the MVP.
+- **Visual editor:** Blockly-inspired, with Scratch-like approachable interactions and beginner-focused categories.
+- **PS4 input:** support an external PS4 receiver module connected to the ESP32-S3 over UART or I2C. The exact receiver, wiring, and data protocol must be selected and documented before implementation.
+- **Delivery:** phased development with observable acceptance criteria; hardware-dependent features are validated on real boards.
+
+## Planned MVP
+
+1. Create, edit, save, and reopen a block workspace.
+2. Generate readable Arduino C++ for the supported block set.
+3. Provide a safe compile/upload workflow for ESP32-S3 with actionable errors.
+4. Include starter robotics blocks and a documented board/pin configuration.
+5. Add a PS4 receiver abstraction only after the target module protocol is confirmed.
+
+See [the roadmap](docs/ROADMAP.md) for phases and exit criteria, [architecture](docs/ARCHITECTURE.md) for system boundaries, and [development setup](docs/DEVELOPMENT.md) for the planned local workflow.
+
+## Reference archive
+
+The supplied NewmaniaCodeLab archive is treated as a design and implementation reference, not as the current CodeLab repository. Its README reports a Blockly workspace, Python generator, Web Serial connection/monitor, compatibility checks, reboot, and workspace file save/load as existing features in that separate project. The archive's code confirms a React/Vite + Tauri application and a Blockly Python generator. These are **reference-project claims**, not verified CodeLab functionality. See [reference baseline](docs/REFERENCE-BASELINE.md).
+
+## Repository documents
+
+- [AGENTS.md](AGENTS.md): instructions for AI coding agents and contributors.
+- [Roadmap](docs/ROADMAP.md): phased plan and completion criteria.
+- [Architecture](docs/ARCHITECTURE.md): proposed modules, code flow, and hardware boundary.
+- [Development setup](docs/DEVELOPMENT.md): setup guide, to be completed alongside the application scaffold.
+- [Testing strategy](docs/TESTING.md): verification layers and release gates.
+- [Contributing](CONTRIBUTING.md): contribution workflow and review expectations.
+
+## Status legend
+
+- **Verified in this repository:** repository inspection only; at planning time it contained no application code.
+- **Reference archive:** observed or reported in NewmaniaCodeLab; not part of this repository.
+- **Planned:** future CodeLab work, subject to phase acceptance and hardware validation.
