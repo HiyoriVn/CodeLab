@@ -18,7 +18,8 @@ When the scaffold is available locally, verify and record:
 When the app can be run locally, verify and record:
 - The sample workspace produces the expected `setup()` and `loop()` Arduino structure.
 - Each supported block generates syntactically plausible C++ with nested statements preserved.
-- Unsupported blocks are listed and visibly marked as placeholders.
+- Supported control, math, text, and variable blocks produce the documented output.
+- Unsupported blocks and mixed/unknown variable types are listed and visibly marked as placeholders.
 - Repeated generation from an unchanged workspace produces identical output.
 - Copying the preview works where the browser grants clipboard access.
 

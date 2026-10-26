@@ -25,7 +25,7 @@ See [the roadmap](docs/ROADMAP.md) for phases and exit criteria, [architecture](
 
 ## Current code preview
 
-The initial generator supports a subset of built-in logic, math, control, and text-output blocks. Unsupported blocks are called out in the preview and replaced with placeholders; treat any output with warnings as incomplete. There is no compiler or upload action yet.
+The initial generator supports a subset of built-in logic, math, control, and text blocks, plus simple variables whose assigned types can be inferred consistently. Unsupported blocks or mixed/unknown variable types are called out and replaced with placeholders; treat any output with warnings as incomplete. There is no compiler or upload action yet.
 
 ## Reference archive
 

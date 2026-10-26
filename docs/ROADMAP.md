@@ -38,7 +38,7 @@ This roadmap distinguishes work present in a branch from work that has been veri
 
 ## Phase 2 — Arduino C++ generation
 
-**Status:** initial generator and code preview are present on `feat/phase-2-arduino-generator`; the supported block set is limited and the app has not yet been run or verified. Compile/upload and hardware checks remain outstanding.
+**Status:** generator and code preview now cover basic logic/math/control/text blocks plus simple numeric, boolean, and string variables. The Phase 2 branch has not yet been run or verified; generator fixtures and compile checks remain outstanding.
 
 **Goal:** deliver a small, deterministic language pipeline.
 

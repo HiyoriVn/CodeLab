@@ -39,6 +39,7 @@ const toolbox = {
       contents: [
         { kind: 'block', type: 'math_number', fields: { NUM: 1 } },
         { kind: 'block', type: 'math_arithmetic' },
+        { kind: 'block', type: 'math_single', fields: { OP: 'ROOT' } },
         { kind: 'block', type: 'math_modulo' },
         { kind: 'block', type: 'math_random_int' },
       ],
