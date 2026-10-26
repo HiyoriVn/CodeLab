@@ -4,8 +4,8 @@ const ATOMIC = 0;
 
 function variableTypeOf(block, knownTypes) {
   if (!block) return null;
-  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo'].includes(block.type)) return 'number';
-  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property'].includes(block.type)) return 'boolean';
+  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'codelab_analog_read'].includes(block.type)) return 'number';
+  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read'].includes(block.type)) return 'boolean';
   if (['text', 'text_join'].includes(block.type)) return 'string';
   if (block.type === 'variables_get') return knownTypes.get(block.getFieldValue('VAR')) || null;
   return null;
@@ -93,6 +93,10 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     super.init(workspace);
     this.definitions_ = Object.create(null);
     this.repeatIndex_ = 0;
+    this.motorIndex_ = 0;
+    this.diagnostics_ = new Set();
+    this.pinModes_ = new Map();
+    this.setupStatements_ = new Map();
     initializeVariables(this, workspace);
   }
 
@@ -104,6 +108,7 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
       definitions,
       'void setup() {',
       '  Serial.begin(115200);',
+      ...Array.from(this.setupStatements_.values()).map((line) => '  ' + line),
       '}',
       '',
       'void loop() {',
@@ -205,6 +210,102 @@ function registerBlocks(generator) {
     return gen.getVariableName(id) + ' = ' + value + ';\n';
   };
 
+
+  const pinWarnings = (pin, gen, label, analog = false) => {
+    const numericPin = /^-?\\d+$/.test(pin) ? Number(pin) : null;
+    if (numericPin === null) {
+      gen.diagnostics_.add(label + ': chân GPIO phải là một số nguyên cố định.');
+      return;
+    }
+    const valid = (numericPin >= 0 && numericPin <= 21) || (numericPin >= 26 && numericPin <= 48);
+    if (!valid) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' không tồn tại trên ESP32-S3.');
+    if ([0, 3, 45, 46].includes(numericPin)) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' là chân strapping; tránh tải ngoài có thể ảnh hưởng lúc khởi động.');
+    if (numericPin === 19 || numericPin === 20) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' thường được dùng cho USB; kiểm tra cấu hình bo mạch.');
+    if (numericPin >= 26 && numericPin <= 37) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' có thể được dùng cho flash/PSRAM tùy module.');
+    if (analog && (numericPin < 1 || numericPin > 20)) gen.diagnostics_.add(label + ': ADC của ESP32-S3 chỉ có trên GPIO 1–20.');
+  };
+
+  const numberInput = (block, name, gen, label) => {
+    const value = gen.valueToCode(block, name, ATOMIC);
+    if (!value) {
+      gen.diagnostics_.add(label + ': chưa nối giá trị số.');
+      return '0';
+    }
+    return value;
+  };
+
+  const configurePin = (gen, pin, mode, label) => {
+    pinWarnings(pin, gen, label);
+    const existing = gen.pinModes_.get(pin);
+    if (existing && existing !== mode) {
+      gen.diagnostics_.add(label + ': cùng chân GPIO được dùng vừa làm ' + existing + ' vừa làm ' + mode + '.');
+      return;
+    }
+    if (!existing) {
+      gen.pinModes_.set(pin, mode);
+      gen.setupStatements_.set('pin_' + pin, 'pinMode(' + pin + ', ' + mode + ');');
+    }
+  };
+
+  const configurePwm = (gen, pin, label) => {
+    pinWarnings(pin, gen, label);
+    const existing = gen.pinModes_.get(pin);
+    if (existing && existing !== 'PWM') {
+      gen.diagnostics_.add(label + ': cùng chân GPIO được dùng vừa làm ' + existing + ' vừa làm PWM.');
+      return;
+    }
+    gen.pinModes_.set(pin, 'PWM');
+    gen.setupStatements_.set('pwm_' + pin, 'if (!ledcAttach(' + pin + ', 5000, 8)) Serial.println("PWM setup failed");');
+  };
+
+  generator.forBlock.codelab_delay_ms = (block, gen) => {
+    const duration = numberInput(block, 'DURATION', gen, 'Khối chờ');
+    return 'delay((uint32_t)max(0.0, (double)(' + duration + ')));\\n';
+  };
+
+  generator.forBlock.codelab_gpio_write = (block, gen) => {
+    const pin = numberInput(block, 'PIN', gen, 'Khối ghi GPIO');
+    configurePin(gen, pin, 'OUTPUT', 'Khối ghi GPIO');
+    return 'digitalWrite(' + pin + ', ' + block.getFieldValue('STATE') + ');\\n';
+  };
+
+  generator.forBlock.codelab_gpio_read = (block, gen) => {
+    const pin = numberInput(block, 'PIN', gen, 'Khối đọc GPIO');
+    configurePin(gen, pin, 'INPUT', 'Khối đọc GPIO');
+    return ['(digitalRead(' + pin + ') == HIGH)', ATOMIC];
+  };
+
+  generator.forBlock.codelab_analog_read = (block, gen) => {
+    const pin = numberInput(block, 'PIN', gen, 'Khối đọc ADC');
+    pinWarnings(pin, gen, 'Khối đọc ADC', true);
+    return ['analogRead(' + pin + ')', ATOMIC];
+  };
+
+  generator.forBlock.codelab_pwm_write = (block, gen) => {
+    const pin = numberInput(block, 'PIN', gen, 'Khối PWM');
+    const duty = numberInput(block, 'DUTY', gen, 'Khối PWM');
+    configurePwm(gen, pin, 'Khối PWM');
+    return 'ledcWrite(' + pin + ', (uint32_t)constrain((int)(' + duty + '), 0, 255));\\n';
+  };
+
+  generator.forBlock.codelab_hbridge_motor = (block, gen) => {
+    const in1 = numberInput(block, 'IN1', gen, 'Driver IN1');
+    const in2 = numberInput(block, 'IN2', gen, 'Driver IN2');
+    const pwm = numberInput(block, 'PWM', gen, 'Driver PWM');
+    const speed = numberInput(block, 'SPEED', gen, 'Tốc độ động cơ');
+    configurePin(gen, in1, 'OUTPUT', 'Driver IN1');
+    configurePin(gen, in2, 'OUTPUT', 'Driver IN2');
+    configurePwm(gen, pwm, 'Driver PWM');
+    if (new Set([in1, in2, pwm]).size < 3) gen.diagnostics_.add('Driver H-bridge: mỗi IN1, IN2 và PWM cần một GPIO riêng.');
+    const id = gen.motorIndex_++;
+    const temp = '__codelab_motor_speed_' + id;
+    gen.definitions_['include_math'] = '#include <math.h>';
+    return 'int ' + temp + ' = constrain((int)(' + speed + '), -255, 255);\\n' +
+      'digitalWrite(' + in1 + ', ' + temp + ' >= 0 ? HIGH : LOW);\\n' +
+      'digitalWrite(' + in2 + ', ' + temp + ' >= 0 ? LOW : HIGH);\\n' +
+      'ledcWrite(' + pwm + ', abs(' + temp + '));\\n';
+  };
+
   generator.forBlock.controls_if = (block, gen) => {
     let code = '';
     let branch = 0;
@@ -273,6 +374,7 @@ export function generateArduino(workspace) {
       if (generator.invalidVariableIds_.has(variable.getId())) unsupportedVariables.add(variable.name);
     }
     const warnings = Array.from(unsupported).map((type) => 'Khối "' + type + '" chưa có bộ sinh Arduino C++; mã xem trước có placeholder.');
+    warnings.push(...generator.diagnostics_);
     for (const name of unsupportedVariables) {
       warnings.push('Biến "' + name + '" có kiểu chưa xác định hoặc bị gán nhiều kiểu; mã xem trước có placeholder.');
     }

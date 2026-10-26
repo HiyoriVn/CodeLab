@@ -3,6 +3,7 @@ import * as Blockly from 'blockly';
 import 'blockly/blocks';
 import * as Vietnamese from 'blockly/msg/vi';
 import { generateArduino } from '../generators/arduino.js';
+import '../blocks/robotics.js';
 
 Blockly.setLocale(Vietnamese);
 
@@ -42,6 +43,19 @@ const toolbox = {
         { kind: 'block', type: 'math_single', fields: { OP: 'ROOT' } },
         { kind: 'block', type: 'math_modulo' },
         { kind: 'block', type: 'math_random_int' },
+      ],
+    },
+    {
+      kind: 'category',
+      name: 'Thiết bị & robot',
+      categorystyle: 'variable_category',
+      contents: [
+        { kind: 'block', type: 'codelab_delay_ms' },
+        { kind: 'block', type: 'codelab_gpio_write' },
+        { kind: 'block', type: 'codelab_gpio_read' },
+        { kind: 'block', type: 'codelab_analog_read' },
+        { kind: 'block', type: 'codelab_pwm_write', inputs: { DUTY: { shadow: { type: 'math_number', fields: { NUM: 0 } } } } },
+        { kind: 'block', type: 'codelab_hbridge_motor' },
       ],
     },
     {

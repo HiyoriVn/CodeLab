@@ -56,6 +56,8 @@ This roadmap distinguishes work present in a branch from work that has been veri
 
 ## Phase 3 — Board and robotics blocks
 
+**Status:** GPIO input/output, ADC, PWM, delay, and H-bridge motor blocks are implemented on `feat/phase-3-robotics-blocks`; not yet run or verified. Board-specific pin mapping is still user-selected and warnings refer to ESP32-S3 chip-level restrictions.
+
 **Goal:** express safe beginner robotics programs.
 
 **Work**

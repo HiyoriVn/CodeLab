@@ -25,7 +25,7 @@ See [the roadmap](docs/ROADMAP.md) for phases and exit criteria, [architecture](
 
 ## Current code preview
 
-The initial generator supports a subset of built-in logic, math, control, and text blocks, plus simple variables whose assigned types can be inferred consistently. Unsupported blocks or mixed/unknown variable types are called out and replaced with placeholders; treat any output with warnings as incomplete. There is no compiler or upload action yet.
+The generator supports a subset of built-in logic, math, control, and text blocks, simple consistently typed variables, and ESP32-S3 GPIO/ADC/PWM/H-bridge blocks. Unsupported blocks, unsafe pin choices, or mixed/unknown variable types are called out; treat any output with warnings as incomplete. There is no compiler or upload action yet.
 
 ## Reference archive
 
