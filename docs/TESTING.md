@@ -1,6 +1,17 @@
 # Testing and verification strategy
 
-No application or test suite is present in the repository at planning time. This document defines checks to introduce with the corresponding implementation; it does not report that they have run.
+The Phase 1 web scaffold is present but has not yet been run or verified. There is no automated test suite at this stage. This document defines checks to add with implementation and manual scenarios to record; it does not report successful results.
+
+## Phase 1 manual acceptance
+
+When the scaffold is available locally, verify and record:
+- The app starts in a supported desktop browser and the Blockly toolbox renders.
+- Blocks can be created, connected, moved, deleted, and undone/redone.
+- The example workspace loads and can be edited.
+- Changes survive a page refresh in the same browser profile.
+- Downloaded workspace files reopen with their blocks intact.
+- Invalid JSON, unknown format, and unsupported schema versions show a clear error without replacing the current workspace.
+- The editor remains usable at a narrow/mobile viewport.
 
 ## Verification layers
 
@@ -33,7 +44,6 @@ No application or test suite is present in the repository at planning time. This
 ## Hardware test record
 
 For every hardware-dependent result, record:
-
 - Date and CodeLab commit.
 - Board model and revision.
 - Receiver/peripheral model and firmware, when applicable.
