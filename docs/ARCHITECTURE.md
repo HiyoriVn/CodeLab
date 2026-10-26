@@ -15,7 +15,8 @@ The Phase 1 branch introduces the web app shell and Blockly workspace. The Phase
 - **Web shell:** React + Vite entry point and responsive editor layout.
 - **Blockly workspace:** built-in blocks, Vietnamese locale, versioned workspace JSON import/export, and browser-local draft persistence.
 - **Phase 2 generator:** basic control, logic, math, text, and inferred simple variable types, with a code preview that marks unsupported or mixed-type variable blocks.
-- **Not present yet:** compile/upload service, board profiles, native desktop shell, and PS4 protocol implementation.
+- **Robotics blocks:** GPIO input/output, ADC, PWM, delay, and a generic two-direction-pin H-bridge motor block. The generator emits setup pin modes and cautions for risky/unexposed GPIOs.
+- **Not present yet:** compile/upload service, specific board pin maps, native desktop shell, and PS4 protocol implementation.
 
 The Phase 1 scaffold is on `feat/phase-1-editor-shell`; the initial C++ generator is on `feat/phase-2-arduino-generator`. Neither has been run or verified.
 

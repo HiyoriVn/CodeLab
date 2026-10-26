@@ -23,6 +23,14 @@ When the app can be run locally, verify and record:
 - Repeated generation from an unchanged workspace produces identical output.
 - Copying the preview works where the browser grants clipboard access.
 
+## Phase 3 manual acceptance
+
+When the app can be run locally with an ESP32-S3 target, verify and record:
+- Generated GPIO setup statements appear once per pin.
+- Pin role conflicts, missing pin values, reserved/unavailable pins, and non-ADC pins produce visible warnings.
+- PWM and H-bridge output use the documented 5 kHz, 8-bit LEDC configuration and safe speed bounds.
+- The H-bridge example is tested with the chosen motor driver and a separate motor supply; no motor is connected directly to a GPIO.
+
 ## Verification layers
 
 ### Workspace and block model

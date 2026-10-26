@@ -32,6 +32,8 @@ These commands are defined by the Phase 1 scaffold. They have not yet been run i
 - Imported files must use the CodeLab workspace format and a supported version.
 - The initial Arduino C++ preview handles numeric values, basic logic/comparisons, arithmetic, conditional and loop blocks, simple variables with a single inferable type, text concatenation, and serial text output.
 - Blocks without a generator are shown as placeholders with a warning. Variables assigned mixed or unknown types also warn and use placeholders; generated preview is incomplete when warnings appear.
+- Robotics blocks include GPIO digital read/write, ADC read, PWM output, millisecond delay, and a generic H-bridge motor block. The H-bridge block assumes two direction inputs and one PWM/enable input; check the driver documentation and wiring.
+- GPIO warnings flag unavailable chip-level pins, strapping pins, USB pins, possible flash/PSRAM pins, and non-ADC pins. Warnings do not replace the exact board pinout.
 
 This is a web-first editor scaffold. It has no compile/upload flow, native desktop shell, or ESP32-S3 hardware transport yet. Browser local storage is scoped to that browser profile; use the downloaded workspace file to move work between machines or browsers.
 
