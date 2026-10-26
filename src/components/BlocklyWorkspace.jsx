@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as Blockly from 'blockly';
 import 'blockly/blocks';
 import * as Vietnamese from 'blockly/msg/vi';
+import { generateArduino } from '../generators/arduino.js';
 
 Blockly.setLocale(Vietnamese);
 
@@ -38,6 +39,7 @@ const toolbox = {
       contents: [
         { kind: 'block', type: 'math_number', fields: { NUM: 1 } },
         { kind: 'block', type: 'math_arithmetic' },
+        { kind: 'block', type: 'math_single', fields: { OP: 'ROOT' } },
         { kind: 'block', type: 'math_modulo' },
         { kind: 'block', type: 'math_random_int' },
       ],
@@ -84,14 +86,16 @@ const theme = Blockly.Theme.defineTheme('codelabTheme', {
   },
 });
 
-function BlocklyWorkspace({ initialState, onChange, workspaceRef }) {
+function BlocklyWorkspace({ initialState, onChange, onCodeChange, workspaceRef }) {
   const hostRef = useRef(null);
   const onChangeRef = useRef(onChange);
+  const onCodeChangeRef = useRef(onCodeChange);
   const initialStateRef = useRef(initialState);
 
   useEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    onCodeChangeRef.current = onCodeChange;
+  }, [onChange, onCodeChange]);
 
   useEffect(() => {
     if (!hostRef.current) return undefined;
@@ -121,9 +125,11 @@ function BlocklyWorkspace({ initialState, onChange, workspaceRef }) {
       saveTimer = window.setTimeout(() => {
         if (workspace.isDragging()) return;
         onChangeRef.current(Blockly.serialization.workspaces.save(workspace));
+        onCodeChangeRef.current?.(generateArduino(workspace));
       }, 250);
     };
     workspace.addChangeListener(save);
+    onCodeChangeRef.current?.(generateArduino(workspace));
 
     const resizeObserver = new ResizeObserver(() => Blockly.svgResize(workspace));
     resizeObserver.observe(hostRef.current);

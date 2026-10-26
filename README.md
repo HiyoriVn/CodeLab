@@ -2,7 +2,7 @@
 
 CodeLab is a planned visual programming environment for ESP32-S3 robotics. Its goal is to let learners assemble Scratch/Blockly-style blocks, inspect the generated Arduino C++, and deploy programs to a board.
 
-> **Repository status:** the Phase 1 editor shell and Blockly workspace are present on the `feat/phase-1-editor-shell` branch. They have not yet been run or verified. Arduino generation, compilation, upload, and hardware support remain planned.
+> **Repository status:** the Phase 1 editor and an initial Phase 2 Arduino C++ preview are present on feature branches. They have not yet been run or verified. Compilation, upload, and hardware support remain planned.
 
 ## Product decisions
 
@@ -16,12 +16,16 @@ CodeLab is a planned visual programming environment for ESP32-S3 robotics. Its g
 ## Planned MVP
 
 1. Create, edit, save, and reopen a block workspace.
-2. Generate readable Arduino C++ for the supported block set.
+2. Expand and verify readable Arduino C++ generation for the supported block set.
 3. Provide a safe compile/upload workflow for ESP32-S3 with actionable errors.
 4. Include starter robotics blocks and a documented board/pin configuration.
 5. Add a PS4 receiver abstraction only after the target module protocol is confirmed.
 
 See [the roadmap](docs/ROADMAP.md) for phases and exit criteria, [architecture](docs/ARCHITECTURE.md) for system boundaries, and [development setup](docs/DEVELOPMENT.md) for the local workflow.
+
+## Current code preview
+
+The initial generator supports a subset of built-in logic, math, control, and text blocks, plus simple variables whose assigned types can be inferred consistently. Unsupported blocks or mixed/unknown variable types are called out and replaced with placeholders; treat any output with warnings as incomplete. There is no compiler or upload action yet.
 
 ## Reference archive
 

@@ -1,6 +1,6 @@
 # Testing and verification strategy
 
-The Phase 1 web scaffold is present but has not yet been run or verified. There is no automated test suite at this stage. This document defines checks to add with implementation and manual scenarios to record; it does not report successful results.
+The Phase 1 web scaffold and initial Phase 2 generator are present but have not yet been run or verified. There is no automated test suite at this stage. This document defines checks to add with implementation and manual scenarios to record; it does not report successful results.
 
 ## Phase 1 manual acceptance
 
@@ -12,6 +12,16 @@ When the scaffold is available locally, verify and record:
 - Downloaded workspace files reopen with their blocks intact.
 - Invalid JSON, unknown format, and unsupported schema versions show a clear error without replacing the current workspace.
 - The editor remains usable at a narrow/mobile viewport.
+
+## Phase 2 manual acceptance
+
+When the app can be run locally, verify and record:
+- The sample workspace produces the expected `setup()` and `loop()` Arduino structure.
+- Each supported block generates syntactically plausible C++ with nested statements preserved.
+- Supported control, math, text, and variable blocks produce the documented output.
+- Unsupported blocks and mixed/unknown variable types are listed and visibly marked as placeholders.
+- Repeated generation from an unchanged workspace produces identical output.
+- Copying the preview works where the browser grants clipboard access.
 
 ## Verification layers
 
