@@ -1,6 +1,6 @@
 # Proposed architecture
 
-The Phase 1 branch introduces the web app shell and Blockly workspace. Other components below remain target architecture, not implemented functionality.
+The Phase 1 branch introduces the web app shell and Blockly workspace. The Phase 2 branch adds an initial Arduino C++ generator and code preview. Both branches are awaiting runtime verification. Compiler, uploader, board profiles, and hardware integration remain planned.
 
 ## Design principles
 
@@ -14,9 +14,10 @@ The Phase 1 branch introduces the web app shell and Blockly workspace. Other com
 
 - **Web shell:** React + Vite entry point and responsive editor layout.
 - **Blockly workspace:** built-in blocks, Vietnamese locale, versioned workspace JSON import/export, and browser-local draft persistence.
-- **Not present yet:** Arduino C++ generation, board profiles, compiler, upload service, native desktop shell, and PS4 protocol implementation.
+- **Phase 2 generator:** basic control, logic, math, text-output blocks and a code preview with warnings for unsupported blocks.
+- **Not present yet:** compile/upload service, board profiles, native desktop shell, and PS4 protocol implementation.
 
-The current scaffold is on `feat/phase-1-editor-shell` and has not yet been run or verified.
+The Phase 1 scaffold is on `feat/phase-1-editor-shell`; the initial C++ generator is on `feat/phase-2-arduino-generator`. Neither has been run or verified.
 
 ## Target logical components
 

@@ -85,3 +85,13 @@ h1 { font-size: 24px; letter-spacing: -.6px; margin: 7px 0 5px; }
   .next-step { align-items: flex-start; }
   .page-footer { gap: 8px; flex-direction: column; }
 }
+
+.code-panel { margin-top: 16px; overflow: hidden; border: 1px solid #e1e7e0; border-radius: 12px; background: #fff; box-shadow: 0 8px 32px #2d462d0a; }
+.code-panel-header { min-height: 48px; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #e9ede8; }
+.code-panel-header>div { display: flex; align-items: center; gap: 9px; }
+.code-panel-header strong { font-size: 11px; }
+.code-panel-icon { color: var(--green); font-weight: 800; font-size: 15px; }
+.code-language { color: #8d988f; font-size: 10px; }
+.generator-warning { padding: 10px 14px; border-bottom: 1px solid #f2e2bf; background: #fff8e9; color: #775316; font-size: 11px; line-height: 1.5; }
+.code-output { min-height: 160px; max-height: 420px; overflow: auto; margin: 0; padding: 16px; background: #202922; color: #d9eadb; font: 12px/1.65 Consolas, 'Courier New', monospace; tab-size: 2; }
+.code-output code { font: inherit; white-space: pre; }

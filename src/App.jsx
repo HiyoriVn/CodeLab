@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
 import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
+import CodePreview from './components/CodePreview.jsx';
 
 const STORAGE_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-workspace';
@@ -20,6 +21,7 @@ function App() {
   const fileInputRef = useRef(null);
   const [workspaceState, setWorkspaceState] = useState(readWorkspace);
   const [saveStatus, setSaveStatus] = useState('Bản nháp được lưu trên trình duyệt này');
+  const [generatedCode, setGeneratedCode] = useState({ code: '', warnings: [] });
 
   const handleWorkspaceChange = useCallback((state) => {
     setWorkspaceState(state);
@@ -122,7 +124,7 @@ function App() {
 
       <section className="welcome-strip">
         <div>
-          <span className="phase-tag">GIAI ĐOẠN 1 · WORKSPACE</span>
+          <span className="phase-tag">GIAI ĐOẠN 1–2 · WORKSPACE + C++</span>
           <h1>Lắp ghép ý tưởng của bạn</h1>
           <p>Kéo các khối lệnh vào vùng làm việc. Workspace được tự lưu trên trình duyệt này.</p>
         </div>
@@ -138,17 +140,19 @@ function App() {
           <div><span className="editor-icon">▦</span><strong>Không gian lập trình</strong><span className="editor-divider">/</span><span className="editor-muted">Khối lệnh</span></div>
           <div className="editor-tools"><span className="keyboard-hint">Kéo thả để bắt đầu</span></div>
         </div>
-        <BlocklyWorkspace initialState={workspaceState} onChange={handleWorkspaceChange} workspaceRef={workspaceRef} />
+        <BlocklyWorkspace initialState={workspaceState} onChange={handleWorkspaceChange} onCodeChange={setGeneratedCode} workspaceRef={workspaceRef} />
         <div className="workspace-footer">
           <span><i className="status-dot" />Sẵn sàng chỉnh sửa</span>
           <span>{workspaceState ? 'Có bản nháp được lưu' : 'Chưa có khối lệnh'}</span>
         </div>
       </section>
 
+      <CodePreview code={generatedCode.code} warnings={generatedCode.warnings} />
+
       <section className="next-step">
         <div className="next-step-icon" aria-hidden="true">⌘</div>
-        <div><strong>Arduino C++ sẽ có ở giai đoạn tiếp theo</strong><p>Hiện tại CodeLab đang xây dựng workspace. Chưa có trình sinh mã, biên dịch hay nạp chương trình.</p></div>
-        <span className="next-step-label">PHASE 2</span>
+        <div><strong>Biên dịch và nạp chương trình là bước tiếp theo</strong><p>Đây chỉ là bản xem trước. CodeLab chưa biên dịch hoặc gửi mã lên ESP32-S3.</p></div>
+        <span className="next-step-label">KẾ TIẾP</span>
       </section>
       <footer className="page-footer"><span>CodeLab · Bản thử nghiệm ban đầu</span><span>Blockly workspace · ESP32-S3 dự kiến</span></footer>
     </main>
