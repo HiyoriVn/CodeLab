@@ -2,10 +2,95 @@ import * as Blockly from 'blockly';
 
 const ATOMIC = 0;
 
+const PS4_HELPER = `class CodeLabPS4Adapter {
+  HardwareSerial* serial_ = nullptr;
+  uint8_t address_ = 0;
+  bool i2c_ = false;
+  int16_t axes_[4] = {0, 0, 0, 0};
+  uint32_t buttons_ = 0;
+  bool receiverConnected_ = false;
+  uint32_t lastFrameAt_ = 0;
+  char line_[96] = {0};
+  size_t lineLength_ = 0;
+  bool discardLine_ = false;
+
+  void applyFrame(int connected, int x, int y, int rx, int ry, unsigned long buttons) {
+    axes_[0] = (int16_t)constrain(x, -32768, 32767);
+    axes_[1] = (int16_t)constrain(y, -32768, 32767);
+    axes_[2] = (int16_t)constrain(rx, -32768, 32767);
+    axes_[3] = (int16_t)constrain(ry, -32768, 32767);
+    buttons_ = (uint32_t)buttons;
+    receiverConnected_ = connected != 0;
+    lastFrameAt_ = millis();
+  }
+
+  void readUart() {
+    if (!serial_) return;
+    while (serial_->available()) {
+      const char ch = (char)serial_->read();
+      if (ch == '\n' || ch == '\r') {
+        if (lineLength_ && !discardLine_) {
+          line_[lineLength_] = '\0';
+          int connected, x, y, rx, ry, consumed = 0;
+          unsigned long buttons;
+          if (sscanf(line_, "%d,%d,%d,%d,%d,%lu%n", &connected, &x, &y, &rx, &ry, &buttons, &consumed) == 6 &&
+              line_[consumed] == '\0') {
+            applyFrame(connected, x, y, rx, ry, buttons);
+          }
+        }
+        lineLength_ = 0;
+        discardLine_ = false;
+      } else if (!discardLine_ && lineLength_ < sizeof(line_) - 1) {
+        line_[lineLength_++] = ch;
+      } else {
+        lineLength_ = 0;
+        discardLine_ = true;
+      }
+    }
+  }
+
+  static int16_t readI16(uint8_t low, uint8_t high) {
+    return (int16_t)((uint16_t)low | ((uint16_t)high << 8));
+  }
+
+  void readI2c() {
+    if (!i2c_) return;
+    const uint8_t received = Wire.requestFrom(address_, (uint8_t)13);
+    if (received != 13 || Wire.available() < 13) {
+      while (Wire.available()) Wire.read();
+      return;
+    }
+    uint8_t frame[13];
+    for (uint8_t i = 0; i < 13; ++i) frame[i] = (uint8_t)Wire.read();
+    axes_[0] = readI16(frame[1], frame[2]);
+    axes_[1] = readI16(frame[3], frame[4]);
+    axes_[2] = readI16(frame[5], frame[6]);
+    axes_[3] = readI16(frame[7], frame[8]);
+    buttons_ = (uint32_t)frame[9] | ((uint32_t)frame[10] << 8) |
+      ((uint32_t)frame[11] << 16) | ((uint32_t)frame[12] << 24);
+    receiverConnected_ = (frame[0] & 0x01) != 0;
+    lastFrameAt_ = millis();
+  }
+
+public:
+  void beginUart(HardwareSerial& serial) { serial_ = &serial; i2c_ = false; }
+  void beginI2c(uint8_t address) { address_ = address; i2c_ = true; }
+  void update() { if (i2c_) readI2c(); else readUart(); }
+  bool connected() const { return receiverConnected_ && (uint32_t)(millis() - lastFrameAt_) <= 250; }
+  int axis(uint8_t index) const {
+    if (!connected() || index > 3) return 0;
+    return (int)map(axes_[index], -32768, 32767, -1000, 1000);
+  }
+  bool button(uint8_t index) const {
+    return connected() && index < 32 && ((buttons_ >> index) & 1U);
+  }
+};
+CodeLabPS4Adapter codelabPs4;`;
+
 function variableTypeOf(block, knownTypes) {
   if (!block) return null;
-  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'codelab_analog_read'].includes(block.type)) return 'number';
-  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read'].includes(block.type)) return 'boolean';
+  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'codelab_analog_read', 'codelab_ps4_axis'].includes(block.type)) return 'number';
+  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_ps4_connected', 'codelab_ps4_button'].includes(block.type)) return 'boolean';
   if (['text', 'text_join'].includes(block.type)) return 'string';
   if (block.type === 'variables_get') return knownTypes.get(block.getFieldValue('VAR')) || null;
   return null;
@@ -97,6 +182,9 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     this.diagnostics_ = new Set();
     this.pinModes_ = new Map();
     this.setupStatements_ = new Map();
+    this.loopPreamble_ = '';
+    this.controllerRequested_ = false;
+    this.controllerConfigured_ = false;
     initializeVariables(this, workspace);
   }
 
@@ -112,6 +200,7 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
       '}',
       '',
       'void loop() {',
+      this.loopPreamble_ ? '  ' + this.loopPreamble_ : '',
       code.trimEnd(),
       '}',
       '',
@@ -260,13 +349,13 @@ function registerBlocks(generator) {
 
   generator.forBlock.codelab_delay_ms = (block, gen) => {
     const duration = numberInput(block, 'DURATION', gen, 'Khối chờ');
-    return 'delay((uint32_t)max(0.0, (double)(' + duration + ')));\\n';
+    return 'delay((uint32_t)max(0.0, (double)(' + duration + ')));\n';
   };
 
   generator.forBlock.codelab_gpio_write = (block, gen) => {
     const pin = numberInput(block, 'PIN', gen, 'Khối ghi GPIO');
     configurePin(gen, pin, 'OUTPUT', 'Khối ghi GPIO');
-    return 'digitalWrite(' + pin + ', ' + block.getFieldValue('STATE') + ');\\n';
+    return 'digitalWrite(' + pin + ', ' + block.getFieldValue('STATE') + ');\n';
   };
 
   generator.forBlock.codelab_gpio_read = (block, gen) => {
@@ -285,7 +374,7 @@ function registerBlocks(generator) {
     const pin = numberInput(block, 'PIN', gen, 'Khối PWM');
     const duty = numberInput(block, 'DUTY', gen, 'Khối PWM');
     configurePwm(gen, pin, 'Khối PWM');
-    return 'ledcWrite(' + pin + ', (uint32_t)constrain((int)(' + duty + '), 0, 255));\\n';
+    return 'ledcWrite(' + pin + ', (uint32_t)constrain((int)(' + duty + '), 0, 255));\n';
   };
 
   generator.forBlock.codelab_hbridge_motor = (block, gen) => {
@@ -300,10 +389,94 @@ function registerBlocks(generator) {
     const id = gen.motorIndex_++;
     const temp = '__codelab_motor_speed_' + id;
     gen.definitions_['include_math'] = '#include <math.h>';
-    return 'int ' + temp + ' = constrain((int)(' + speed + '), -255, 255);\\n' +
-      'digitalWrite(' + in1 + ', ' + temp + ' >= 0 ? HIGH : LOW);\\n' +
-      'digitalWrite(' + in2 + ', ' + temp + ' >= 0 ? LOW : HIGH);\\n' +
-      'ledcWrite(' + pwm + ', abs(' + temp + '));\\n';
+    return 'int ' + temp + ' = constrain((int)(' + speed + '), -255, 255);\n' +
+      'digitalWrite(' + in1 + ', ' + temp + ' >= 0 ? HIGH : LOW);\n' +
+      'digitalWrite(' + in2 + ', ' + temp + ' >= 0 ? LOW : HIGH);\n' +
+      'ledcWrite(' + pwm + ', abs(' + temp + '));\n';
+  };
+
+  const reservePin = (gen, pin, mode, label) => {
+    pinWarnings(pin, gen, label);
+    const existing = gen.pinModes_.get(pin);
+    if (existing && existing !== mode) {
+      gen.diagnostics_.add(label + ': GPIO ' + pin + ' đã được dùng cho ' + existing + '.');
+    } else {
+      gen.pinModes_.set(pin, mode);
+    }
+  };
+
+  const configureController = (gen, mode, settings) => {
+    if (gen.controllerConfigured_) {
+      gen.diagnostics_.add('Chỉ cấu hình một bộ nhận PS4 trong mỗi chương trình.');
+      return;
+    }
+    gen.controllerConfigured_ = true;
+    gen.controllerRequested_ = true;
+    gen.definitions_['ps4_adapter'] = PS4_HELPER;
+    gen.includes_['ps4_stdio'] = '#include <stdio.h>';
+    gen.includes_['ps4_wire'] = '#include <Wire.h>';
+    gen.loopPreamble_ = 'codelabPs4.update();';
+    if (mode === 'UART') {
+      gen.setupStatements_.set('ps4_uart', 'Serial1.begin(' + settings.baud + ', SERIAL_8N1, ' + settings.rx + ', ' + settings.tx + '); codelabPs4.beginUart(Serial1);');
+    } else {
+      gen.setupStatements_.set('ps4_i2c', 'Wire.begin(' + settings.sda + ', ' + settings.scl + '); Wire.setTimeOut(10); codelabPs4.beginI2c(' + settings.address + ');');
+    }
+  };
+
+  generator.forBlock.codelab_ps4_begin_uart = (block, gen) => {
+    const rx = numberInput(block, 'RX', gen, 'PS4 UART RX');
+    const tx = numberInput(block, 'TX', gen, 'PS4 UART TX');
+    const baud = numberInput(block, 'BAUD', gen, 'PS4 UART baud');
+    pinWarnings(rx, gen, 'PS4 UART RX');
+    pinWarnings(tx, gen, 'PS4 UART TX');
+    if (rx === tx) gen.diagnostics_.add('PS4 UART: RX và TX phải dùng GPIO khác nhau.');
+    if (!/^\d+$/.test(baud) || Number(baud) < 1200 || Number(baud) > 2000000) gen.diagnostics_.add('PS4 UART: baud phải nằm trong khoảng 1200–2000000.');
+    reservePin(gen, rx, 'UART', 'PS4 UART RX');
+    reservePin(gen, tx, 'UART', 'PS4 UART TX');
+    configureController(gen, 'UART', { rx, tx, baud });
+    return '';
+  };
+
+  generator.forBlock.codelab_ps4_begin_i2c = (block, gen) => {
+    const sda = numberInput(block, 'SDA', gen, 'PS4 I2C SDA');
+    const scl = numberInput(block, 'SCL', gen, 'PS4 I2C SCL');
+    const address = numberInput(block, 'ADDRESS', gen, 'PS4 I2C address');
+    pinWarnings(sda, gen, 'PS4 I2C SDA');
+    pinWarnings(scl, gen, 'PS4 I2C SCL');
+    if (sda === scl) gen.diagnostics_.add('PS4 I2C: SDA và SCL phải dùng GPIO khác nhau.');
+    if (!/^\d+$/.test(address) || Number(address) < 8 || Number(address) > 119) gen.diagnostics_.add('PS4 I2C: địa chỉ phải nằm trong khoảng 8–119.');
+    reservePin(gen, sda, 'I2C', 'PS4 I2C SDA');
+    reservePin(gen, scl, 'I2C', 'PS4 I2C SCL');
+    configureController(gen, 'I2C', { sda, scl, address });
+    return '';
+  };
+
+  generator.forBlock.codelab_ps4_connected = (_block, gen) => {
+    gen.controllerRequested_ = true;
+    gen.definitions_['ps4_adapter'] = PS4_HELPER;
+    gen.includes_['ps4_stdio'] = '#include <stdio.h>';
+    gen.includes_['ps4_wire'] = '#include <Wire.h>';
+    return ['codelabPs4.connected()', ATOMIC];
+  };
+
+  generator.forBlock.codelab_ps4_axis = (block, gen) => {
+    gen.controllerRequested_ = true;
+    gen.definitions_['ps4_adapter'] = PS4_HELPER;
+    gen.includes_['ps4_stdio'] = '#include <stdio.h>';
+    gen.includes_['ps4_wire'] = '#include <Wire.h>';
+    gen.loopPreamble_ = 'codelabPs4.update();';
+    const axes = { LX: 0, LY: 1, RX: 2, RY: 3 };
+    return ['codelabPs4.axis(' + (axes[block.getFieldValue('AXIS')] ?? 0) + ')', ATOMIC];
+  };
+
+  generator.forBlock.codelab_ps4_button = (block, gen) => {
+    gen.controllerRequested_ = true;
+    gen.definitions_['ps4_adapter'] = PS4_HELPER;
+    gen.includes_['ps4_stdio'] = '#include <stdio.h>';
+    gen.includes_['ps4_wire'] = '#include <Wire.h>';
+    gen.loopPreamble_ = 'codelabPs4.update();';
+    const buttons = { CROSS: 0, CIRCLE: 1, SQUARE: 2, TRIANGLE: 3, L1: 4, R1: 5, L2: 6, R2: 7, SHARE: 8, OPTIONS: 9, L3: 10, R3: 11, PS: 12, UP: 13, DOWN: 14, LEFT: 15, RIGHT: 16 };
+    return ['codelabPs4.button(' + (buttons[block.getFieldValue('BUTTON')] ?? 0) + ')', ATOMIC];
   };
 
   generator.forBlock.controls_if = (block, gen) => {
@@ -375,6 +548,9 @@ export function generateArduino(workspace) {
     }
     const warnings = Array.from(unsupported).map((type) => 'Khối "' + type + '" chưa có bộ sinh Arduino C++; mã xem trước có placeholder.');
     warnings.push(...generator.diagnostics_);
+    if (generator.controllerRequested_ && !generator.controllerConfigured_) {
+      warnings.push('Tay cầm PS4: thêm khối cấu hình UART hoặc I2C và adapter tương thích trước khi dùng.');
+    }
     for (const name of unsupportedVariables) {
       warnings.push('Biến "' + name + '" có kiểu chưa xác định hoặc bị gán nhiều kiểu; mã xem trước có placeholder.');
     }

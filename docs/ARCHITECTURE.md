@@ -1,51 +1,55 @@
-# Proposed architecture
+# Architecture
 
-The repository contains the React/Vite + Blockly editor, Arduino C++ generator, robotics blocks, and a local Arduino CLI bridge in source. Runtime and hardware verification are still pending.
+CodeLab is a browser-first React/Vite + Blockly editor that generates Arduino C++ for ESP32-S3. Current feature branches contain the workspace, generator, robotics blocks, a local Arduino CLI bridge, and a CodeLab PS4 adapter contract. Source changes remain unverified.
 
-## Design principles
+## Modules
 
-- Keep the visual workspace independent from target-language generation.
-- Make generated Arduino C++ deterministic and reviewable.
-- Keep board and peripheral details in explicit profiles/adapters.
-- Separate transport from controller semantics so UART/I2C details do not leak into blocks.
-- Make actions that affect hardware explicit and recoverable.
-
-## Current source modules
-
-- **Editor UI:** React shell, Blockly workspace, code preview, workspace import/export, and build/device panel.
-- **Workspace:** versioned serialized blocks and browser-local draft persistence.
-- **Block catalog:** built-in Blockly blocks plus CodeLab GPIO input/output, ADC, PWM, delay, and H-bridge blocks.
-- **C++ generator:** subset of control, logic, math, text, variables, and robotics blocks; unsupported blocks and diagnostics are shown as warnings.
-- **Local build bridge:** Node.js HTTP service bound to loopback. It calls Arduino CLI without a shell, compiles temporary sketches, enumerates ports, and uploads only a successful build after UI confirmation.
-- **Target profile:** currently defaults to generic `esp32:esp32:esp32s3`; board-specific pin maps are not implemented.
-- **PS4 receiver:** not implemented. The archive does not identify a receiver or protocol.
-
-All implemented source paths are unverified until the user runs them.
+- **Editor UI:** Blockly workspace, code preview, workspace import/export, and build/device panel.
+- **Generator:** supported Blockly and robotics blocks produce Arduino C++ plus diagnostics.
+- **Local build bridge:** loopback Node.js service invokes Arduino CLI with argument arrays, keeps successful builds temporarily, lists connected ports, and requires explicit confirmation before upload.
+- **Controller adapter:** generated C++ polls a single UART or I2C input using the CodeLab adapter contract, normalizes four axes and a button bitmask, and returns neutral/disconnected values after stale data.
+- **Board profile:** defaults to generic ESP32-S3 FQBN; board-specific pin maps are not implemented.
 
 ## Data flow
 
-`Workspace → generator → Arduino C++ + diagnostics → local Arduino CLI compile → user-confirmed upload → board`
+`Workspace → Arduino C++ + diagnostics → local Arduino CLI compile → user-confirmed upload → ESP32-S3`
 
-The local bridge serves the built web app and `/api` on `127.0.0.1:8787`. During web development Vite proxies `/api` to that bridge. Upload requires a valid build ID and a port currently reported by Arduino CLI.
+Controller data flows:
 
-The future PS4 path remains:
+`PS4 receiver → optional translating adapter → CodeLab UART/I2C frame → normalized controller state → Blockly expressions`
 
-`External receiver → documented UART/I2C adapter → normalized state → controller blocks → generated logic`
+The receiver may not emit this contract directly. The selected hardware, electrical levels, and protocol must be confirmed before claiming module compatibility.
 
-The receiver does not imply native Bluetooth support on the ESP32-S3. Its exact electrical and protocol contract must be supplied before implementation.
+## PS4 CodeLab adapter contract
+
+UART mode reads newline-delimited ASCII CSV:
+`connected,lx,ly,rx,ry,buttons\n`
+
+- `connected`: 0 or 1.
+- `lx`, `ly`, `rx`, `ry`: signed 16-bit axis values.
+- `buttons`: unsigned 32-bit decimal bitmask.
+- The default baud is 115200; the block allows a different rate.
+- The parser refreshes state only for a complete valid line. State becomes disconnected after 250 ms without a valid frame.
+
+I2C mode makes the ESP32-S3 the bus master and requests 13 bytes from the configured 7-bit receiver address:
+
+- byte 0: connected in bit 0;
+- bytes 1–8: four signed 16-bit little-endian axes in LX, LY, RX, RY order;
+- bytes 9–12: unsigned 32-bit little-endian button mask.
+
+Axes are normalized to -1000…1000. When disconnected or stale, axis reads return 0 and button reads return false. The contract's button bit assignments are documented in [PS4 receiver requirements](PS4-RECEIVER.md).
 
 ## Boundaries
 
-- UI calls HTTP application services; it does not launch processes or parse receiver frames.
-- Generator accepts a Blockly workspace and returns code plus diagnostics.
-- Build bridge accepts source text and target configuration, not Blockly objects.
-- The bridge uses `spawn` with a fixed executable and argument list; it binds to loopback and has bounded request sizes and temporary build retention.
-- Board profiles should validate pin capabilities before generation and choose a known FQBN.
-- Receiver adapters should expose connection state, named buttons, axes, and timestamps after module documentation is known.
+- UI calls local HTTP APIs; it does not spawn compiler processes or parse receiver frames.
+- The generator accepts a Blockly workspace and produces code/diagnostics.
+- The bridge accepts source text and target settings, not Blockly objects.
+- The receiver-specific adapter/firmware is outside CodeLab until the actual receiver is identified.
+- Upload is only available after a successful compile and user confirmation.
 
 ## Open decisions
 
-- Exact ESP32-S3 board(s), pinout, flash/partition assumptions, and supported host OS matrix.
-- Arduino CLI installation/update approach and supported core versions.
-- Exact PS4 receiver model, voltage, wiring, UART/I2C settings, packet format, and license.
-- Whether desktop packaging is needed after browser MVP feedback.
+- Exact ESP32-S3 board, pinout, supported operating systems, and Arduino core version.
+- Exact receiver module, wiring, voltage, protocol, and whether it can emit the CodeLab adapter format.
+- Whether a separate receiver firmware or translating microcontroller is needed.
+- Desktop packaging after web MVP feedback.
