@@ -39,6 +39,7 @@ The supplied NewmaniaCodeLab archive is treated as a design and implementation r
 - [Development setup](docs/DEVELOPMENT.md): local web workflow and current limitations.
 - [Testing strategy](docs/TESTING.md): verification layers and release gates.
 - [Contributing](CONTRIBUTING.md): contribution workflow and review expectations.
+- [PS4 receiver requirements](docs/PS4-RECEIVER.md): hardware details needed before a real controller adapter can be built.
 
 ## Status legend
 

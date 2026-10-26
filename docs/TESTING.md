@@ -72,3 +72,16 @@ For every hardware-dependent result, record:
 ## Release gate
 
 A first release requires generator fixtures, successful compilation for the supported ESP32-S3 target, successful upload smoke tests for the supported board matrix, validated PS4 integration if included in the release scope, and documented known limitations. Do not label untested hardware combinations as supported.
+
+
+## Phase 4 manual acceptance
+
+The compile/upload UI and loopback bridge are implemented in source but unverified. When available, verify:
+- Missing Arduino CLI, missing ESP32 core, compile errors, and timeouts are shown clearly.
+- A generated sketch compiles for the selected FQBN; compile is blocked while generator warnings remain.
+- Only CLI-detected ports are offered and disconnects are handled.
+- Upload is impossible before a successful build, requires the separate confirmation prompt, and reports CLI failure details.
+- Temporary build directories expire; the bridge is reachable only on loopback.
+- The built application served by the bridge and the Vite development proxy both reach the API.
+
+Do not claim Phase 4 accepted until compile, upload, and disconnect scenarios are recorded for an actual supported board.
