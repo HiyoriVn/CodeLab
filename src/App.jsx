@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
 import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
 import CodePreview from './components/CodePreview.jsx';
+import DevicePanel from './components/DevicePanel.jsx';
 
 const STORAGE_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-workspace';
@@ -124,14 +125,14 @@ function App() {
 
       <section className="welcome-strip">
         <div>
-          <span className="phase-tag">GIAI ĐOẠN 1–2 · WORKSPACE + C++</span>
+          <span className="phase-tag">GIAI ĐOẠN 1–4 · WORKSPACE + C++ + NẠP</span>
           <h1>Lắp ghép ý tưởng của bạn</h1>
           <p>Kéo các khối lệnh vào vùng làm việc. Workspace được tự lưu trên trình duyệt này.</p>
         </div>
         <div className="target-card">
           <span className="target-dot" />
           <span><small>MỤC TIÊU DỰ KIẾN</small><strong>ESP32-S3</strong></span>
-          <span className="target-soon">SẮP CÓ</span>
+          <span className="target-soon">CỤC BỘ</span>
         </div>
       </section>
 
@@ -149,11 +150,7 @@ function App() {
 
       <CodePreview code={generatedCode.code} warnings={generatedCode.warnings} />
 
-      <section className="next-step">
-        <div className="next-step-icon" aria-hidden="true">⌘</div>
-        <div><strong>Biên dịch và nạp chương trình là bước tiếp theo</strong><p>Đây chỉ là bản xem trước. CodeLab chưa biên dịch hoặc gửi mã lên ESP32-S3.</p></div>
-        <span className="next-step-label">KẾ TIẾP</span>
-      </section>
+      <DevicePanel code={generatedCode.code} warnings={generatedCode.warnings} />
       <footer className="page-footer"><span>CodeLab · Bản thử nghiệm ban đầu</span><span>Blockly workspace · ESP32-S3 dự kiến</span></footer>
     </main>
   );

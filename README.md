@@ -1,48 +1,35 @@
 # CodeLab
 
-CodeLab is a planned visual programming environment for ESP32-S3 robotics. Its goal is to let learners assemble Scratch/Blockly-style blocks, inspect the generated Arduino C++, and deploy programs to a board.
-
-> **Repository status:** the Phase 1 editor and an initial Phase 2 Arduino C++ preview are present on feature branches. They have not yet been run or verified. Compilation, upload, and hardware support remain planned.
+CodeLab is a browser-first visual programming environment for ESP32-S3 robotics. It uses Blockly-style blocks to generate Arduino C++.
 
 ## Product decisions
 
-- **MVP target:** ESP32-S3.
-- **MVP language:** Arduino C++ generated from blocks. MicroPython is out of scope for the MVP.
-- **Initial platform:** browser-based web app using React, Vite, and Blockly. Desktop packaging can be evaluated later.
-- **Visual editor:** Blockly-inspired, with Scratch-like approachable interactions and beginner-focused categories.
-- **PS4 input:** support an external PS4 receiver module connected to the ESP32-S3 over UART or I2C. The exact receiver, wiring, and data protocol must be selected and documented before implementation.
-- **Delivery:** phased development with observable acceptance criteria; hardware-dependent features are validated on real boards.
+- MVP board family: ESP32-S3; exact board profiles remain to be selected.
+- MVP language: Arduino C++; MicroPython is out of scope.
+- Web stack: React, Vite, and Blockly.
+- PS4 controller: use an external receiver over UART or I2C. CodeLab defines an adapter contract; direct compatibility depends on the actual receiver or a translating adapter.
 
-## Planned MVP
+## Current implementation status
 
-1. Create, edit, save, and reopen a block workspace.
-2. Expand and verify readable Arduino C++ generation for the supported block set.
-3. Provide a safe compile/upload workflow for ESP32-S3 with actionable errors.
-4. Include starter robotics blocks and a documented board/pin configuration.
-5. Add a PS4 receiver abstraction only after the target module protocol is confirmed.
+Draft feature branches contain the editor and workspace persistence, a subset of Arduino C++ generation, GPIO/ADC/PWM/delay/H-bridge blocks, a local Arduino CLI compile/upload flow, and PS4 adapter blocks and packet decoder. These changes have not been run or verified. No browser, compiler, serial-port, or hardware checks have been performed.
 
-See [the roadmap](docs/ROADMAP.md) for phases and exit criteria, [architecture](docs/ARCHITECTURE.md) for system boundaries, and [development setup](docs/DEVELOPMENT.md) for the local workflow.
+The PS4 packet format in this repository is a CodeLab adapter contract. It does not establish compatibility with an unidentified receiver. The receiver must emit the documented UART or I2C frame, directly or through a compatible translating module/firmware.
 
-## Current code preview
+See the [roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md), [development setup](docs/DEVELOPMENT.md), [verification plan](docs/TESTING.md), and [PS4 adapter contract](docs/PS4-RECEIVER.md).
 
-The generator supports a subset of built-in logic, math, control, and text blocks, simple consistently typed variables, and ESP32-S3 GPIO/ADC/PWM/H-bridge blocks. Unsupported blocks, unsafe pin choices, or mixed/unknown variable types are called out; treat any output with warnings as incomplete. There is no compiler or upload action yet.
+## Run locally
+
+For editor development, use `npm install`, then run `npm run dev` and `npm run bridge` in separate terminals. The bridge requires Arduino CLI and the ESP32 core.
+
+For a standalone local build, run `npm run build` followed by `npm run bridge`, then open `http://127.0.0.1:8787`. Upload requires a successful compile, a currently detected serial port, and an explicit confirmation.
 
 ## Reference archive
 
-The supplied NewmaniaCodeLab archive is treated as a design and implementation reference, not as the current CodeLab repository. Its README reports a Blockly workspace, Python generator, Web Serial connection/monitor, compatibility checks, reboot, and workspace file save/load as existing features in that separate project. The archive's code confirms a React/Vite + Tauri application and a Blockly Python generator. These are **reference-project claims**, not verified CodeLab functionality. See [reference baseline](docs/REFERENCE-BASELINE.md).
+NewmaniaCodeLab is a separate design reference, not the CodeLab repository. Its README and source describe a Blockly app and Python generator; they do not define CodeLab's PS4 receiver protocol. See [reference baseline](docs/REFERENCE-BASELINE.md).
 
-## Repository documents
+## Status labels
 
-- [AGENTS.md](AGENTS.md): instructions for AI coding agents and contributors.
-- [Roadmap](docs/ROADMAP.md): phased plan and completion criteria.
-- [Architecture](docs/ARCHITECTURE.md): proposed modules, code flow, and hardware boundary.
-- [Development setup](docs/DEVELOPMENT.md): local web workflow and current limitations.
-- [Testing strategy](docs/TESTING.md): verification layers and release gates.
-- [Contributing](CONTRIBUTING.md): contribution workflow and review expectations.
-
-## Status legend
-
-- **Implemented in branch, unverified:** source code exists but has not been run or verified.
-- **Verified in this repository:** the behavior has been exercised and its result recorded.
-- **Reference archive:** observed or reported in NewmaniaCodeLab; not part of this repository.
-- **Planned:** future CodeLab work, subject to phase acceptance and hardware validation.
+- **Implemented in branch, unverified:** source exists, but behavior has not been exercised.
+- **Verified:** tested in this repository with evidence recorded.
+- **Adapter contract:** CodeLab-defined input format; actual receiver compatibility must be confirmed.
+- **Planned:** not yet present in source.

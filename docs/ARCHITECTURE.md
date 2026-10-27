@@ -1,59 +1,55 @@
-# Proposed architecture
+# Architecture
 
-The Phase 1 branch introduces the web app shell and Blockly workspace. The Phase 2 branch adds an initial Arduino C++ generator and code preview. Both branches are awaiting runtime verification. Compiler, uploader, board profiles, and hardware integration remain planned.
+CodeLab is a browser-first React/Vite + Blockly editor that generates Arduino C++ for ESP32-S3. Current feature branches contain the workspace, generator, robotics blocks, a local Arduino CLI bridge, and a CodeLab PS4 adapter contract. Source changes remain unverified.
 
-## Design principles
+## Modules
 
-- Keep the visual workspace independent from target-language generation.
-- Make generated Arduino C++ deterministic and reviewable.
-- Keep board and peripheral details in explicit profiles/adapters.
-- Separate transport from controller semantics so UART/I2C protocol details do not leak into blocks.
-- Make actions that affect hardware explicit and recoverable.
-
-## Current Phase 1 scaffold
-
-- **Web shell:** React + Vite entry point and responsive editor layout.
-- **Blockly workspace:** built-in blocks, Vietnamese locale, versioned workspace JSON import/export, and browser-local draft persistence.
-- **Phase 2 generator:** basic control, logic, math, text, and inferred simple variable types, with a code preview that marks unsupported or mixed-type variable blocks.
-- **Robotics blocks:** GPIO input/output, ADC, PWM, delay, and a generic two-direction-pin H-bridge motor block. The generator emits setup pin modes and cautions for risky/unexposed GPIOs.
-- **Not present yet:** compile/upload service, specific board pin maps, native desktop shell, and PS4 protocol implementation.
-
-The Phase 1 scaffold is on `feat/phase-1-editor-shell`; the initial C++ generator is on `feat/phase-2-arduino-generator`. Neither has been run or verified.
-
-## Target logical components
-
-1. **Editor UI** — block workspace, toolbox, code preview, project open/save, device and compile/upload status.
-2. **Workspace model** — versioned serialized blocks, validation, examples, and migration.
-3. **Block catalog** — typed definitions, categories, constraints, help text, and target support metadata.
-4. **C++ generator** — converts validated workspace into normalized intermediate representation and Arduino C++ output; reports unsupported blocks and source locations.
-5. **Target profile** — ESP32-S3 board identity, framework/toolchain version, pin capabilities, and compile/upload configuration.
-6. **Build/deploy service** — compiles, reports diagnostics, selects a device/port, and uploads only after explicit confirmation.
-7. **Device transport** — USB serial/board connection and lifecycle, isolated from UI and generation.
-8. **Peripheral adapters** — motor/sensor adapters and PS4 receiver adapter. The receiver adapter speaks its confirmed UART or I2C protocol and emits normalized controller state.
+- **Editor UI:** Blockly workspace, code preview, workspace import/export, and build/device panel.
+- **Generator:** supported Blockly and robotics blocks produce Arduino C++ plus diagnostics.
+- **Local build bridge:** loopback Node.js service invokes Arduino CLI with argument arrays, keeps successful builds temporarily, lists connected ports, and requires explicit confirmation before upload.
+- **Controller adapter:** generated C++ polls a single UART or I2C input using the CodeLab adapter contract, normalizes four axes and a button bitmask, and returns neutral/disconnected values after stale data.
+- **Board profile:** defaults to generic ESP32-S3 FQBN; board-specific pin maps are not implemented.
 
 ## Data flow
 
-`Workspace → validation → target-aware IR → Arduino C++ + diagnostics → compile → user-confirmed upload → board`
+`Workspace → Arduino C++ + diagnostics → local Arduino CLI compile → user-confirmed upload → ESP32-S3`
 
-The PS4 path is:
+Controller data flows:
 
-`External PS4 controller → receiver module → UART or I2C → receiver adapter → normalized buttons/axes → controller blocks → generated control logic`
+`PS4 receiver → optional translating adapter → CodeLab UART/I2C frame → normalized controller state → Blockly expressions`
 
-The receiver does not imply native Bluetooth support on the ESP32-S3. CodeLab targets the external receiver module specified by the project owner.
+The receiver may not emit this contract directly. The selected hardware, electrical levels, and protocol must be confirmed before claiming module compatibility.
 
-## Proposed boundaries
+## PS4 CodeLab adapter contract
 
-- UI calls application services; it should not own compiler subprocess or wire-protocol logic.
-- Generator functions should be pure where practical: workspace + target profile in, generated files + diagnostics out.
-- Build/deploy should accept generated files and a target profile, not Blockly objects.
-- Receiver adapter should expose a stable API such as connection state, named buttons, normalized axes, and timestamps. Exact API waits on the module protocol.
-- Board profiles validate pins and capabilities before code generation.
-- Start with the web app. Before compile/upload, choose whether a native helper/desktop shell is needed for local Arduino toolchains and serial access; do not assume browser APIs cover every supported platform.
+UART mode reads newline-delimited ASCII CSV:
+`connected,lx,ly,rx,ry,buttons\n`
+
+- `connected`: 0 or 1.
+- `lx`, `ly`, `rx`, `ry`: signed 16-bit axis values.
+- `buttons`: unsigned 32-bit decimal bitmask.
+- The default baud is 115200; the block allows a different rate.
+- The parser refreshes state only for a complete valid line. State becomes disconnected after 250 ms without a valid frame.
+
+I2C mode makes the ESP32-S3 the bus master and requests 13 bytes from the configured 7-bit receiver address:
+
+- byte 0: connected in bit 0;
+- bytes 1–8: four signed 16-bit little-endian axes in LX, LY, RX, RY order;
+- bytes 9–12: unsigned 32-bit little-endian button mask.
+
+Axes are normalized to -1000…1000. When disconnected or stale, axis reads return 0 and button reads return false. The contract's button bit assignments are documented in [PS4 receiver requirements](PS4-RECEIVER.md).
+
+## Boundaries
+
+- UI calls local HTTP APIs; it does not spawn compiler processes or parse receiver frames.
+- The generator accepts a Blockly workspace and produces code/diagnostics.
+- The bridge accepts source text and target settings, not Blockly objects.
+- The receiver-specific adapter/firmware is outside CodeLab until the actual receiver is identified.
+- Upload is only available after a successful compile and user confirmation.
 
 ## Open decisions
 
-- Whether to add desktop packaging after the web editor.
-- Selected Arduino toolchain and how it is installed/updated.
-- Exact ESP32-S3 board(s), flash/partition assumptions, and upload path.
-- Exact PS4 receiver model, protocol, electrical requirements, and licensing.
-- Workspace file extension/schema evolution and compatibility policy.
+- Exact ESP32-S3 board, pinout, supported operating systems, and Arduino core version.
+- Exact receiver module, wiring, voltage, protocol, and whether it can emit the CodeLab adapter format.
+- Whether a separate receiver firmware or translating microcontroller is needed.
+- Desktop packaging after web MVP feedback.
