@@ -4,6 +4,7 @@ import 'blockly/blocks';
 import * as Vietnamese from 'blockly/msg/vi';
 import { generateArduino } from '../generators/arduino.js';
 import '../blocks/robotics.js';
+import '../blocks/controller.js';
 
 Blockly.setLocale(Vietnamese);
 
@@ -56,6 +57,26 @@ const toolbox = {
         { kind: 'block', type: 'codelab_analog_read' },
         { kind: 'block', type: 'codelab_pwm_write', inputs: { DUTY: { shadow: { type: 'math_number', fields: { NUM: 0 } } } } },
         { kind: 'block', type: 'codelab_hbridge_motor' },
+      ],
+    },
+    {
+      kind: 'category',
+      name: 'Tay cầm PS4',
+      categorystyle: 'logic_category',
+      contents: [
+        { kind: 'block', type: 'codelab_ps4_begin_uart', inputs: {
+          RX: { shadow: { type: 'math_number', fields: { NUM: 16 } } },
+          TX: { shadow: { type: 'math_number', fields: { NUM: 17 } } },
+          BAUD: { shadow: { type: 'math_number', fields: { NUM: 115200 } } },
+        } },
+        { kind: 'block', type: 'codelab_ps4_begin_i2c', inputs: {
+          SDA: { shadow: { type: 'math_number', fields: { NUM: 8 } } },
+          SCL: { shadow: { type: 'math_number', fields: { NUM: 9 } } },
+          ADDRESS: { shadow: { type: 'math_number', fields: { NUM: 48 } } },
+        } },
+        { kind: 'block', type: 'codelab_ps4_connected' },
+        { kind: 'block', type: 'codelab_ps4_axis' },
+        { kind: 'block', type: 'codelab_ps4_button' },
       ],
     },
     {

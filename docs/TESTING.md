@@ -85,3 +85,15 @@ The compile/upload UI and loopback bridge are implemented in source but unverifi
 - The built application served by the bridge and the Vite development proxy both reach the API.
 
 Do not claim Phase 4 accepted until compile, upload, and disconnect scenarios are recorded for an actual supported board.
+
+
+## Phase 5 adapter acceptance
+
+The CodeLab packet decoder and blocks are implemented in source but unverified. Before treating them as receiver support, verify:
+- UART lines parse only when all six CSV fields are valid; malformed/partial/overlong lines do not create a connected state.
+- I2C frames use exactly 13 bytes and the documented little-endian field mapping.
+- Axis normalization, button bit mapping, and stale-frame neutral state match the contract.
+- Compile a workspace using each transport and its controller blocks.
+- Test with the actual receiver or translating adapter and record board, voltage, wiring, firmware, and captured frames.
+
+Until hardware identity and results are recorded, describe Phase 5 as adapter-contract support rather than compatibility with a particular PS4 module.
