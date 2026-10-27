@@ -38,3 +38,14 @@ Accessibility, examples, troubleshooting, supported-platform checks, compiler di
 ## Later ideas
 
 MicroPython generation, cloud accounts/sharing, and non-ESP32-S3 board families remain outside MVP.
+
+## Phase 1 UI refresh and local projects
+
+**Status:** Full-screen CodeLab studio layout, right-side Code / serial monitor / device panels, browser-local multi-project list, and project import/export are implemented in source; unverified. The demo's purple and gold palette is the initial visual reference. Custom color and language preferences remain future work. The local project list is stored in the current browser profile; users should export project files for backup or transfer.
+
+**Acceptance checks**
+- Verify right-side panels can be switched and collapsed/reopened without losing workspace state.
+- Create multiple projects, switch between them, reload the app, and confirm each workspace and name persists.
+- Export a project, import it, and confirm the workspace matches; invalid files must leave the current project intact.
+- Exercise serial monitor connect/read/write/disconnect in a supported browser and record the browser and board.
+- Confirm the editor remains usable at narrow/mobile widths.

@@ -33,3 +33,5 @@ NewmaniaCodeLab is a separate design reference, not the CodeLab repository. Its 
 - **Verified:** tested in this repository with evidence recorded.
 - **Adapter contract:** CodeLab-defined input format; actual receiver compatibility must be confirmed.
 - **Planned:** not yet present in source.
+
+The current editor source also includes a full-screen studio layout, collapsible right-side Code/serial/device panels, local multi-project storage, and project file import/export. Projects remain in the current browser profile unless exported. The serial monitor uses Web Serial where supported. These changes are implemented in source and remain unverified; see the UI refresh entry in [roadmap](docs/ROADMAP.md).

@@ -65,3 +65,9 @@ The source is implemented on feature branches and remains **unverified**. No bro
 4. Run applicable checks when requested and record exact results.
 5. Update documentation when implementation or decisions change.
 6. Open a PR with scope, verification status, and hardware details where relevant.
+
+## Updated editor and projects
+
+The editor now uses a full-height studio layout with Code, serial monitor, and device panels on the right. The panels can be selected or collapsed. Projects are held in the current browser profile and can be exported as `.codelab.json` files or imported from CodeLab project/workspace files. This browser storage is local to the browser profile and should not be treated as a backup; export files for safekeeping or transfer.
+
+The serial monitor uses the browser Web Serial API to select a port, read incoming text, and send newline-terminated commands. Browser support and board serial settings must be confirmed on the target setup. UI and serial behavior remain unverified until exercised.
