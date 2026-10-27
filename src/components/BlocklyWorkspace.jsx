@@ -106,8 +106,16 @@ const toolbox = {
 
 const theme = Blockly.Theme.defineTheme('codelabTheme', {
   base: Blockly.Themes.Classic,
+  categoryStyles: {
+    loop_category: { colour: '#80e0c0' },
+    logic_category: { colour: '#90caf9' },
+    math_category: { colour: '#a5d6a7' },
+    text_category: { colour: '#ffe082' },
+    variable_category: { colour: '#ffcc80' },
+    procedure_category: { colour: '#f8a5b8' },
+  },
   componentStyles: {
-    workspaceBackgroundColour: '#fbfcfa',
+    workspaceBackgroundColour: '#fbfcfe',
     toolboxBackgroundColour: '#f3f6f2',
     toolboxForegroundColour: '#27352b',
     flyoutBackgroundColour: '#eef2ed',
@@ -181,3 +189,4 @@ function BlocklyWorkspace({ initialState, onChange, onCodeChange, workspaceRef }
 }
 
 export default BlocklyWorkspace;
+
