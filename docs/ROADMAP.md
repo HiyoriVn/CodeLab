@@ -33,7 +33,9 @@ Implementation status describes source state. A phase is complete only after its
 
 ## Phase 6 — Stabilization and first release
 
-Accessibility, examples, troubleshooting, supported-platform checks, compiler diagnostics, and reproducible packaging remain to be completed after user testing and hardware acceptance.
+**Status:** starter recipes and troubleshooting guidance are present in source on `feat/phase-6-stabilization-docs`; unverified. Accessibility review, supported-platform checks, compiler diagnostics, release packaging, and all runtime/hardware acceptance remain outstanding.
+
+**Exit criteria:** users can complete the documented examples, supported platform/toolchain versions are recorded, accessibility and reliability checks pass, and a reproducible release build plus tested hardware matrix are published.
 
 ## Later ideas
 

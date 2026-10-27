@@ -15,7 +15,7 @@ Draft feature branches contain the editor and workspace persistence, a subset of
 
 The PS4 packet format in this repository is a CodeLab adapter contract. It does not establish compatibility with an unidentified receiver. The receiver must emit the documented UART or I2C frame, directly or through a compatible translating module/firmware.
 
-See the [roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md), [development setup](docs/DEVELOPMENT.md), [verification plan](docs/TESTING.md), and [PS4 adapter contract](docs/PS4-RECEIVER.md).
+See the [roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md), [development setup](docs/DEVELOPMENT.md), [verification plan](docs/TESTING.md), [starter examples](docs/EXAMPLES.md), [troubleshooting](docs/TROUBLESHOOTING.md), and [PS4 adapter contract](docs/PS4-RECEIVER.md).
 
 ## Run locally
 
