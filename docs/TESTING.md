@@ -1,6 +1,6 @@
 # Testing and verification strategy
 
-The Phase 1 web scaffold and initial Phase 2 generator are present but have not yet been run or verified. There is no automated test suite at this stage. This document defines checks to add with implementation and manual scenarios to record; it does not report successful results.
+The current `main` branch contains the web editor, generator, robotics blocks, local compile/upload bridge, and PS4 adapter contract. No app, compile, upload, or hardware verification is recorded, and no automated test suite is present. This document lists acceptance checks, not successful results.
 
 ## Phase 1 manual acceptance
 
@@ -97,3 +97,13 @@ The CodeLab packet decoder and blocks are implemented in source but unverified. 
 - Test with the actual receiver or translating adapter and record board, voltage, wiring, firmware, and captured frames.
 
 Until hardware identity and results are recorded, describe Phase 5 as adapter-contract support rather than compatibility with a particular PS4 module.
+
+
+## Phase 6 manual acceptance
+
+- Follow each recipe in `EXAMPLES.md` on the documented board and record the observed result.
+- Check keyboard navigation, labels, focus visibility, and readable warnings in a desktop browser.
+- Repeat compile/upload and disconnect/reconnect scenarios; record supported OS, browser, board, and toolchain versions.
+- Confirm the production bundle can be reproduced from the documented setup.
+
+Do not mark the MVP release-ready until the hardware matrix and release gate above are complete.

@@ -1,6 +1,6 @@
 # Architecture
 
-CodeLab is a browser-first React/Vite + Blockly editor that generates Arduino C++ for ESP32-S3. Current feature branches contain the workspace, generator, robotics blocks, a local Arduino CLI bridge, and a CodeLab PS4 adapter contract. Source changes remain unverified.
+CodeLab is a browser-first React/Vite + Blockly editor in `main` that generates Arduino C++ for ESP32-S3. The editor, robotics blocks, local Arduino CLI bridge, and CodeLab PS4 adapter contract are present in source; runtime and hardware verification remain outstanding.
 
 ## Modules
 
@@ -18,7 +18,7 @@ Controller data flows:
 
 `PS4 receiver → optional translating adapter → CodeLab UART/I2C frame → normalized controller state → Blockly expressions`
 
-The receiver may not emit this contract directly. The selected hardware, electrical levels, and protocol must be confirmed before claiming module compatibility.
+The receiver may not emit this contract directly. Confirm the selected hardware, electrical levels, and protocol before claiming module compatibility.
 
 ## PS4 CodeLab adapter contract
 
@@ -37,7 +37,7 @@ I2C mode makes the ESP32-S3 the bus master and requests 13 bytes from the config
 - bytes 1–8: four signed 16-bit little-endian axes in LX, LY, RX, RY order;
 - bytes 9–12: unsigned 32-bit little-endian button mask.
 
-Axes are normalized to -1000…1000. When disconnected or stale, axis reads return 0 and button reads return false. The contract's button bit assignments are documented in [PS4 receiver requirements](PS4-RECEIVER.md).
+Axes are normalized to -1000…1000. When disconnected or stale, axis reads return 0 and button reads return false. Button assignments are documented in [PS4 receiver requirements](PS4-RECEIVER.md).
 
 ## Boundaries
 

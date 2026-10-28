@@ -55,7 +55,7 @@ The controller blocks use the CodeLab UART/I2C frame contract in [PS4 receiver r
 - The generated adapter normalizes axes to -1000…1000 and returns neutral state when no valid frame arrives for 250 ms.
 - Unsupported blocks and diagnostics produce warnings; compile remains disabled while warnings exist.
 
-The source is implemented on feature branches and remains **unverified**. No browser, Arduino CLI compile, serial upload, receiver parser, or hardware test has been run.
+The source is present on `main` and remains **unverified**. No browser, Arduino CLI compile, serial upload, receiver parser, or hardware test has been run.
 
 ## Contributor workflow
 
