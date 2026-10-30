@@ -1,0 +1,109 @@
+# Testing and verification strategy
+
+The current `main` branch contains the web editor, generator, robotics blocks, local compile/upload bridge, and PS4 adapter contract. No app, compile, upload, or hardware verification is recorded, and no automated test suite is present. This document lists acceptance checks, not successful results.
+
+## Phase 1 manual acceptance
+
+When the scaffold is available locally, verify and record:
+- The app starts in a supported desktop browser and the Blockly toolbox renders.
+- Blocks can be created, connected, moved, deleted, and undone/redone.
+- The example workspace loads and can be edited.
+- Changes survive a page refresh in the same browser profile.
+- Downloaded workspace files reopen with their blocks intact.
+- Invalid JSON, unknown format, and unsupported schema versions show a clear error without replacing the current workspace.
+- The editor remains usable at a narrow/mobile viewport.
+
+## Phase 2 manual acceptance
+
+When the app can be run locally, verify and record:
+- The sample workspace produces the expected `setup()` and `loop()` Arduino structure.
+- Each supported block generates syntactically plausible C++ with nested statements preserved.
+- Supported control, math, text, and variable blocks produce the documented output.
+- Unsupported blocks and mixed/unknown variable types are listed and visibly marked as placeholders.
+- Repeated generation from an unchanged workspace produces identical output.
+- Copying the preview works where the browser grants clipboard access.
+
+## Phase 3 manual acceptance
+
+When the app can be run locally with an ESP32-S3 target, verify and record:
+- Generated GPIO setup statements appear once per pin.
+- Pin role conflicts, missing pin values, reserved/unavailable pins, and non-ADC pins produce visible warnings.
+- PWM and H-bridge output use the documented 5 kHz, 8-bit LEDC configuration and safe speed bounds.
+- The H-bridge example is tested with the chosen motor driver and a separate motor supply; no motor is connected directly to a GPIO.
+
+## Verification layers
+
+### Workspace and block model
+- Serialize and restore representative workspaces.
+- Validate type checks, required inputs, pin constraints, and workspace schema migration.
+- Verify unsupported block types are reported rather than dropped.
+
+### Generator
+- Golden fixtures for each supported block and representative combinations.
+- Determinism checks for identical workspace and target inputs.
+- Compile generated examples with the pinned Arduino toolchain and ESP32-S3 target.
+- Confirm diagnostics identify the relevant block or generated source location.
+
+### Device workflow
+- Unit/integration coverage for port selection, cancellation, disconnect, timeout, and failed upload.
+- Confirm upload requires an explicit user action and target selection.
+- Hardware smoke test on each supported board and host OS.
+
+### PS4 receiver
+- Test protocol parsing with captured/synthetic valid, partial, malformed, and out-of-range frames.
+- Verify connection loss and neutral controller state behavior.
+- Hardware test against the exact module, wiring, voltage, interface, and firmware documented for the release.
+
+### User experience
+- Keyboard navigation and basic accessibility checks.
+- Manual beginner scenarios using the published examples.
+- Larger-workspace responsiveness and repeated compile/upload cycles before release.
+
+## Hardware test record
+
+For every hardware-dependent result, record:
+- Date and CodeLab commit.
+- Board model and revision.
+- Receiver/peripheral model and firmware, when applicable.
+- Wiring, voltage, transport settings, and relevant pin mapping.
+- Host OS, toolchain version, and result.
+- Any limitation or reproducible failure.
+
+## Release gate
+
+A first release requires generator fixtures, successful compilation for the supported ESP32-S3 target, successful upload smoke tests for the supported board matrix, validated PS4 integration if included in the release scope, and documented known limitations. Do not label untested hardware combinations as supported.
+
+
+## Phase 4 manual acceptance
+
+The compile/upload UI and loopback bridge are implemented in source but unverified. When available, verify:
+- Missing Arduino CLI, missing ESP32 core, compile errors, and timeouts are shown clearly.
+- A generated sketch compiles for the selected FQBN; compile is blocked while generator warnings remain.
+- Only CLI-detected ports are offered and disconnects are handled.
+- Upload is impossible before a successful build, requires the separate confirmation prompt, and reports CLI failure details.
+- Temporary build directories expire; the bridge is reachable only on loopback.
+- The built application served by the bridge and the Vite development proxy both reach the API.
+
+Do not claim Phase 4 accepted until compile, upload, and disconnect scenarios are recorded for an actual supported board.
+
+
+## Phase 5 adapter acceptance
+
+The CodeLab packet decoder and blocks are implemented in source but unverified. Before treating them as receiver support, verify:
+- UART lines parse only when all six CSV fields are valid; malformed/partial/overlong lines do not create a connected state.
+- I2C frames use exactly 13 bytes and the documented little-endian field mapping.
+- Axis normalization, button bit mapping, and stale-frame neutral state match the contract.
+- Compile a workspace using each transport and its controller blocks.
+- Test with the actual receiver or translating adapter and record board, voltage, wiring, firmware, and captured frames.
+
+Until hardware identity and results are recorded, describe Phase 5 as adapter-contract support rather than compatibility with a particular PS4 module.
+
+
+## Phase 6 manual acceptance
+
+- Follow each recipe in `EXAMPLES.md` on the documented board and record the observed result.
+- Check keyboard navigation, labels, focus visibility, and readable warnings in a desktop browser.
+- Repeat compile/upload and disconnect/reconnect scenarios; record supported OS, browser, board, and toolchain versions.
+- Confirm the production bundle can be reproduced from the documented setup.
+
+Do not mark the MVP release-ready until the hardware matrix and release gate above are complete.
