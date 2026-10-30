@@ -257,3 +257,4 @@ body,.code-side,.set,.blockly-host .blocklyToolboxDiv,.ws{transition:background-
 .blockly-host .blocklyToolboxCategory:focus,.blockly-host .blocklyToolboxCategory:focus-visible,
 .blockly-host .blocklyToolboxCategory.blocklyActiveFocus,.blockly-host .blocklyToolboxCategory.blocklyPassiveFocus{box-shadow:none!important;border-color:transparent;border-top-color:transparent;border-right-color:transparent;border-bottom-color:transparent}
 .blockly-host .blocklyActiveFocus>.blocklyIconShape,.blockly-host .blocklyActiveFocus>.blocklyPath,.blockly-host .blocklyActiveFocus>rect{stroke-opacity:1}
+.blockly-host .blocklyHtmlInput,.blocklyWidgetDiv .blocklyHtmlInput{text-align:center}
