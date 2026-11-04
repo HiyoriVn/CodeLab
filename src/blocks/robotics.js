@@ -5,6 +5,8 @@ const numberInput = (block, name, label) => block
   .setCheck('Number')
   .appendField(label);
 
+const rowBreak = (block) => { if (typeof block.appendEndRowInput === 'function') block.appendEndRowInput(); };
+
 Blockly.Blocks.codelab_delay_ms = {
   init() {
     numberInput(this, 'DURATION', 'chờ (ms)');
@@ -66,6 +68,7 @@ Blockly.Blocks.codelab_hbridge_motor = {
   init() {
     numberInput(this, 'IN1', 'driver IN1');
     numberInput(this, 'IN2', 'IN2');
+    rowBreak(this);
     numberInput(this, 'PWM', 'PWM');
     numberInput(this, 'SPEED', 'tốc độ −255…255');
     this.setInputsInline(true);

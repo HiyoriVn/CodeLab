@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { highlightCpp } from '../ui/highlight.js';
 
 function CodePreview({ code, warnings }) {
   const [copyStatus, setCopyStatus] = useState('');
+
+  const highlighted = useMemo(() => highlightCpp(code || ''), [code]);
 
   const copyCode = async () => {
     try {
@@ -15,20 +18,16 @@ function CodePreview({ code, warnings }) {
 
   return (
     <section className="code-panel" aria-label="Mã Arduino C++ được sinh">
-      <header className="code-panel-header">
-        <div>
-          <span className="code-panel-icon" aria-hidden="true">{ }</span>
-          <strong>Mã Arduino C++</strong>
-          <span className="code-language">ESP32-S3 · bản xem trước</span>
-        </div>
+      <div className="code-panel-header">
+        <span className="code-language">Arduino C++ · ESP32-S3 · bản xem trước</span>
         <button className="button button-quiet" onClick={copyCode}>{copyStatus || 'Sao chép mã'}</button>
-      </header>
+      </div>
       {warnings.length > 0 && (
         <div className="generator-warning" role="status">
           <strong>Mã chưa hoàn chỉnh.</strong> {warnings.join(' ')} Không dùng để nạp lên bo mạch.
         </div>
       )}
-      <pre className="code-output"><code>{code || '// Đang tạo mã…'}</code></pre>
+      <pre className="code-output"><code>{code ? highlighted : <span className="tok-comment">// Đang tạo mã…</span>}</code></pre>
     </section>
   );
 }
