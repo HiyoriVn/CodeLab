@@ -20,7 +20,7 @@ The original remote branches have unrelated history with `main`:
 
 ## Template follow-up
 
-The 14 files from `54ef650` will be preserved in a separate commit under `src/blocks/template`. They are reference templates, not registered runtime blocks. Activating them requires comparing field/input names and generator compatibility with the existing definitions; importing them blindly could duplicate block types. No additional block or hardware support is claimed.
+The 14 files from `54ef650` are preserved in a separate commit under `src/blocks/template`. They are reference templates, not registered runtime blocks. Activating them requires comparing field/input names and generator compatibility with the existing definitions; importing them blindly could duplicate block types. No additional block or hardware support is claimed.
 
 ## Verification
 
