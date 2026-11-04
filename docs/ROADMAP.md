@@ -42,6 +42,8 @@ MicroPython generation, cloud accounts/sharing, and non-ESP32-S3 board families 
 
 ## Phase 1 UI refresh and local projects
 
+**Integration branch update (2026-11-04):** `codex/integrate-bach-ui` ports Bách's UI onto main history, preserves local project switching, and adds light/dark and menu-color preferences. Code is a sidebar, serial is a bottom panel, and device controls use a dialog. Build and limited Chrome smoke checks passed; see [TESTING.md](TESTING.md). Language translation, nonempty workspace round-trip, responsive/accessibility acceptance, and hardware checks remain outstanding. The status below describes the original main baseline.
+
 **Status:** Full-screen CodeLab studio layout, right-side Code / serial monitor / device panels, browser-local multi-project list, and project import/export are implemented in source; unverified. The demo's purple and gold palette is the initial visual reference. Custom color and language preferences remain future work. The local project list is stored in the current browser profile; users should export project files for backup or transfer.
 
 **Acceptance checks**

@@ -5,10 +5,13 @@ const numberInput = (block, name, label) => block
   .setCheck('Number')
   .appendField(label);
 
+const rowBreak = (block) => { if (typeof block.appendEndRowInput === 'function') block.appendEndRowInput(); };
+
 Blockly.Blocks.codelab_ps4_begin_uart = {
   init() {
     numberInput(this, 'RX', 'PS4 UART · ESP RX GPIO');
     numberInput(this, 'TX', 'ESP TX GPIO');
+    rowBreak(this);
     numberInput(this, 'BAUD', 'baud');
     this.setInputsInline(true);
     this.setPreviousStatement(true);
@@ -22,6 +25,7 @@ Blockly.Blocks.codelab_ps4_begin_i2c = {
   init() {
     numberInput(this, 'SDA', 'PS4 I2C · SDA GPIO');
     numberInput(this, 'SCL', 'SCL GPIO');
+    rowBreak(this);
     numberInput(this, 'ADDRESS', 'địa chỉ');
     this.setInputsInline(true);
     this.setPreviousStatement(true);

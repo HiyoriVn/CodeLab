@@ -5,6 +5,8 @@ import * as Vietnamese from 'blockly/msg/vi';
 import { generateArduino } from '../generators/arduino.js';
 import '../blocks/robotics.js';
 import '../blocks/controller.js';
+import { RENDERER, FALLBACK_RENDERER } from '../blocks/renderer.js';
+import { themes } from '../blocks/theme.js';
 
 Blockly.setLocale(Vietnamese);
 
@@ -104,36 +106,12 @@ const toolbox = {
   ],
 };
 
-const theme = Blockly.Theme.defineTheme('codelabTheme', {
-  base: Blockly.Themes.Classic,
-  categoryStyles: {
-    loop_category: { colour: '#80e0c0' },
-    logic_category: { colour: '#90caf9' },
-    math_category: { colour: '#a5d6a7' },
-    text_category: { colour: '#ffe082' },
-    variable_category: { colour: '#ffcc80' },
-    procedure_category: { colour: '#f8a5b8' },
-  },
-  componentStyles: {
-    workspaceBackgroundColour: '#fbfcfe',
-    toolboxBackgroundColour: '#f3f6f2',
-    toolboxForegroundColour: '#27352b',
-    flyoutBackgroundColour: '#eef2ed',
-    flyoutForegroundColour: '#27352b',
-    flyoutOpacity: 1,
-    scrollbarColour: '#aab8ac',
-    insertionMarkerColour: '#2d8b57',
-    insertionMarkerOpacity: 0.3,
-    scrollbarOpacity: 0.5,
-    cursorColour: '#354b3b',
-  },
-});
-
-function BlocklyWorkspace({ initialState, onChange, onCodeChange, workspaceRef }) {
+function BlocklyWorkspace({ initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
   const hostRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const onCodeChangeRef = useRef(onCodeChange);
   const initialStateRef = useRef(initialState);
+  const darkRef = useRef(dark);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -142,17 +120,31 @@ function BlocklyWorkspace({ initialState, onChange, onCodeChange, workspaceRef }
 
   useEffect(() => {
     if (!hostRef.current) return undefined;
-    const workspace = Blockly.inject(hostRef.current, {
+    const options = {
       toolbox,
-      renderer: 'zelos',
       sounds: false,
-      trashcan: true,
+      trashcan: false,
       move: { scrollbars: true, drag: true, wheel: true },
-      zoom: { controls: true, wheel: true, startScale: 0.9, maxScale: 1.4, minScale: 0.55, scaleSpeed: 1.1 },
-      grid: { spacing: 24, length: 3, colour: '#e0e6df', snap: true },
-      theme,
-    });
+      zoom: { controls: false, wheel: true, startScale: 0.9, maxScale: 1.4, minScale: 0.55, scaleSpeed: 1.1 },
+      grid: { spacing: 24, length: 3, colour: 'transparent', snap: true },
+      theme: darkRef.current ? themes.dark : themes.light,
+    };
+    let workspace;
+    try {
+      workspace = Blockly.inject(hostRef.current, { ...options, renderer: RENDERER });
+    } catch (error) {
+      console.warn('Bộ vẽ khối "codelab" lỗi, chuyển sang zelos.', error);
+      hostRef.current.replaceChildren();
+      workspace = Blockly.inject(hostRef.current, { ...options, renderer: FALLBACK_RENDERER });
+    }
     workspaceRef.current = workspace;
+
+    const flyout = workspace.getFlyout();
+    if (flyout) {
+      const flyoutScale = workspace.options.zoomOptions?.startScale ?? 0.9;
+      flyout.getFlyoutScale = () => flyoutScale;
+      flyout.getWorkspace().scale = flyoutScale;
+    }
 
     if (initialStateRef.current) {
       try {
@@ -172,18 +164,54 @@ function BlocklyWorkspace({ initialState, onChange, onCodeChange, workspaceRef }
       }, 250);
     };
     workspace.addChangeListener(save);
+
+    let tagFrame = 0;
+    const tagStacks = () => {
+      tagFrame = 0;
+      workspace.getAllBlocks(false).forEach((block) => {
+        const root = block.getSvgRoot?.();
+        if (!root) return;
+        root.classList.toggle('has-next', !!block.getNextBlock());
+        root.classList.toggle('is-nested', !!block.outputConnection && !!block.getParent());
+      });
+    };
+    const scheduleTag = (event) => {
+      if (event?.isUiEvent || tagFrame) return;
+      tagFrame = window.requestAnimationFrame(tagStacks);
+    };
+    workspace.addChangeListener(scheduleTag);
+    tagStacks();
     onCodeChangeRef.current?.(generateArduino(workspace));
+
+    const tagCategories = () => {
+      hostRef.current?.querySelectorAll('.blocklyToolboxCategory').forEach((row, index) => {
+        row.style.setProperty('--i', index);
+        const colour = row.style.borderLeftColor;
+        if (colour && row.style.getPropertyValue('--cat') !== colour) row.style.setProperty('--cat', colour);
+      });
+    };
+    tagCategories();
+    const toolboxObserver = new MutationObserver(tagCategories);
+    const toolboxDiv = hostRef.current.querySelector('.blocklyToolboxDiv');
+    if (toolboxDiv) toolboxObserver.observe(toolboxDiv, { childList: true, subtree: true });
 
     const resizeObserver = new ResizeObserver(() => Blockly.svgResize(workspace));
     resizeObserver.observe(hostRef.current);
 
     return () => {
       window.clearTimeout(saveTimer);
+      window.cancelAnimationFrame(tagFrame);
       resizeObserver.disconnect();
+      toolboxObserver.disconnect();
       workspace.dispose();
       workspaceRef.current = null;
     };
   }, [workspaceRef]);
+
+  useEffect(() => {
+    darkRef.current = dark;
+    workspaceRef.current?.setTheme(dark ? themes.dark : themes.light);
+  }, [dark, workspaceRef]);
 
   return <div ref={hostRef} className="blockly-host" aria-label="Vùng lắp ghép khối lệnh" />;
 }

@@ -1,6 +1,20 @@
 # Testing and verification strategy
 
-The current `main` branch contains the web editor, generator, robotics blocks, local compile/upload bridge, and PS4 adapter contract. No app, compile, upload, or hardware verification is recorded, and no automated test suite is present. This document lists acceptance checks, not successful results.
+The current `main` branch contains the web editor, generator, robotics blocks, local compile/upload bridge, and PS4 adapter contract. No hardware acceptance is recorded and no automated test suite is present. The sections below are acceptance checklists; the dated integration record lists checks actually performed.
+
+## UI integration checks — 2026-11-04
+
+Branch: `codex/integrate-bach-ui`, based on main `608e2e6`, porting Bách's `7ebec68` UI with project switching restored. Windows, Node 26.12.1, npm 11.20.0, Vite 7.3.7.
+
+- `npm install --no-package-lock`: succeeded; no new declared dependencies; audit reported zero vulnerabilities at install time.
+- `npm run build`: passed. Vite reports a JavaScript chunk larger than 500 kB (about 1.03 MB minified); bundle optimization remains follow-up work.
+- Node/Blockly isolated-workspace assertion: a supported block loaded and an unknown block type threw as expected. This checks the import-validation mechanism, not the full browser file-picker flow.
+- `git diff --check`: passed before committing.
+- Chrome at `http://127.0.0.1:5174`: editor/toolbox rendered; created a second empty project, switched to the first, reloaded, and verified both projects and the active selection in the File menu.
+- Code preview rendered Arduino setup/loop; dark-mode switch and bottom serial panel worked. Device dialog showed bridge-unavailable feedback, with compile/upload disabled.
+- Browser console reported the existing Blockly `getAllVariables` deprecation warning. No renderer fallback warning was observed in the inspected logs.
+- Browser import check was blocked by the extension's disabled local-file access; import/export round-trip, nonempty workspace persistence, block drag/connect behavior, and responsive/accessibility acceptance remain outstanding.
+- No Arduino compile, upload, serial I/O, receiver, or hardware acceptance was attempted. These smoke checks do not establish MVP release readiness.
 
 ## Phase 1 manual acceptance
 

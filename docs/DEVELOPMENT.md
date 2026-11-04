@@ -55,7 +55,7 @@ The controller blocks use the CodeLab UART/I2C frame contract in [PS4 receiver r
 - The generated adapter normalizes axes to -1000…1000 and returns neutral state when no valid frame arrives for 250 ms.
 - Unsupported blocks and diagnostics produce warnings; compile remains disabled while warnings exist.
 
-The source is present on `main` and remains **unverified**. No browser, Arduino CLI compile, serial upload, receiver parser, or hardware test has been run.
+The source is present on `main`. Limited browser/build checks for the UI integration branch are recorded in [TESTING.md](TESTING.md); Arduino CLI compile, serial upload, receiver parser, and hardware acceptance remain outstanding.
 
 ## Contributor workflow
 
@@ -68,6 +68,6 @@ The source is present on `main` and remains **unverified**. No browser, Arduino 
 
 ## Updated editor and projects
 
-The editor now uses a full-height studio layout with Code, serial monitor, and device panels on the right. The panels can be selected or collapsed. Projects are held in the current browser profile and can be exported as `.codelab.json` files or imported from CodeLab project/workspace files. This browser storage is local to the browser profile and should not be treated as a backup; export files for safekeeping or transfer.
+The UI integration branch uses a full-height layout with Code on the right, serial monitor below, and a device dialog. The panels can be opened or closed. Use **Tập tin** to switch browser-local projects, create a project, or import/export `.codelab.json` files. Light/dark mode and menu colors are available. This browser storage is local to the browser profile and should not be treated as a backup; export files for safekeeping or transfer. See [UI-INTEGRATION.md](UI-INTEGRATION.md) for branch provenance.
 
 The serial monitor uses the browser Web Serial API to select a port, read incoming text, and send newline-terminated commands. Browser support and board serial settings must be confirmed on the target setup. UI and serial behavior remain unverified until exercised.
