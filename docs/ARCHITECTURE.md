@@ -1,13 +1,13 @@
 # Architecture
 
-CodeLab is a browser-first React/Vite + Blockly editor in `main` that generates Arduino C++ for ESP32-S3. The editor, robotics blocks, local Arduino CLI bridge, and CodeLab PS4 adapter contract are present in source; runtime and hardware verification remain outstanding.
+CodeLab is a browser-first React/Vite + Blockly editor that generates Arduino C++ for ESP32-S3. This page describes the existing web application and legacy adapter design. The 2026-11-04 [audit](PHASE01_AUDIT.md) records a passing web build, limited historical UI checks, and a reproduced PS4 generator error; hardware verification remains outstanding. The [new firmware architecture](architecture/ARCHITECTURE.md) is a proposal, not implemented code.
 
 ## Modules
 
 - **Editor UI:** Blockly workspace, code preview, workspace import/export, and build/device panel.
 - **Generator:** supported Blockly and robotics blocks produce Arduino C++ plus diagnostics.
 - **Local build bridge:** loopback Node.js service invokes Arduino CLI with argument arrays, keeps successful builds temporarily, lists connected ports, and requires explicit confirmation before upload.
-- **Controller adapter:** generated C++ polls a single UART or I2C input using the CodeLab adapter contract, normalizes four axes and a button bitmask, and returns neutral/disconnected values after stale data.
+- **Controller adapter:** helper source is intended to poll a single UART or I2C input, normalize four axes and a button bitmask, and return neutral/disconnected values after stale data. Generation currently fails on `includes_`; the helper also has escaping and validation defects recorded in the audit. This is not a verified receiver.
 - **Board profile:** defaults to generic ESP32-S3 FQBN; board-specific pin maps are not implemented.
 
 ## Data flow
@@ -29,7 +29,7 @@ UART mode reads newline-delimited ASCII CSV:
 - `lx`, `ly`, `rx`, `ry`: signed 16-bit axis values.
 - `buttons`: unsigned 32-bit decimal bitmask.
 - The default baud is 115200; the block allows a different rate.
-- The parser refreshes state only for a complete valid line. State becomes disconnected after 250 ms without a valid frame.
+- Intended timeout is 250 ms without an accepted frame. The source checks six parsed fields and end-of-line, but does not strictly validate their documented ranges; this is a known gap, not verified safe-state behavior.
 
 I2C mode makes the ESP32-S3 the bus master and requests 13 bytes from the configured 7-bit receiver address:
 
@@ -44,12 +44,14 @@ Axes are normalized to -1000…1000. When disconnected or stale, axis reads retu
 - UI calls local HTTP APIs; it does not spawn compiler processes or parse receiver frames.
 - The generator accepts a Blockly workspace and produces code/diagnostics.
 - The bridge accepts source text and target settings, not Blockly objects.
-- The receiver-specific adapter/firmware is outside CodeLab until the actual receiver is identified.
+- The external ESP32 bridge is selected as the receiver architecture; its chip/power/pins are still unknown. The supplied PS4Bluepad32 source remains outside CodeLab, and the two firmware targets are planned.
 - Upload is only available after a successful compile and user confirmation.
 
-## Open decisions
+## Confirmed hardware decision and open work
 
-- Exact ESP32-S3 board, pinout, supported operating systems, and Arduino core version.
-- Exact receiver module, wiring, voltage, protocol, and whether it can emit the CodeLab adapter format.
-- Whether a separate receiver firmware or translating microcontroller is needed.
+STEAM Robotics Mainboard V2.0 uses ESP32-S3-MINI-1-N8. PS4 data enters UART1: TX6/RX7, header GND/+5V_Core/TX/RX. Cross TX/RX, use 3.3 V logic and common ground, and do not assume +5V_Core can power the bridge. The existing UART16/17 toolbox defaults collide with servo3/4 on this board. See [hardware sources](hardware/HARDWARE.md) and [pinout](hardware/PINOUT.md). Legacy I2C PS4 support remains source only; it is not the chosen bridge transport.
+
+- Exact mainboard toolchain/FQBN/USB configuration and supported operating systems.
+- Bridge chip/board, bridge-side wiring/power, toolchain and versioned protocol with axis/button conversion.
+- Implementation and verification of the two firmware targets, driver resources and safety policy.
 - Desktop packaging after web MVP feedback.
