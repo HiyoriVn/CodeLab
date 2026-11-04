@@ -1,5 +1,9 @@
 # Development setup
 
+## Hardware audit update - 2026-11-04
+
+The confirmed mainboard is STEAM Robotics V2.0 / ESP32-S3-MINI-1-N8; a dedicated software board profile and pinned firmware toolchain are still missing. The existing generic FQBN below is not hardware acceptance. The PS4 bridge uses mainboard UART1 RX7/TX6; existing RX16/TX17 toolbox defaults collide with servos. The PS4 generator currently fails (`includes_` / `ps4_stdio`); do not use its source presence as proof of working PS4 support. See [audit](PHASE01_AUDIT.md), [hardware](hardware/HARDWARE.md) and [implementation plan](IMPLEMENTATION_PLAN.md). This audit did not run compile/upload or install a firmware toolchain.
+
 ## Requirements
 
 - Node.js compatible with Vite 7 and npm.
@@ -44,7 +48,7 @@ The bridge allows upload only for a successful build in the current session and 
 
 ## PS4 adapter contract
 
-The controller blocks use the CodeLab UART/I2C frame contract in [PS4 receiver requirements](PS4-RECEIVER.md). GPIO defaults are examples and must be checked against the selected board. A receiver with a different protocol needs a translating adapter. Do not treat the generic contract as verified support for a particular receiver.
+The controller blocks contain the legacy CodeLab UART/I2C frame contract in [PS4 receiver requirements](PS4-RECEIVER.md). The selected V2 bridge integration uses UART1; L1 PS4Bluepad32 needs explicit axis/button conversion and a UART publisher. Keep legacy workspace data intact when implementing the future board profile. The current generator defects must be fixed and compiled before claiming functionality.
 
 ## Current source behavior
 
@@ -52,7 +56,7 @@ The controller blocks use the CodeLab UART/I2C frame contract in [PS4 receiver r
 - Arduino C++ preview for a subset of built-in control, logic, math, text, and variable blocks.
 - Robotics blocks for GPIO, ADC, PWM, delay, and generic H-bridge motor control.
 - PS4 adapter blocks for UART/I2C configuration, connection state, four axes, and named buttons.
-- The generated adapter normalizes axes to -1000…1000 and returns neutral state when no valid frame arrives for 250 ms.
+- The helper's intended behavior is axes normalized to -1000…1000 with neutral accessors after 250 ms. Generation, escaping, strict input validation and robot safety gaps are recorded in the audit.
 - Unsupported blocks and diagnostics produce warnings; compile remains disabled while warnings exist.
 
 The source is present on `main`. Limited browser/build checks for the UI integration branch are recorded in [TESTING.md](TESTING.md); Arduino CLI compile, serial upload, receiver parser, and hardware acceptance remain outstanding.

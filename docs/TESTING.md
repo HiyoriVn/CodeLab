@@ -1,6 +1,20 @@
 # Testing and verification strategy
 
-The current `main` branch contains the web editor, generator, robotics blocks, local compile/upload bridge, and PS4 adapter contract. No hardware acceptance is recorded and no automated test suite is present. The sections below are acceptance checklists; the dated integration record lists checks actually performed.
+## Hardware/firmware Phase 01 audit - 2026-11-04
+
+Audited local branch `codex/integrate-bach-ui` at `f3a839825ca2e83fcb82337cbfe4f8dd2afc3efc`; Windows, Node 26.12.1, npm 11.20.0. Detailed commands/outcomes and limits are in [PHASE01_AUDIT.md, section 7](PHASE01_AUDIT.md#7-verification-results); final documentation checks are in [PROGRESS.md](PROGRESS.md).
+
+- `npm run build`: passed, Vite 7.3.7, 59 modules, 7.53 s; JS chunk 1,032.85 kB, warning >500 kB.
+- `npm ls --depth=0`: React/React DOM 19.3.1, Blockly 12.5.1, Vite 7.3.7, React plugin 5.2.0. No dependencies installed or changed.
+- `node --check tools/arduino-bridge.mjs`: passed syntax only.
+- Headless Blockly/generator audit: empty/motor/GPIO samples generated repeatable text; UART RX7/TX6, UART RX16/TX17 and I2C samples all returned `Cannot set properties of undefined (setting 'ps4_stdio')`. **PS4 generation failed**, despite process exit 0. No C++ compilation was performed.
+- Evaluating the existing PS4 helper template confirmed two NUL characters and raw LF/CR inside character literals. This is an additional generation defect, not a successful parser test.
+- Read both supplied PDFs (4 pages total), extracted text and visually checked all pages; inspected the external PS4Bluepad32 ZIP without installing/running it.
+- `arduino-cli` and `pio` were not found on PATH. No browser rerun, compile/upload, serial I/O, Bluetooth pairing or hardware test was performed. Existing UI records below remain historical evidence only.
+
+The numbered manual phases below retain the historical **web roadmap**. Use [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the new firmware Phase 02-07 criteria. No automated test suite was added during this documentation-only audit.
+
+The audited checkout contains the web editor, generator, robotics blocks, local compile/upload bridge and PS4 adapter source. No hardware acceptance is recorded and no automated test suite is present. The sections below are acceptance checklists; dated records distinguish checks actually performed from outstanding work.
 
 ## UI integration checks — 2026-11-04
 
@@ -21,7 +35,7 @@ Branch: `codex/integrate-bach-ui`, based on main `608e2e6`, porting Bách's `7eb
 When the scaffold is available locally, verify and record:
 - The app starts in a supported desktop browser and the Blockly toolbox renders.
 - Blocks can be created, connected, moved, deleted, and undone/redone.
-- The example workspace loads and can be edited.
+- Once an example workspace is added, it loads and can be edited; none is shipped as a standalone example in the audited checkout.
 - Changes survive a page refresh in the same browser profile.
 - Downloaded workspace files reopen with their blocks intact.
 - Invalid JSON, unknown format, and unsupported schema versions show a clear error without replacing the current workspace.
@@ -115,7 +129,7 @@ Until hardware identity and results are recorded, describe Phase 5 as adapter-co
 
 ## Phase 6 manual acceptance
 
-- Follow each recipe in `EXAMPLES.md` on the documented board and record the observed result.
+- Add the missing `EXAMPLES.md`, then follow each recipe on the documented board and record the observed result.
 - Check keyboard navigation, labels, focus visibility, and readable warnings in a desktop browser.
 - Repeat compile/upload and disconnect/reconnect scenarios; record supported OS, browser, board, and toolchain versions.
 - Confirm the production bundle can be reproduced from the documented setup.
