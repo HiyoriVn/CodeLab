@@ -1,0 +1,58 @@
+Task 02.1 — Minimal Firmware Build & Toolchain Verification
+Date: 2026-11-05 (Asia/Saigon)
+Environment: Windows local Codex process (Windows 10.0.26300, PowerShell 7.6.5)
+Arduino CLI: C:\Users\Admin\AppData\Local\Programs\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe
+Arduino CLI version: 1.5.1 (commit 01f3d4f2b, 2026-06-05T10:22:12Z)
+ARDUINO_DIRECTORIES_DATA=C:\Users\Admin\AppData\Local\Arduino15
+ARDUINO_DIRECTORIES_DOWNLOADS=C:\Users\Admin\AppData\Local\Arduino15\staging
+ESP32 Arduino Core: 3.3.7 (installed; core list reports 3.3.12 as latest, not installed)
+ESP32 Bluepad32 Core: 4.1.0 installed; not used for mainboard compile
+Board details: ESP32S3 Dev Module; full FQBN esp32:esp32:esp32s3
+Compile FQBN: esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled
+Sketch: firmware/verification/minimal_build/minimal_build.ino
+Sketch source:
+  void setup() {
+  }
+
+  void loop() {
+  }
+
+No GPIO, peripherals, libraries, serial ports, or upload operations were used.
+
+Environment variables were set only in the current PowerShell process:
+  $env:ARDUINO_DIRECTORIES_DATA = 'C:\Users\Admin\AppData\Local\Arduino15'
+  $env:ARDUINO_DIRECTORIES_DOWNLOADS = 'C:\Users\Admin\AppData\Local\Arduino15\staging'
+  $env:ARDUINO_DIRECTORIES_USER = 'C:\Users\Admin\AppData\Local\Arduino15\sketchbook'
+
+Verification commands:
+  & $cli version
+  & $cli core list
+  & $cli board details --fqbn esp32:esp32:esp32s3
+All three returned exit code 0. Core list reported esp32:esp32 3.3.7 installed.
+
+Initial sandbox compile:
+  & $cli compile --fqbn 'esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled' --verbose <workspace>\firmware\verification\minimal_build
+Exit code: 1
+Relevant stderr:
+  Error during build: fork/exec C:\Users\Admin\AppData\Local\Arduino15\packages\esp32\tools\esp-x32\2511/bin/xtensa-esp32s3-elf-g++.exe: {Illegal System DLL Relocation}
+  The system DLL %hs was relocated in memory. The application will not run properly.
+  The relocation occurred because the DLL %hs occupied an address range reserved for Windows system DLLs.
+Cause: Windows process/DLL relocation failure when the sandboxed build launched the installed Xtensa compiler. The same compile was rerun with approved out-of-sandbox execution; the compiler proceeded successfully. No toolchain was installed or changed.
+
+Successful compile command (rerun with approved out-of-sandbox execution):
+  & $cli compile --fqbn 'esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled' --verbose <workspace>\firmware\verification\minimal_build
+Exit code: 0
+Relevant stdout:
+  FQBN: esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB
+  Using board 'esp32s3' from platform in folder: C:\Users\Admin\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.3.7
+  Using core 'esp32' from platform in folder: C:\Users\Admin\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.3.7
+  Successfully created ESP32S3 image.
+  Sketch uses 271423 bytes (8%) of program storage space. Maximum is 3342336 bytes.
+  Global variables use 21420 bytes (6%) of dynamic memory, leaving 306260 bytes for local variables. Maximum is 327680 bytes.
+  Used platform Version: esp32:esp32 3.3.7
+
+Second output-dir compile was run with the same FQBN and source; exit code: 0.
+Binary was created in the requested build output directory. Exact size and SHA-256 are recorded in the workspace artifact listing; the binary is a build artifact only and was not flashed.
+
+Build status: TOOLCHAIN_VERIFIED; MINIMAL_BUILD_PASSED.
+Hardware status: PENDING_HARDWARE_VALIDATION. This generic S3 profile is not a physical PCB validation.

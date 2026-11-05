@@ -1,3 +1,7 @@
 node_modules/
 dist/
 package-lock.json
+
+# Arduino verification build artifacts
+/firmware/verification/**/build-output/
+/firmware/verification/**/esp32.esp32.esp32s3/

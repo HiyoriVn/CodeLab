@@ -1,5 +1,13 @@
 # Development setup
 
+## Firmware toolchain preflight - 2026-11-05
+
+Verified on Windows with Arduino CLI 1.5.1 and installed ESP32 Arduino Core 3.3.7. Set `ARDUINO_DIRECTORIES_DATA` to `C:\Users\Admin\AppData\Local\Arduino15` and `ARDUINO_DIRECTORIES_DOWNLOADS` to its `staging` subdirectory in the current PowerShell process. Do not change IDE/OpenBlockDesktop settings.
+
+Minimal compile passed (exit 0) using `esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled` and empty `setup()`/`loop()`. This is a generic “ESP32S3 Dev Module” profile, not validation on the STEAM PCB. See [build log](verification/phase02_1_compile.log) and [progress](PROGRESS.md). No upload was run.
+
+Safe-startup policy for the next board-configuration task: motors/buzzer LOW at initialization; servo outputs DISABLED with no pulses by default. Enabling requires an explicit command and verified power-stable interlock. The documents identify no POWER_GOOD signal; leave enable unavailable until an actual verifiable condition is identified. Keep PS4 UART CSV v1 as the compatibility baseline.
+
 ## Hardware audit update - 2026-11-04
 
 The confirmed mainboard is STEAM Robotics V2.0 / ESP32-S3-MINI-1-N8; a dedicated software board profile and pinned firmware toolchain are still missing. The existing generic FQBN below is not hardware acceptance. The PS4 bridge uses mainboard UART1 RX7/TX6; existing RX16/TX17 toolbox defaults collide with servos. The PS4 generator currently fails (`includes_` / `ps4_stdio`); do not use its source presence as proof of working PS4 support. See [audit](PHASE01_AUDIT.md), [hardware](hardware/HARDWARE.md) and [implementation plan](IMPLEMENTATION_PLAN.md). This audit did not run compile/upload or install a firmware toolchain.
@@ -9,7 +17,7 @@ The confirmed mainboard is STEAM Robotics V2.0 / ESP32-S3-MINI-1-N8; a dedicated
 - Node.js compatible with Vite 7 and npm.
 - A modern desktop browser.
 - Arduino CLI.
-- Arduino ESP32 core 3.x for the default `esp32:esp32:esp32s3` target.
+- Arduino ESP32 core 3.3.7 for the verified generic `esp32:esp32:esp32s3` compile target; board-specific settings remain to validate on the PCB.
 - A supported ESP32-S3 board and USB data cable for hardware validation.
 
 ## Run the web editor and bridge
