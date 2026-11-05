@@ -1,4 +1,6 @@
 import * as Blockly from 'blockly';
+import { getBoardProfile, DEFAULT_BOARD_ID, validatePin } from '../boards/profiles.js';
+import { startupCode } from '../boards/startup.js';
 
 const ATOMIC = 0;
 
@@ -168,8 +170,9 @@ function initializeVariables(generator, workspace) {
 }
 
 class ArduinoGenerator extends Blockly.CodeGenerator {
-  constructor() {
+  constructor(profile) {
     super('Arduino');
+    this.profile_ = profile;
     this.ORDER_ATOMIC = ATOMIC;
     this.addReservedWords('setup,loop,Serial,boolean,bool,char,int,long,float,double,void,const,if,else,for,while,break,continue,return,true,false');
   }
@@ -189,12 +192,14 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
   }
 
   finish(code) {
-    const definitions = Object.values(this.definitions_ || {}).join('\n');
-    const includes = ['#include <Arduino.h>', ...Object.values(this.includes_ || {})].join('\n');
+    const startup = startupCode(this.profile_);
+    const definitions = [startup.definitions, ...Object.values(this.definitions_ || {})].filter(Boolean).join('\n');
+    const includes = ['#include <Arduino.h>', ...startup.includes, ...Object.values(this.includes_ || {})].join('\n');
     return [
       includes,
       definitions,
       'void setup() {',
+      ...startup.setup.map(line => '  ' + line),
       '  Serial.begin(115200);',
       ...Array.from(this.setupStatements_.values()).map((line) => '  ' + line),
       '}',
@@ -306,12 +311,7 @@ function registerBlocks(generator) {
       gen.diagnostics_.add(label + ': chân GPIO phải là một số nguyên cố định.');
       return;
     }
-    const valid = (numericPin >= 0 && numericPin <= 21) || (numericPin >= 26 && numericPin <= 48);
-    if (!valid) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' không tồn tại trên ESP32-S3.');
-    if ([0, 3, 45, 46].includes(numericPin)) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' là chân strapping; tránh tải ngoài có thể ảnh hưởng lúc khởi động.');
-    if (numericPin === 19 || numericPin === 20) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' thường được dùng cho USB; kiểm tra cấu hình bo mạch.');
-    if (numericPin >= 26 && numericPin <= 37) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' có thể được dùng cho flash/PSRAM tùy module.');
-    if (analog && (numericPin < 1 || numericPin > 20)) gen.diagnostics_.add(label + ': ADC của ESP32-S3 chỉ có trên GPIO 1–20.');
+    for (const warning of validatePin(gen.profile_, numericPin, analog)) gen.diagnostics_.add(label + ': ' + warning);
   };
 
   const numberInput = (block, name, gen, label) => {
@@ -367,6 +367,7 @@ function registerBlocks(generator) {
   generator.forBlock.codelab_analog_read = (block, gen) => {
     const pin = numberInput(block, 'PIN', gen, 'Khối đọc ADC');
     pinWarnings(pin, gen, 'Khối đọc ADC', true);
+    configurePin(gen, pin, 'INPUT', 'Khối đọc ADC');
     return ['analogRead(' + pin + ')', ATOMIC];
   };
 
@@ -378,6 +379,7 @@ function registerBlocks(generator) {
   };
 
   generator.forBlock.codelab_hbridge_motor = (block, gen) => {
+    if (gen.profile_.id !== DEFAULT_BOARD_ID) gen.diagnostics_.add('Board profile chưa cho phép điều khiển motor; block H-bridge generic chỉ dùng trên profile Generic đã kiểm tra wiring.');
     const in1 = numberInput(block, 'IN1', gen, 'Driver IN1');
     const in2 = numberInput(block, 'IN2', gen, 'Driver IN2');
     const pwm = numberInput(block, 'PWM', gen, 'Driver PWM');
@@ -525,8 +527,8 @@ function registerBlocks(generator) {
   );
 }
 
-export function generateArduino(workspace) {
-  const generator = new ArduinoGenerator();
+export function generateArduino(workspace, boardId = DEFAULT_BOARD_ID) {
+  const generator = new ArduinoGenerator(getBoardProfile(boardId));
   registerBlocks(generator);
 
   const unsupported = new Set();
@@ -554,7 +556,7 @@ export function generateArduino(workspace) {
     for (const name of unsupportedVariables) {
       warnings.push('Biến "' + name + '" có kiểu chưa xác định hoặc bị gán nhiều kiểu; mã xem trước có placeholder.');
     }
-    return { code, warnings };
+    return { code, warnings, boardId };
   } catch (error) {
     return {
       code: '// Không thể sinh mã Arduino C++ cho workspace này.\n',

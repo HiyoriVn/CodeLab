@@ -106,12 +106,14 @@ const toolbox = {
   ],
 };
 
-function BlocklyWorkspace({ initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
+function BlocklyWorkspace({ boardId, initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
   const hostRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const onCodeChangeRef = useRef(onCodeChange);
   const initialStateRef = useRef(initialState);
   const darkRef = useRef(dark);
+  const boardIdRef = useRef(boardId);
+  boardIdRef.current = boardId;
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -160,7 +162,7 @@ function BlocklyWorkspace({ initialState, dark = false, onChange, onCodeChange, 
       saveTimer = window.setTimeout(() => {
         if (workspace.isDragging()) return;
         onChangeRef.current(Blockly.serialization.workspaces.save(workspace));
-        onCodeChangeRef.current?.(generateArduino(workspace));
+        onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current));
       }, 250);
     };
     workspace.addChangeListener(save);
@@ -181,7 +183,7 @@ function BlocklyWorkspace({ initialState, dark = false, onChange, onCodeChange, 
     };
     workspace.addChangeListener(scheduleTag);
     tagStacks();
-    onCodeChangeRef.current?.(generateArduino(workspace));
+    onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current));
 
     const tagCategories = () => {
       hostRef.current?.querySelectorAll('.blocklyToolboxCategory').forEach((row, index) => {
@@ -207,6 +209,10 @@ function BlocklyWorkspace({ initialState, dark = false, onChange, onCodeChange, 
       workspaceRef.current = null;
     };
   }, [workspaceRef]);
+
+  useEffect(() => {
+    if (workspaceRef.current) onCodeChangeRef.current?.(generateArduino(workspaceRef.current, boardId));
+  }, [boardId, workspaceRef]);
 
   useEffect(() => {
     darkRef.current = dark;

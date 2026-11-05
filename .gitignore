@@ -13,3 +13,6 @@ package-lock.json
 /firmware/**/*.map
 /firmware/**/*.exe
 /docs/verification/phase02_2_*.log
+
+# V1 verification logs are local evidence; review the short Markdown report
+/docs/verification/newmania_v1_*.log

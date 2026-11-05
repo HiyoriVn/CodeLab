@@ -262,3 +262,6 @@ body,.code-side,.set,.blockly-host .blocklyToolboxDiv,.ws{transition:background-
 .local-projects strong{display:block;padding:6px 12px;font-size:12px}
 .local-projects .mi{white-space:normal;overflow-wrap:anywhere}
 .local-projects [aria-current="true"]{font-weight:700}
+
+.board-profile-toolbar{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:5px 12px;background:var(--pan);border-bottom:1px solid var(--line)}
+.board-profile-toolbar select{max-width:70vw;height:32px;margin-left:8px}

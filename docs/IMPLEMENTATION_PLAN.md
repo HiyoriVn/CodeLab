@@ -1,6 +1,12 @@
 # Kế hoạch Phase 01-07: mainboard, PS4 bridge và CodeLab
 
-Ngày 2026-11-04. Đây là **kế hoạch**, không phải công việc được tự động cho phép thực hiện. Phase 01 kết thúc ở audit/tài liệu; Phase 02-07 chưa bắt đầu. Dãy số này khác [roadmap web lịch sử](ROADMAP.md). Baseline và blockers xem [PROGRESS.md](PROGRESS.md), [audit](PHASE01_AUDIT.md).
+Ngày 2026-11-04. Đây là **kế hoạch**, không phải công việc được tự động cho phép thực hiện. Đây là baseline kế hoạch Phase 01; trạng thái triển khai từng phần Phase 02 và fast track hiện tại được ghi ở PROGRESS.md. Dãy số này khác [roadmap web lịch sử](ROADMAP.md). Baseline và blockers xem [PROGRESS.md](PROGRESS.md), [audit](PHASE01_AUDIT.md).
+
+## Fast track Newmania Starter V1.0 — 2026-11-05
+
+Yêu cầu mới cho phép tích hợp nhiều board để chuẩn bị board kiểm thử V1. V2 vẫn là board mục tiêu; native V2 BoardConfig/SafeStartup giữ nguyên. Phạm vi: registry/profile validation, lựa chọn board trong project, generated basic digital/ADC/PWM LED47 + serial, six compile-only examples, HTTP compile/upload target binding và checklist hardware. Không mở rộng sang MotorDriver V2 hoặc PS4Bridge. SOFTWARE_ACCEPTED chỉ áp dụng phạm vi đã test; HARDWARE_UNTESTED vẫn giữ.
+
+Deliverables và acceptance: [board profiles](boards/BOARD_PROFILES.md), [hướng dẫn/checklist V1](boards/V1_HARDWARE_TEST.md), [báo cáo build/test/commit-ready](verification/NEWMANIA_V1_FAST_TRACK.md). Core pin3.3.7; V1 N8R2 dùng QSPI PSRAM enabled, V2 N8 giữ disabled. Giữ format project version1 với optional boardId, thiếu -> Generic; không sửa pin ngầm. Hoàn tất ở chuẩn bị hardware testing, không tự chạy upload hoặc phase tiếp theo.
 
 ## Phase 01 - Repository Audit & Hardware Mapping
 

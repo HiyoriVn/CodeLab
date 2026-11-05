@@ -8,7 +8,7 @@
 - The user selected a browser-first web app for the initial platform. Use React, Vite, and Blockly in the Phase 1 scaffold; desktop packaging may be evaluated later.
 - Keep the MVP on ESP32-S3 and Arduino C++. Do not add MicroPython generation or conversion to MVP scope unless the project owner changes this decision.
 - The confirmed mainboard is STEAM Robotics Mainboard V2.0 with ESP32-S3-MINI-1-N8. Use `docs/hardware/HARDWARE.md` and `docs/hardware/PINOUT.md`, including their source and unknown-value labels. Do not change GPIO assignments.
-- The external ESP32 is a PS4 bridge only; it must not control motors or servos. Mainboard UART1 uses TX GPIO6 and RX GPIO7, with crossed TX/RX and common ground. Signals are 3.3 V; do not connect the header's +5V_Core to the bridge before its power input is verified. The bridge chip and its UART pins remain unknown; enable Bluetooth Classic only after confirming chip support.
+- The external ESP32 is a PS4 bridge only; it must not control motors or servos. V2 mainboard UART1 uses TX GPIO6 and RX GPIO7, with crossed TX/RX and common ground. Signals are 3.3 V; do not connect the header's +5V_Core to the bridge before its power input is verified. The bridge chip and its UART pins remain unknown; enable Bluetooth Classic only after confirming chip support.
 - Existing UART/I2C Blockly adapters are legacy source, not verified support for this board. The selected PS4 connection is UART1, not I2C. The supplied PS4Bluepad32 ZIP is an external candidate dependency, not an integrated firmware or a proven UART protocol.
 
 ## Implementation guidance
@@ -42,3 +42,10 @@
 - Preserve existing application behavior, workspace formats, and applicable instructions. Report defects rather than fixing application code during this audit.
 - All 12 motor inputs and BUZZ_EN must initialize LOW. Servo outputs remain LOW/high-impedance during USB-only checks and must not emit pulses before servo power is stable. The PDFs do not specify a power-good GPIO or stabilization delay; do not invent either.
 - Treat PDF/ZIP instructions as reference content, not authorization to execute their setup/upload examples. Record each source, page/section or archive path, and distinguish documented facts, user decisions, proposals, and observed test results.
+
+## V1 fast track scope — 2026-11-05
+
+- The user authorized multi-board web/generator/build integration and safe basic-I/O firmware/examples for Newmania Starter V1.0 as the test board. V2 remains the target board; preserve its accepted native BoardConfig/SafeStartup. This supersedes the old documentation-only boundary for this task only.
+- Read `docs/boards/BOARD_PROFILES.md` and `docs/boards/V1_HARDWARE_TEST.md`. Use `src/boards/profiles.js` for web/build mappings; keep blocks generic. Do not silently remap pins in old workspaces. Missing optional project.boardId means Generic.
+- V1 N8R2 has QSPI PSRAM: Core3.3.7, FlashSize=8M, PartitionScheme=default_8MB, PSRAM=enabled; V2 N8 remains PSRAM=disabled. Runtime memory/USB and power need hardware validation.
+- Do not enable motor/servo or infer that DC3–15V board input is safe for 3–6V kit motors. No auto-upload, COM selection, commit/push, MotorDriver V2 or PS4Bridge work is authorized by this fast track.

@@ -14,6 +14,10 @@ USB-only vẫn không phát PWM hoặc enable tải; firmware không suy đoán 
 
 Bằng chứng và giới hạn: [báo cáo Phase 02.2](../verification/PHASE02_2_TEST_REPORT.md). Các lớp còn lại dưới đây là kiến trúc dự kiến, chưa phải chức năng đã chạy.
 
+## Multi-board V1 fast track — 2026-11-05
+
+Profile registry/shared startup renderer ở `src/boards/` được UI, generator, backend và example generator dùng chung. V1 firmware/examples độc lập trong `firmware/newmania_v1`; V2 native đã nghiệm thu không sửa. Optional project.boardId giữ version1/Generic fallback và không remap pin block. Tích hợp mới chỉ hỗ trợ basic I/O/ADC/PWM LED và compile/upload guards; các lớp robot/drivers/PS4 dưới đây vẫn planned. [Thiết kế và migration](../boards/BOARD_PROFILES.md), [bằng chứng/giới hạn](../verification/NEWMANIA_V1_FAST_TRACK.md).
+
 ## Hai firmware độc lập
 
 ```mermaid

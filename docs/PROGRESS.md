@@ -2,6 +2,19 @@
 
 Cập nhật 2026-11-05 (Asia/Saigon). Baseline code trước preflight: `codex/integrate-bach-ui` @ `3a81e54aca414524bb949f3b24af6eb3b2e6b88f`. [Báo cáo Phase 01](PHASE01_AUDIT.md), [kế hoạch](IMPLEMENTATION_PLAN.md), [log build Phase 02.1](verification/phase02_1_compile.log).
 
+## Fast track Newmania Starter V1.0 — 2026-11-05
+
+**SOFTWARE_ACCEPTED** cho registry ba profiles, GPIO validation/generation, safe examples và compile pipeline. **HARDWARE_UNTESTED** / **PENDING_HARDWARE_VALIDATION** giữ nguyên. V1 là board kiểm thử, V2 là board mục tiêu; native V2 không sửa. Baseline trước task `3106a9eee15e5057669249ad9f46eb83d22279d6`.
+
+- Profile V1 N8R2: Flash8MB/QSPI PSRAM2MB, `PSRAM=enabled`, core3.3.7; V2 vẫn disabled, Generic giữ dự án cũ. Pinout đã đối chiếu DOCX người dùng cung cấp. USB CDC là cấu hình candidate chưa xác minh trên PCB.
+- PASS `npm test`: 15/15, bao gồm native fakeGPIO/HTTP compile-upload guard, deterministic generation/round-trip, conflict và backwards compatibility. PASS `npm run build`: 61 modules, chunk warning >500kB.
+- PASS sáu ví dụ V1 qua workspace -> generator -> HTTP -> CLI -> binary, script exit0. Không upload hoặc chọn COM. Program bytes từ311,846 đến322,174; raw log local `docs/verification/newmania_v1_build.log` ignored. [Báo cáo đầy đủ/build table/commit commands](verification/NEWMANIA_V1_FAST_TRACK.md).
+- Chrome smoke PASS chọn V1/preview, block không rỗng qua đổi profile và reload, target FQBN trong device dialog và disabled state khi bridge unavailable. Chưa kiểm tra upload/Serial thật hoặc file-picker round-trip; test block đã dọn.
+- Ví dụ minimal/Blink47/Serial/DI1/ADC1/PWM LED47 và [checklist hardware](boards/V1_HARDWARE_TEST.md) sẵn sàng. Motor/servo pins reserved, không tự enable. Không suy ra nguồn DC3–15V là an toàn cho motor kit3–6V; chưa có điều kiện servo power-ready/POWER_GOOD.
+- Known issues: PS4 generator includes_/escaping chưa sửa; Blockly deprecation, bundle lớn và origin-port giới hạn giữ nguyên. Không có driver V2/PS4Bridge mới. Không commit/push. Dừng tại chuẩn bị V1 hardware testing.
+
+Các record Phase 01/02.1/02.2 bên dưới giữ làm bằng chứng lịch sử, không thay thế kết quả fast track hiện tại.
+
 ## Phase 02.2 — BoardConfig & Safe Startup — PASS (2026-11-05)
 
 **VERIFIED_BUILD / READY_FOR_PHASE02_3** cho acceptance phần mềm của [Issue #17](https://github.com/HiyoriVn/CodeLab/issues/17). **PENDING_HARDWARE_VALIDATION** vẫn giữ. Phase 02.3 chưa bắt đầu và không được tự chuyển tiếp.

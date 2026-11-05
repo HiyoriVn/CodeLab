@@ -1,0 +1,58 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "pwm_led",
+    "boardId": "newmania-starter-v1",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "codelab_pwm_write",
+            "id": "pwm_led-0",
+            "x": 0,
+            "y": 0,
+            "inputs": {
+              "PIN": {
+                "block": {
+                  "type": "math_number",
+                  "id": "pwm_led-1",
+                  "fields": {
+                    "NUM": 47
+                  }
+                }
+              },
+              "DUTY": {
+                "block": {
+                  "type": "math_number",
+                  "id": "pwm_led-2",
+                  "fields": {
+                    "NUM": 32
+                  }
+                }
+              }
+            },
+            "next": {
+              "block": {
+                "type": "codelab_delay_ms",
+                "id": "pwm_led-3",
+                "inputs": {
+                  "DURATION": {
+                    "block": {
+                      "type": "math_number",
+                      "id": "pwm_led-4",
+                      "fields": {
+                        "NUM": 1000
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

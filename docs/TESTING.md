@@ -1,5 +1,9 @@
 # Testing and verification strategy
 
+## Newmania V1 fast track — 2026-11-05
+
+`npm test`: 15/15 host/generator/native fake-GPIO/HTTP tests PASS; `npm run build` PASS; six V1 examples compiled through the real CLI bridge with Core3.3.7/QSPI PSRAM and nonempty binaries. Chrome profile/persistence/device-dialog smoke checks passed. No actual upload, Serial I/O, GPIO waveform or hardware test. Detailed evidence/limits: [fast-track report](verification/NEWMANIA_V1_FAST_TRACK.md); future board checks: [V1 checklist](boards/V1_HARDWARE_TEST.md). SOFTWARE_ACCEPTED applies to this software scope; HARDWARE_UNTESTED remains.
+
 ## Hardware/firmware Phase 01 audit - 2026-11-04
 
 Audited local branch `codex/integrate-bach-ui` at `f3a839825ca2e83fcb82337cbfe4f8dd2afc3efc`; Windows, Node 26.12.1, npm 11.20.0. Detailed commands/outcomes and limits are in [PHASE01_AUDIT.md, section 7](PHASE01_AUDIT.md#7-verification-results); final documentation checks are in [PROGRESS.md](PROGRESS.md).

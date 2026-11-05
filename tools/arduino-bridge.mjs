@@ -1,9 +1,11 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdtemp, mkdir, rm, writeFile, readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile, readFile, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, extname, sep } from 'node:path';
+import { getBoardProfile, DEFAULT_BOARD_ID } from '../src/boards/profiles.js';
 import { randomUUID } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.CODELAB_BRIDGE_PORT || 8787);
@@ -11,7 +13,7 @@ const FQBN = process.env.CODELAB_FQBN || 'esp32:esp32:esp32s3';
 const CLI = process.env.ARDUINO_CLI_PATH || 'arduino-cli';
 const MAX_BODY = 1_000_000;
 const DIST = resolve('dist');
-const builds = new Map();
+
 
 function run(args, timeout = 180_000) {
   return new Promise((resolveRun) => {
@@ -63,6 +65,8 @@ function getPorts(result) {
   }
 }
 
+export function createBridge({ execute = run } = {}) {
+const builds = new Map();
 const server = createServer(async (req, res) => {
   const origin = req.headers.origin;
   if (origin && !/^https?:\/\/(localhost|127\.0\.0\.1)(:(5173|4173|8787))?$/.test(origin)) {
@@ -71,11 +75,11 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${HOST}:${PORT}`);
   try {
     if (req.method === 'GET' && url.pathname === '/api/status') {
-      const result = await run(['version'], 15_000);
+      const result = await execute(['version'], 15_000);
       return send(res, 200, { ready: result.ok, fqbn: FQBN, version: result.output.trim(), error: result.error });
     }
     if (req.method === 'GET' && url.pathname === '/api/ports') {
-      const result = await run(['board', 'list', '--format', 'json'], 20_000);
+      const result = await execute(['board', 'list', '--format', 'json'], 20_000);
       return send(res, result.ok ? 200 : 500, { ports: getPorts(result), error: result.error });
     }
     if (req.method === 'POST' && url.pathname === '/api/compile') {
@@ -84,32 +88,45 @@ const server = createServer(async (req, res) => {
         return send(res, 400, { error: 'Mã nguồn trống hoặc vượt giới hạn.' });
       }
       if (payload.warnings?.length) return send(res, 400, { error: 'Còn cảnh báo trong mã sinh; hãy xử lý trước khi biên dịch.' });
+      const profile = getBoardProfile(payload.boardId);
+      const fqbn = profile.id === DEFAULT_BOARD_ID ? (process.env.CODELAB_FQBN || profile.build.fqbn) : profile.build.fqbn;
+      const cores = await execute(['core', 'list', '--format', 'json']);
+      if (!cores.ok) return send(res, 503, { error: 'Không đọc được Arduino core.', output: cores.output, detail: cores.error });
+      const installed = JSON.parse(cores.output).platforms || [];
+      if (!installed.some(core => core.id === profile.build.core && core.installed_version === profile.build.version)) return send(res, 409, { error: 'Cần cài ' + profile.build.core + '@' + profile.build.version + '; không tự cài/cập nhật.', output: cores.output });
       const directory = await mkdtemp(join(tmpdir(), 'codelab-'));
       const sketch = join(directory, 'CodeLabSketch');
       const outputDir = join(directory, 'build');
       await mkdir(sketch);
       await mkdir(outputDir);
       await writeFile(join(sketch, 'CodeLabSketch.ino'), payload.code, 'utf8');
-      const result = await run(['compile', '--fqbn', FQBN, '--output-dir', outputDir, sketch]);
+      const result = await execute(['compile', '--fqbn', fqbn, '--output-dir', outputDir, sketch]);
       if (!result.ok) {
         await rm(directory, { recursive: true, force: true });
         return send(res, 422, { ok: false, output: result.output, error: result.error });
       }
+      const binary = await stat(join(outputDir, 'CodeLabSketch.ino.bin')).catch(() => null);
+      if (!binary?.isFile() || binary.size === 0) {
+        await rm(directory, { recursive: true, force: true });
+        return send(res, 422, { error: 'CLI không tạo firmware binary.', output: result.output });
+      }
       const id = randomUUID();
-      builds.set(id, { directory, sketch, outputDir, createdAt: Date.now() });
-      return send(res, 200, { ok: true, buildId: id, output: result.output, error: result.error });
+      builds.set(id, { directory, sketch, outputDir, fqbn, boardId: profile.id, code: payload.code, createdAt: Date.now() });
+      return send(res, 200, { ok: true, buildId: id, binaryBytes: binary.size, fqbn, boardId: profile.id, output: result.output, error: result.error });
     }
     if (req.method === 'POST' && url.pathname === '/api/upload') {
       const payload = await bodyJson(req);
       if (payload.confirmed !== true) return send(res, 400, { error: 'Cần xác nhận nạp firmware.' });
+      if (payload.warnings?.length) return send(res, 409, { error: 'Còn cảnh báo trong mã sinh; hãy xử lý và biên dịch lại.' });
       const build = builds.get(payload.buildId);
       if (!build) return send(res, 410, { error: 'Bản biên dịch đã hết hạn; hãy biên dịch lại.' });
-      const list = await run(['board', 'list', '--format', 'json'], 20_000);
+      if ((payload.boardId ?? DEFAULT_BOARD_ID) !== build.boardId || payload.code !== build.code) return send(res, 409, { error: 'Code/board đã đổi. Hãy biên dịch lại trước khi nạp.' });
+      const list = await execute(['board', 'list', '--format', 'json'], 20_000);
       const ports = getPorts(list);
       if (!ports.some((port) => port.address === payload.port)) {
         return send(res, 400, { error: 'Cổng đã chọn không còn được Arduino CLI nhận diện.' });
       }
-      const result = await run(['upload', '--fqbn', FQBN, '--port', payload.port, '--input-dir', build.outputDir, build.sketch], 240_000);
+      const result = await execute(['upload', '--fqbn', build.fqbn, '--port', payload.port, '--input-dir', build.outputDir, build.sketch], 240_000);
       return send(res, result.ok ? 200 : 422, { ok: result.ok, output: result.output, error: result.error });
     }
     if (req.method === 'GET' && !url.pathname.startsWith('/api/')) {
@@ -131,7 +148,7 @@ const server = createServer(async (req, res) => {
   }
 });
 
-setInterval(async () => {
+const cleanupTimer = setInterval(async () => {
   const cutoff = Date.now() - 30 * 60 * 1000;
   for (const [id, build] of builds) {
     if (build.createdAt < cutoff) {
@@ -141,6 +158,10 @@ setInterval(async () => {
   }
 }, 60_000).unref();
 
-server.listen(PORT, HOST, () => {
+server.on('close', () => clearInterval(cleanupTimer));
+return server;
+}
+
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) createBridge().listen(PORT, HOST, () => {
   process.stdout.write(`CodeLab Arduino bridge: http://${HOST}:${PORT}\nTarget: ${FQBN}\n`);
 });

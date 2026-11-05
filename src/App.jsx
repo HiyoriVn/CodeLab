@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
+import { BOARD_PROFILES, DEFAULT_BOARD_ID, projectBoardId } from './boards/profiles.js';
 import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
 import CodePreview from './components/CodePreview.jsx';
 import DevicePanel from './components/DevicePanel.jsx';
@@ -14,8 +15,8 @@ const LEGACY_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-project';
 const FILE_VERSION = 1;
 const emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } };
-function makeProject(name = 'Dự án mới', workspace = emptyWorkspace) {
-  return { id: crypto.randomUUID(), name, workspace, updatedAt: new Date().toISOString() };
+function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = DEFAULT_BOARD_ID) {
+  return { id: crypto.randomUUID(), name, workspace, boardId, updatedAt: new Date().toISOString() };
 }
 function readProjects() {
   try {
@@ -44,6 +45,9 @@ function App() {
   const [theme, setTheme] = useState(readTheme);
   const [barColor, setBarColor] = useState(readBar);
   const project = projectStore.projects.find((item) => item.id === projectStore.activeId) || projectStore.projects[0];
+
+  const boardId = projectBoardId(project);
+  const changeBoard = (event) => persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id ? {...item, boardId: event.target.value} : item) });
 
   const showToast = useCallback((message) => {
     setToast(message);
@@ -93,7 +97,7 @@ function App() {
   };
   const saveProjectFile = () => {
     const state = workspaceRef.current ? Blockly.serialization.workspaces.save(workspaceRef.current) : project.workspace;
-    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state } };
+    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state, boardId } };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url; link.download = `${project.name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'codelab-project'}.codelab.json`; link.click(); URL.revokeObjectURL(url);
     showToast('Đã tải tệp dự án xuống');
@@ -112,7 +116,7 @@ function App() {
       } finally {
         validationWorkspace.dispose();
       }
-      const imported = makeProject(content.name || file.name, content.workspace);
+      const imported = makeProject(content.name || file.name, content.workspace, projectBoardId(content));
       persist({ activeId: imported.id, projects: [...snapshotProjects(), imported] });
       showToast(`Đã mở ${file.name}`);
     } catch (error) { window.alert(error.message || 'Không thể mở dự án.'); }
@@ -160,9 +164,10 @@ function App() {
         onLanguage={() => showToast('Chưa có bản dịch, hiện chỉ có Tiếng Việt')}
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
+      <div className="board-profile-toolbar"><label>Board <select aria-label="Board profile" value={boardId} onChange={changeBoard}>{BOARD_PROFILES.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}</select></label><small>SOFTWARE profile · HARDWARE_UNTESTED</small></div>
       <div className="main">
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
-          <BlocklyWorkspace key={project?.id} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
+          <BlocklyWorkspace key={project?.id} boardId={boardId} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
           <ZoomControls workspaceRef={workspaceRef} />
           <div className="workspace-status"><span><i className="status-dot" />Sẵn sàng chỉnh sửa</span><span>{blockCount} khối đang dùng</span></div>
         </div>
@@ -176,7 +181,7 @@ function App() {
       <section className="console" hidden={!terminalOpen} aria-label="Bảng lệnh" style={{ '--console-h': `${consoleHeight}px` }}>
         <div className="console-grip" role="separator" aria-orientation="horizontal" aria-label="Kéo để đổi kích thước bảng lệnh" aria-valuemin={CONSOLE_MIN} aria-valuenow={consoleHeight} tabIndex={0} title="Kéo xuống để thu nhỏ, kéo lên để phóng to" onPointerDown={startResize} onKeyDown={resizeByKey} onDoubleClick={toggleConsoleSize} />
         <h2>Bảng lệnh<button className="x" onClick={() => setTerminalOpen(false)} aria-label="Đóng">×</button></h2>
-        <SerialMonitor />
+        {terminalOpen && <SerialMonitor />}
       </section>
 
       <Modal open={dialog === 'help'} onClose={closeDialog} title="Hướng dẫn nhanh">
@@ -190,7 +195,7 @@ function App() {
       </Modal>
       <Modal open={dialog === 'connect'} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
-        <DevicePanel code={generatedCode.code} warnings={generatedCode.warnings} />
+        <DevicePanel key={project.id} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={generatedCode.warnings} />
         <div className="dialog-actions"><button className="btn" onClick={closeDialog}>Đóng</button></div>
       </Modal>
       <div className={`toast ${toast ? 'on' : ''}`} role="status">{toast}</div>

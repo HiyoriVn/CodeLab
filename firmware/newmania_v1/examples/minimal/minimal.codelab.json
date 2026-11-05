@@ -1,0 +1,9 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "minimal",
+    "boardId": "newmania-starter-v1",
+    "workspace": {}
+  }
+}

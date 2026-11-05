@@ -4,16 +4,16 @@ CodeLab is a browser-first visual programming environment for ESP32-S3 robotics.
 
 ## Product decisions
 
-- MVP mainboard: STEAM Robotics Mainboard V2.0, ESP32-S3-MINI-1-N8. Hardware mapping is documented; its software board profile is still planned.
+- MVP mainboard: STEAM Robotics Mainboard V2.0, ESP32-S3-MINI-1-N8. The accepted native BoardConfig/SafeStartup and web board profile are present; hardware validation remains pending. Newmania Starter V1.0 (ESP32-S3-WROOM-1-N8R2) is the additional hardware test board.
 - MVP language: Arduino C++; MicroPython is out of scope.
 - Web stack: React, Vite, and Blockly.
 - PS4 controller: a separate ESP32 handles the controller and forwards state over mainboard UART1 (TX GPIO6, RX GPIO7). The bridge chip, bridge pins/power input, toolchain and wire protocol still need confirmation. Legacy UART/I2C blocks remain in source; the selected board integration uses UART1.
 
 ## Current status
 
-The audited local checkout contains the Blockly editor and workspace persistence, a subset of Arduino C++ generation, GPIO/ADC/PWM/delay/H-bridge blocks, a local Arduino CLI compile/upload flow, and PS4 adapter source. The production web build passed on 2026-11-04, and earlier limited UI checks are recorded in the testing document. Arduino compilation, upload and hardware acceptance remain unverified. Headless audit reproduced a PS4 code-generation error (`includes_` / `ps4_stdio`); web bundling does not establish PS4 functionality.
+The audited local checkout contains the Blockly editor and workspace persistence, a subset of Arduino C++ generation, GPIO/ADC/PWM/delay/H-bridge blocks, a local Arduino CLI compile/upload flow, and PS4 adapter source. The production web build passed on 2026-11-04, and earlier limited UI checks are recorded in the testing document. Minimal V2 and six V1 generated examples have now been Arduino-compiled; upload and hardware acceptance remain unverified. Headless audit reproduced a PS4 code-generation error (`includes_` / `ps4_stdio`); web bundling does not establish PS4 functionality.
 
-The hardware/firmware Phase 01 audit is documented in [the report](docs/PHASE01_AUDIT.md) and [progress tracker](docs/PROGRESS.md). Two supplied PDFs establish the board pinout; the supplied PS4Bluepad32 1.0.1 ZIP is an external candidate library, not integrated bridge firmware. No mainboard or PS4 bridge firmware target exists yet. Phase 02 has not started.
+The hardware/firmware Phase 01 audit is documented in [the report](docs/PHASE01_AUDIT.md) and [progress tracker](docs/PROGRESS.md). Two supplied PDFs establish the board pinout; the supplied PS4Bluepad32 1.0.1 ZIP is an external candidate library, not integrated bridge firmware. V2 safe-startup firmware and independent V1 test sketches now exist; PS4 bridge firmware remains planned. See [multi-board profiles](docs/boards/BOARD_PROFILES.md), [V1 hardware test guide](docs/boards/V1_HARDWARE_TEST.md), and [fast-track results](docs/verification/NEWMANIA_V1_FAST_TRACK.md).
 
 See the [hardware baseline](docs/hardware/HARDWARE.md), [pinout](docs/hardware/PINOUT.md), [proposed firmware architecture](docs/architecture/ARCHITECTURE.md), [module gaps](docs/architecture/MODULES.md), [Phase 02-07 plan](docs/IMPLEMENTATION_PLAN.md), [web architecture](docs/ARCHITECTURE.md), [development setup](docs/DEVELOPMENT.md), [verification plan](docs/TESTING.md), and [legacy PS4 contract](docs/PS4-RECEIVER.md). The [historical web roadmap](docs/ROADMAP.md) uses a separate phase numbering scheme. Previously referenced `docs/EXAMPLES.md` and `docs/TROUBLESHOOTING.md` are absent; they remain planned deliverables.
 
