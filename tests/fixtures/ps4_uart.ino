@@ -116,6 +116,8 @@ public:
   void beginUart(HardwareSerial& serial) { serial_ = &serial; i2c_ = false; }
   void beginI2c(uint8_t address) { address_ = address; i2c_ = true; }
   void update() { if (i2c_) readI2c(); else readUart(); }
+  bool hasReport() const { return hasFrame_; }
+  uint32_t lastReportAt() const { return lastFrameAt_; }
   bool connected() const { return hasFrame_ && receiverConnected_ && (uint32_t)(millis() - lastFrameAt_) <= 250; }
   int axis(uint8_t index) const {
     if (!connected() || index > 3) return 0;

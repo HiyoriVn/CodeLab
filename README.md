@@ -21,6 +21,8 @@ The physical Newmania unit under test reports16MB flash/8MB Octal PSRAM, differi
 
 ## Run locally
 
+PS4 mecanum logic is available as a portable C++ library with host mocks, latched faults and a disabled-by-default logical servo. It does not drive motors/servos on the experimental board. See [simulation/API/wiring gates](docs/robotics/PS4_MECANUM.md).
+
 Robotics blocks now use board capabilities and logical motor/servo channels. Digital/ADC/PWM/Serial generation and servo signal disable have software tests; motor motion and servo enable remain blocked. See [supported examples, compiler evidence and limitations](docs/verification/ROBOTICS_BLOCKS_INTEGRATION.md). Hardware acceptance remains pending.
 
 For editor development, use `npm install`, then run `npm run dev` and `npm run bridge` in separate terminals. The bridge requires Arduino CLI and the ESP32 core.

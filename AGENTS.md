@@ -67,3 +67,9 @@
 - User authorizes hardware tests only with confirmed COM and separate approval before each upload. COM4 and USB-only/all loads disconnected confirmed; do not infer approval for later images. No external DC/motor/servo tests, toolchain updates or commit/push.
 - Actual no-GPIO probe initializes8MB Octal PSRAM and reports16MB flash. Module suffix/PCB wiring remain unverified. User approved a separate experimental profile, preserving N8R2/V2/Generic. Only LED47/Serial tests are exposed; all other GPIO, motors/servos/ADC are blocked until wiring verification.
 - Experimental profile startup must not reuse N8R2 LOW motor init: GPIO35–37 may be internal Octal memory. No board-GPIO startup, no claim of safe output levels before boot; requires USB-only/no loads. Old N8R2 examples must not be uploaded to this observed variant unchanged. Each new upload still requires approval.
+
+## PS4 mecanum logic — 2026-11-05
+
+- User authorizes portable RobotController/MecanumMixer/servo logic, interfaces/mock backends, host simulation and safe compile-only. No flash/upload, hardware tests, new motor/servo backend or board profile changes. Prior hardware session remains stopped.
+- Reuse CSV v1 publisher/parser; parser freshness metadata is read-only. No repeated poll may invent a fresh report. Reconnect never arms; faults stop mocks and require explicit recovery. Servo remains disabled without explicit enable plus independently verified power readiness; no POWER_GOOD pin assumed.
+- Experimental35–37 remain unavailable. Keep all actuators mocked; compile sketch must not initialize board GPIO or UART until separately reviewed wiring. See `docs/robotics/PS4_MECANUM.md` for coordinate/binding proposals and remaining hardware gates.

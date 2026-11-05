@@ -1,5 +1,9 @@
 # PS4 receiver and CodeLab adapter contract
 
+## Mecanum consumer — 2026-11-05
+
+The new [simulation-only RobotController](robotics/PS4_MECANUM.md) consumes this same UART CSV v1 contract. Parser `hasReport()`/`lastReportAt()` expose read-only freshness metadata; they do not refresh the timestamp or change parsing/axes. The controller watchdog uses actual accepted-report age, not repeated accessor reads. Bridge/publisher, CSV schema and250ms boundary are unchanged. Motor/servo remain mocks; no UART or actuator is enabled on the experimental board by this consumer.
+
 This document describes the **legacy CodeLab UART/I2C adapter contract**, not a verified hardware implementation. The selected V2 mainboard architecture uses a separate ESP32 PS4 bridge over UART1 TX GPIO6 / RX GPIO7. Bridge chip/pins/power remain open. UART ASCII CSV v1 below is the selected compatibility baseline. PS4Bluepad32 1.0.1 itself has different axis/button representations and no UART publisher; the new isolated bridge supplies conversion/publication. See [library audit](architecture/PS4_LIBRARY_AUDIT.md).
 
 The 2026-11-05 **A1** update fixes the previously reproduced `includes_ / ps4_stdio` exception and generated LF/CR/NUL escaping. UART generation/parser are software-tested; see [A1 results](verification/PS4_A1_STABILIZATION.md). PS4Bluepad32 1.0.1 / Bluepad32 remain on the separate ESP32. No direct PS4 Bluetooth support is added to ESP32-S3, A2–A4 now add an isolated compile-only Classic ESP32 bridge; hardware remains untested. The separate NewmaniaCodeLab reference archive does not establish this protocol.

@@ -83,6 +83,8 @@ Safety boot tối thiểu phải có từ Phase 02; Phase 05 hoàn thiện chín
 
 ## Tích hợp với ứng dụng hiện hữu
 
+2026-11-05: portable `firmware/libraries/CodeLabRobot` implements mecanum mixing, PS4 mapping, DISARMED/ARMED/FAULT control and logical servo with interfaces/mock backends. Actual publisher -> canonical parser -> controller scenarios run on host; simulation sketch compiles without board GPIO/UART enable. No hardware motor/servo driver, generator load-control block or changed profile. [API, state policy, tests and wiring gates](../robotics/PS4_MECANUM.md). This does not mark hardware roadmap phases complete.
+
 Hướng đề xuất là generated Arduino gọi API mainboard và SafetyManager trong sketch đã build, giữ mô hình compile/upload của CodeLab. Chưa chọn giao thức live điều khiển robot từ browser; không giả định SerialMonitor đã là SerialCLI firmware.
 
 Giữ nguyên `codelab.projects.v1` và file version 1 ở Phase 01. Phase 06 phải định nghĩa profile/version migration, golden fixtures và cảnh báo cho block H-bridge ba chân/UART16/17 cũ. Không đổi ngầm nội dung dự án người dùng. Thay đổi generator cần deterministic code, helper ổn định và source/block mapping khi khả thi.

@@ -1,5 +1,9 @@
 # Testing and verification strategy
 
+## PS4 mecanum simulation — 2026-11-05
+
+`npm test`34/34 PASS, `npm run build` PASS/exit0. New native C++ host scenarios test4913 mixer vectors, mapping/permutation/inversion/saturation, arming/neutral/deadzone/acceleration, disconnect/reconnect/held buttons,250/251ms/wrap/stall, servo bounds/power/backend failures; actual existing CSV publisher and parser are included. Standalone parser header must match generator byte-for-byte; regeneration: `node tools/robot-parser-header.mjs`. Arduino INPUT macro collision guarded in native compile. `pwsh -NoProfile -File tools/verify-mecanum.ps1` compile-only PASS/exit0 with unchanged experimental16MB/OPI/Core3.3.7; no UART/GPIO or actuator initialization in sketch. [Full results/API/hardware gates](robotics/PS4_MECANUM.md). Pure logic/mock acceptance only; no hardware actuation tests.
+
 ## Experimental Newmania OPI profile — 2026-11-05
 
 `npm test`32/32 PASS, `npm run build` PASS, exit0. Five added checks cover LED-only allowlist, absence of board/memory GPIO startup, serialization/goldens, invalid old pins/channels retained with diagnostics, HTTP compile target and stale-profile upload rejection. Existing profile/PS4/native checks retained. Rebuild experimental examples with `node tools/v1-opi-examples.mjs`; this never uploads. Only actual CLI/Blink result and individually approved hardware results recorded in [integration report](verification/V1_HARDWARE_INTEGRATION.md).
