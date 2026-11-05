@@ -1,8 +1,8 @@
 # PS4 receiver and CodeLab adapter contract
 
-This document describes the **legacy CodeLab UART/I2C adapter contract**, not a verified hardware implementation. The selected V2 mainboard architecture uses a separate ESP32 PS4 bridge over UART1 TX GPIO6 / RX GPIO7. Bridge chip/pins/power and the final protocol remain open. The supplied PS4Bluepad32 1.0.1 library has different axis and button representations and no UART publisher; see [library audit](architecture/PS4_LIBRARY_AUDIT.md).
+This document describes the **legacy CodeLab UART/I2C adapter contract**, not a verified hardware implementation. The selected V2 mainboard architecture uses a separate ESP32 PS4 bridge over UART1 TX GPIO6 / RX GPIO7. Bridge chip/pins/power remain open. UART ASCII CSV v1 below is the selected compatibility baseline. The supplied PS4Bluepad32 1.0.1 library has different axis and button representations and no UART publisher; see [library audit](architecture/PS4_LIBRARY_AUDIT.md).
 
-The 2026-11-04 audit reproduced a generator failure (`includes_` / `ps4_stdio`) and helper escaping defects. The field rules below describe the intended legacy contract; current source does not fully enforce them and has not been Arduino-compiled or hardware-tested. The separate NewmaniaCodeLab reference archive does not establish this protocol.
+The 2026-11-05 **A1** update fixes the previously reproduced `includes_ / ps4_stdio` exception and generated LF/CR/NUL escaping. UART generation/parser are software-tested; see [A1 results](verification/PS4_A1_STABILIZATION.md). PS4Bluepad32 1.0.1 / Bluepad32 remain on the separate ESP32. No direct PS4 Bluetooth support is added to ESP32-S3, no bridge is implemented here, and hardware remains untested. The separate NewmaniaCodeLab reference archive does not establish this protocol.
 
 ## CodeLab UART frame
 
@@ -17,7 +17,10 @@ connected,lx,ly,rx,ry,buttons
 - `buttons` is an unsigned 32-bit decimal bitmask.
 - Default baud is 115200; the Blockly configuration allows another baud.
 - Fields are comma-separated and the record ends with LF or CR/LF.
-- Intended behavior: a complete valid record refreshes state; no valid record for 250 ms yields disconnected/neutral accessors. Current `sscanf` checks field count and trailing content but accepts connected values other than 0/1 and clamps axes. Strict validation and robot output safety remain missing.
+- A complete LF or CRLF line is accepted only with all six decimal fields in range. Axes allow a leading minus; no plus signs/whitespace/trailing fields/text, embedded NUL, integer overflow or out-of-range values. An overlong line (buffer96 bytes including terminator) is discarded until LF; incomplete lines do not refresh state. CR alone does not terminate a frame.
+- Accepted connected=0 immediately clears axes/buttons. Before any valid frame, disconnected, or when elapsed time is greater than250 ms since the last accepted frame, accessors return neutral (0/false). At exactly250 ms, a connected valid frame remains current, preserving the existing boundary. Malformed/empty input does not refresh the deadline; unsigned elapsed time handles millis rollover.
+- CSV v1 has no sequence/timestamp/CRC: the receiver cannot tell an actual fresh identical report from stale data replayed as valid CSV. A2 must ensure the publisher emits connected=1 frames only for fresh controller reports; heartbeat alone must not replay cached input as fresh. Rejecting a text heartbeat is tested, but replay protection is not claimed. No v2/binary/I2C switch is implemented.
+- Polling occurs at the generated loop preamble for all controller-read blocks. Accessor neutral state is not a robot output safety manager; blocking programs and motor outputs need separate safety work.
 
 ## CodeLab I2C frame
 
@@ -56,7 +59,7 @@ A receiver that uses a different packet format needs a firmware adapter or a sep
 
 Before connecting hardware, confirm the ESP32-S3 board pinout, receiver voltage levels, common ground, UART direction or I2C roles, and address/baud from the receiver documentation. Do not connect 5 V logic directly to ESP32-S3 GPIO.
 
-The existing UART RX16/TX17 defaults conflict with V2 servo3/4 and must not be used as this board's wiring. Mainboard UART1 is RX7/TX6; the generator API orders RX before TX. UART1 header pin 1 is GND, 2 +5V_Core, 3 TX, 4 RX. Cross TX/RX and share GND; do not connect the 5 V pin to an unverified bridge power input. Generator chip warnings are not a board-specific ownership model.
+The existing UART RX16/TX17 defaults conflict with V2 servo3/4 and must not be used as this board's wiring. Mainboard UART1 is RX7/TX6; the generator API orders RX before TX. UART1 header pin 1 is GND, 2 +5V_Core, 3 TX, 4 RX. Cross TX/RX and share GND; do not connect the 5 V pin to an unverified bridge power input. A1 permits the configured UART1 pair for the selected concrete board profile only (V2 RX7/TX6, V1 RX21/TX18), still detecting conflicts with other block pin roles. Wrong concrete-board UART pins remain warnings. Generic preserves explicit user pin selection; no saved workspace pins or toolbox defaults are silently rewritten.
 
 ## Hardware information still required
 
@@ -65,4 +68,4 @@ The existing UART RX16/TX17 defaults conflict with V2 servo3/4 and must not be u
 - Bridge electrical compatibility with 3.3 V signals, final UART baud/protocol and captured packets.
 - Pairing/reset behavior, update cadence, reconnect behavior, and desired robot safe state.
 
-Historical web Phase 5 is not hardware-accepted. The new firmware roadmap places PS4 bridge/protocol in Phase 04 and CodeLab migration in Phase 06; both remain unstarted. Results must be recorded in [the verification plan](TESTING.md) and [progress](PROGRESS.md).
+Historical web Phase 5 is not hardware-accepted. The new firmware roadmap places PS4 bridge/protocol in Phase 04 and CodeLab migration in Phase 06; full phase acceptance remains open; A1 receiver generation/parsing is separately verified above. Results must be recorded in [the verification plan](TESTING.md) and [progress](PROGRESS.md).

@@ -2,6 +2,16 @@
 
 Cập nhật 2026-11-05 (Asia/Saigon). Baseline code trước preflight: `codex/integrate-bach-ui` @ `3a81e54aca414524bb949f3b24af6eb3b2e6b88f`. [Báo cáo Phase 01](PHASE01_AUDIT.md), [kế hoạch](IMPLEMENTATION_PLAN.md), [log build Phase 02.1](verification/phase02_1_compile.log).
 
+## PS4 A1 — Generator Stabilization — 2026-11-05 — PASS
+
+**A1 SOFTWARE_ACCEPTED / HARDWARE_UNTESTED. READY_FOR_A2 software contract/mapping tests; BRIDGE_COMPILE_PENDING.** Issue18 A2 and bridge hardware remain open, not implemented in this task.
+
+- Reproduced/fixed includes_/ps4_stdio and LF/CR/NUL escaping; UART CSV v1 strict bounds/complete-line parsing, neutral disconnect and250ms timeout verified with generated C++/fake UART/clock. Profile-correct UART1 allowed without changing unrelated GPIO rules, workspace format or saved pins.
+- `npm test` **18/18 PASS**, `npm run build` PASS. Real generated Blockly UART sketch compiled via CodeLab HTTP bridge with CLI1.5.1/Core3.3.7, V2 Flash8MB/default_8MB/PSRAMdisabled, script exit0. BIN313,296 B, program313,155 B, globals22,988 B.
+- PS4Bluepad321.0.1/Bluepad32 on separate ESP32 remains selected; ZIP metadata rechecked, no vendoring/install. No WebPair sketch found in workspace. No direct PS4 Bluetooth on S3, no bridge/mapping implementation, upload or hardware tests.
+- CSV v1 cannot detect stale valid CSV replay; A2 publisher must gate freshness on real controller reports, not heartbeat. Hardware V1 smoke remains BLOCKED per prior user confirmation; no new hardware claim.
+- [Focused report, evidence, files and commit commands](verification/PS4_A1_STABILIZATION.md). Local raw log `docs/verification/ps4_a1_compile.log` ignored. Historical defects below describe earlier phases; A1 supersedes includes_/escaping/strict UART parser status only.
+
 ## V1 Hardware Smoke Test — 2026-11-05 — BLOCKED hardware
 
 - Người dùng xác nhận **chưa có board**. `board list --format json` trả `detected_ports: []`, exit0 cả trong/ngoài sandbox. Không chọn COM, upload hay mở Serial.

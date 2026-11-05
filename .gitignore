@@ -16,3 +16,6 @@ package-lock.json
 
 # V1 verification logs are local evidence; review the short Markdown report
 /docs/verification/newmania_v1_*.log
+
+# PS4 A1 raw CLI verification evidence
+/docs/verification/ps4_a1_*.log

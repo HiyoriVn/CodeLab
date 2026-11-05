@@ -2,6 +2,12 @@
 
 Ngày 2026-11-04. Nguồn L1 và SHA-256 tại [HARDWARE.md](../hardware/HARDWARE.md). Chỉ đọc ZIP, không cài thư viện, không chạy sketch, không flash. Chỉ dẫn setup/upload trong README là nội dung tham khảo, không phải yêu cầu thực thi.
 
+## Quyết định hiện hành — PS4 A1, 2026-11-05
+
+Chủ dự án đã chốt PS4Bluepad32 1.0.1 / Bluepad32 chạy trên ESP32 rời -> UART CSV v1 -> ESP32-S3 mainboard. ZIP được đọc lại library.properties trong A1, xác nhận version1.0.1; phụ thuộc Bluepad32/Preferences và GPL-3.0-or-later vẫn theo source đã audit. Không vendor thư viện hoặc đổi sang thư viện khác. Workspace không tìm thấy `PS4_ESP32_WebPair.ino`; không suy diễn web pairing là thư viện PS4Bluepad32. Các cụm “ứng viên” bên dưới là đánh giá lịch sử trước quyết định này; phần bridge chưa được triển khai.
+
+A1 chỉ sửa generator/parser phía mainboard, đã có regression/golden và compile thật; [báo cáo A1](../verification/PS4_A1_STABILIZATION.md). Mapping/publisher/freshness từ PS4Bluepad32 vẫn là A2; chưa có bridge build/hardware acceptance.
+
 ## Nội dung thực tế
 
 - `ps4-esp32-lib-main/library.properties`: PS4Bluepad32 **1.0.1**, `architectures=esp32`, include `PS4Bluepad32.h`.

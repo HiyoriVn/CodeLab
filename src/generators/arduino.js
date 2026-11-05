@@ -4,7 +4,7 @@ import { startupCode } from '../boards/startup.js';
 
 const ATOMIC = 0;
 
-const PS4_HELPER = `class CodeLabPS4Adapter {
+const PS4_HELPER = String.raw`class CodeLabPS4Adapter {
   HardwareSerial* serial_ = nullptr;
   uint8_t address_ = 0;
   bool i2c_ = false;
@@ -16,13 +16,42 @@ const PS4_HELPER = `class CodeLabPS4Adapter {
   size_t lineLength_ = 0;
   bool discardLine_ = false;
 
-  void applyFrame(int connected, int x, int y, int rx, int ry, unsigned long buttons) {
-    axes_[0] = (int16_t)constrain(x, -32768, 32767);
-    axes_[1] = (int16_t)constrain(y, -32768, 32767);
-    axes_[2] = (int16_t)constrain(rx, -32768, 32767);
-    axes_[3] = (int16_t)constrain(ry, -32768, 32767);
-    buttons_ = (uint32_t)buttons;
-    receiverConnected_ = connected != 0;
+  bool hasFrame_ = false;
+
+  static bool unsignedField(const char*& p, uint32_t limit, uint32_t& value) {
+    if (*p < '0' || *p > '9') return false;
+    value = 0;
+    do {
+      const uint32_t digit = (uint32_t)(*p - '0');
+      if (digit > limit || value > (limit - digit) / 10U) return false;
+      value = value * 10U + digit;
+      ++p;
+    } while (*p >= '0' && *p <= '9');
+    return true;
+  }
+
+  static bool signedField(const char*& p, int16_t& value) {
+    const bool negative = *p == '-';
+    if (negative) ++p;
+    uint32_t magnitude;
+    if (!unsignedField(p, negative ? 32768U : 32767U, magnitude)) return false;
+    value = (int16_t)(negative ? -(int32_t)magnitude : (int32_t)magnitude);
+    return true;
+  }
+
+  void parseLine() {
+    const char* p = line_;
+    uint32_t connected, buttons;
+    int16_t axes[4];
+    if (!unsignedField(p, 1U, connected) || *p++ != ',') return;
+    for (uint8_t i = 0; i < 4; ++i) {
+      if (!signedField(p, axes[i]) || *p++ != ',') return;
+    }
+    if (!unsignedField(p, UINT32_MAX, buttons) || *p != '\0') return;
+    for (uint8_t i = 0; i < 4; ++i) axes_[i] = connected ? axes[i] : 0;
+    buttons_ = connected ? buttons : 0;
+    receiverConnected_ = connected == 1;
+    hasFrame_ = true;
     lastFrameAt_ = millis();
   }
 
@@ -30,19 +59,15 @@ const PS4_HELPER = `class CodeLabPS4Adapter {
     if (!serial_) return;
     while (serial_->available()) {
       const char ch = (char)serial_->read();
-      if (ch == '\n' || ch == '\r') {
+      if (ch == '\n') {
         if (lineLength_ && !discardLine_) {
+          if (line_[lineLength_ - 1] == '\r') --lineLength_;
           line_[lineLength_] = '\0';
-          int connected, x, y, rx, ry, consumed = 0;
-          unsigned long buttons;
-          if (sscanf(line_, "%d,%d,%d,%d,%d,%lu%n", &connected, &x, &y, &rx, &ry, &buttons, &consumed) == 6 &&
-              line_[consumed] == '\0') {
-            applyFrame(connected, x, y, rx, ry, buttons);
-          }
+          if (lineLength_) parseLine();
         }
         lineLength_ = 0;
         discardLine_ = false;
-      } else if (!discardLine_ && lineLength_ < sizeof(line_) - 1) {
+      } else if (ch != '\0' && !discardLine_ && lineLength_ < sizeof(line_) - 1) {
         line_[lineLength_++] = ch;
       } else {
         lineLength_ = 0;
@@ -71,6 +96,7 @@ const PS4_HELPER = `class CodeLabPS4Adapter {
     buttons_ = (uint32_t)frame[9] | ((uint32_t)frame[10] << 8) |
       ((uint32_t)frame[11] << 16) | ((uint32_t)frame[12] << 24);
     receiverConnected_ = (frame[0] & 0x01) != 0;
+    hasFrame_ = true;
     lastFrameAt_ = millis();
   }
 
@@ -78,7 +104,7 @@ public:
   void beginUart(HardwareSerial& serial) { serial_ = &serial; i2c_ = false; }
   void beginI2c(uint8_t address) { address_ = address; i2c_ = true; }
   void update() { if (i2c_) readI2c(); else readUart(); }
-  bool connected() const { return receiverConnected_ && (uint32_t)(millis() - lastFrameAt_) <= 250; }
+  bool connected() const { return hasFrame_ && receiverConnected_ && (uint32_t)(millis() - lastFrameAt_) <= 250; }
   int axis(uint8_t index) const {
     if (!connected() || index > 3) return 0;
     return (int)map(axes_[index], -32768, 32767, -1000, 1000);
@@ -180,6 +206,7 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
   init(workspace) {
     super.init(workspace);
     this.definitions_ = Object.create(null);
+    this.includes_ = Object.create(null);
     this.repeatIndex_ = 0;
     this.motorIndex_ = 0;
     this.diagnostics_ = new Set();
@@ -398,7 +425,8 @@ function registerBlocks(generator) {
   };
 
   const reservePin = (gen, pin, mode, label) => {
-    pinWarnings(pin, gen, label);
+    const uart = gen.profile_.pins.uart1;
+    if (!(mode === 'UART' && uart && [uart.rx, uart.tx].includes(Number(pin)))) pinWarnings(pin, gen, label);
     const existing = gen.pinModes_.get(pin);
     if (existing && existing !== mode) {
       gen.diagnostics_.add(label + ': GPIO ' + pin + ' đã được dùng cho ' + existing + '.');
@@ -429,8 +457,13 @@ function registerBlocks(generator) {
     const rx = numberInput(block, 'RX', gen, 'PS4 UART RX');
     const tx = numberInput(block, 'TX', gen, 'PS4 UART TX');
     const baud = numberInput(block, 'BAUD', gen, 'PS4 UART baud');
-    pinWarnings(rx, gen, 'PS4 UART RX');
-    pinWarnings(tx, gen, 'PS4 UART TX');
+    if (gen.profile_.id === DEFAULT_BOARD_ID) {
+      pinWarnings(rx, gen, 'PS4 UART RX');
+      pinWarnings(tx, gen, 'PS4 UART TX');
+    } else {
+      const uart = gen.profile_.pins.uart1;
+      if (!uart || Number(rx) !== uart.rx || Number(tx) !== uart.tx) gen.diagnostics_.add('PS4 UART: RX/TX phải khớp UART1 của board profile.');
+    }
     if (rx === tx) gen.diagnostics_.add('PS4 UART: RX và TX phải dùng GPIO khác nhau.');
     if (!/^\d+$/.test(baud) || Number(baud) < 1200 || Number(baud) > 2000000) gen.diagnostics_.add('PS4 UART: baud phải nằm trong khoảng 1200–2000000.');
     reservePin(gen, rx, 'UART', 'PS4 UART RX');
@@ -454,6 +487,7 @@ function registerBlocks(generator) {
   };
 
   generator.forBlock.codelab_ps4_connected = (_block, gen) => {
+    gen.loopPreamble_ = 'codelabPs4.update();';
     gen.controllerRequested_ = true;
     gen.definitions_['ps4_adapter'] = PS4_HELPER;
     gen.includes_['ps4_stdio'] = '#include <stdio.h>';

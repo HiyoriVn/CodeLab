@@ -9,7 +9,7 @@
 - Keep the MVP on ESP32-S3 and Arduino C++. Do not add MicroPython generation or conversion to MVP scope unless the project owner changes this decision.
 - The confirmed mainboard is STEAM Robotics Mainboard V2.0 with ESP32-S3-MINI-1-N8. Use `docs/hardware/HARDWARE.md` and `docs/hardware/PINOUT.md`, including their source and unknown-value labels. Do not change GPIO assignments.
 - The external ESP32 is a PS4 bridge only; it must not control motors or servos. V2 mainboard UART1 uses TX GPIO6 and RX GPIO7, with crossed TX/RX and common ground. Signals are 3.3 V; do not connect the header's +5V_Core to the bridge before its power input is verified. The bridge chip and its UART pins remain unknown; enable Bluetooth Classic only after confirming chip support.
-- Existing UART/I2C Blockly adapters are legacy source, not verified support for this board. The selected PS4 connection is UART1, not I2C. The supplied PS4Bluepad32 ZIP is an external candidate dependency, not an integrated firmware or a proven UART protocol.
+- Existing UART/I2C Blockly adapters are legacy source, not verified support for this board. The selected PS4 connection is UART1, not I2C. The selected bridge library is PS4Bluepad32 1.0.1 / Bluepad32 on a separate ESP32; the ZIP is reference source and is not vendored or integrated bridge firmware. UART CSV v1 remains the mainboard compatibility baseline.
 
 ## Implementation guidance
 
