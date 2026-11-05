@@ -2,6 +2,17 @@
 
 Cập nhật 2026-11-05 (Asia/Saigon). Baseline code trước preflight: `codex/integrate-bach-ui` @ `3a81e54aca414524bb949f3b24af6eb3b2e6b88f`. [Báo cáo Phase 01](PHASE01_AUDIT.md), [kế hoạch](IMPLEMENTATION_PLAN.md), [log build Phase 02.1](verification/phase02_1_compile.log).
 
+## V1 Hardware Smoke Test — 2026-11-05 — BLOCKED hardware
+
+- Người dùng xác nhận **chưa có board**. `board list --format json` trả `detected_ports: []`, exit0 cả trong/ngoài sandbox. Không chọn COM, upload hay mở Serial.
+- Preflight PASS trực tiếp: CLI1.5.1, Core esp32:esp32 3.3.7, profile Newmania V1 Flash8MB/QSPI PSRAM2MB, PSRAM=enabled, USB hardwareCDC/CDCOnBoot. Biến Arduino data/downloads chỉ trong process. Git ban đầu sạch, HEAD `642354fb551ca0f21ee2976271c92e11dd6ce740`; giữ nguyên công việc trước đó.
+- Thêm native PSRAM/flash diagnostic an toàn. Compile **PASS/exit0**: program312,238 B, globals22,172 B; binary312,384 B đã tạo trong build-output ignored. Chưa đọc `psramFound()`/sizes từ thiết bị thật, không đánh dấu runtime PASS.
+- Minimal upload/Blink47/Serial115200/PSRAM runtime/Digital input/ADC/PWM LED: **7/7 BLOCKED hardware**, không FAIL và không PASS. Sáu ví dụ trước đó có historical compile PASS; không compile lại hoặc claim hardware integration từ các record này.
+- Giữ **SOFTWARE_ACCEPTED** và **HARDWARE_UNTESTED / PENDING_HARDWARE_VALIDATION**. Luồng CLI -> USB -> board, real upload/Serial/source-profile switching còn BLOCKED. Không sửa app, V2 hoặc PS4, không flash/commit/push.
+- [Biên bản đầy đủ, từng test, command, blockers và Git commands](verification/NEWMANIA_V1_HARDWARE_SMOKE.md). Raw preflight/compile logs `docs/verification/newmania_v1_smoke_*.log` ignored.
+- Kiểm tra tài liệu PASS: `git diff --check`, relative links; đúng5 file trong phạm vi, build/logs ignored, không binary tracked hoặc app/V2 diff.
+- Tiếp tục khi có board: nối USB/rút tải, liệt kê cổng, xin xác nhận đúng COM và phê duyệt Minimal trước; không tự chuyển phase khác.
+
 ## Fast track Newmania Starter V1.0 — 2026-11-05
 
 **SOFTWARE_ACCEPTED** cho registry ba profiles, GPIO validation/generation, safe examples và compile pipeline. **HARDWARE_UNTESTED** / **PENDING_HARDWARE_VALIDATION** giữ nguyên. V1 là board kiểm thử, V2 là board mục tiêu; native V2 không sửa. Baseline trước task `3106a9eee15e5057669249ad9f46eb83d22279d6`.

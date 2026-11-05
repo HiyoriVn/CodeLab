@@ -2,6 +2,10 @@
 
 Trạng thái: **SOFTWARE_ACCEPTED** cho phạm vi ví dụ I/O an toàn và luồng compile đã kiểm tra; **HARDWARE_UNTESTED** cho USB/PSRAM/đầu ra thật. V1 là board kiểm thử, V2 là board mục tiêu; không thay native V2 và không có MotorDriver/ServoDriver/PS4Bridge mới. [Profile và nguồn pinout](BOARD_PROFILES.md), [kết quả kiểm tra](../verification/NEWMANIA_V1_FAST_TRACK.md).
 
+## Smoke session — 2026-11-05
+
+Preflight CLI1.5.1/Core3.3.7 PASS; `board list` hiện không thấy cổng. Người dùng xác nhận chưa có board, nên cả bảy hardware tests **BLOCKED**, giữ HARDWARE_UNTESTED. Đã bổ sung và compile-only PSRAM/flash diagnostic (exit0); chưa upload hoặc đọc runtime. [Biên bản từng test và Commit-ready Summary](../verification/NEWMANIA_V1_HARDWARE_SMOKE.md).
+
 ## Chạy phần mềm trên Windows
 
 Dùng các công cụ đã cài, không cập nhật core hoặc cấu hình IDE. Trong một PowerShell mới tại workspace:
@@ -27,6 +31,7 @@ Khi bạn chủ động kiểm thử board thật: chọn đúng cổng đã xá
 | Minimal | `minimal/minimal.ino`, JSON cùng tên | Giữ motor/buzzer LOW, servo Hi-Z, mở Serial; không PWM hoặc hoạt động tải |
 | LED Blink | `blink/blink.ino`, JSON | LED47 HIGH/LOW, 500 ms mỗi mức; không dùng LED power làm kết quả |
 | Serial Hello | `serial_hello/serial_hello.ino`, JSON | Hello, Newmania! mỗi 1000 ms, 115200 baud |
+| PSRAM runtime | `psram_runtime/psram_runtime.ino` (standalone native diagnostic, không có JSON) | In `PSRAM_PRESENT`, `PSRAM_BYTES`, `FLASH_BYTES` mỗi1s; kỳ vọng1/2097152/8388608, phải quan sát board thật |
 | Digital Input | `digital_input/digital_input.ino`, JSON | GPIO1 INPUT; in Boolean mỗi 250 ms; cần mức tín hiệu ngoài đã xác nhận |
 | ADC Read | `adc_read/adc_read.ino`, JSON | GPIO1 input ADC; in raw mỗi 250 ms; không đo khi floating |
 | PWM LED | `pwm_led/pwm_led.ino`, JSON | LED47 PWM 5 kHz/8-bit duty32; không gọi servo/motor |
