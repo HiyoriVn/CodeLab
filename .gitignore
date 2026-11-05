@@ -5,3 +5,11 @@ package-lock.json
 # Arduino verification build artifacts
 /firmware/verification/**/build-output/
 /firmware/verification/**/esp32.esp32.esp32s3/
+# Mainboard firmware and host-test build products
+/firmware/**/build-output/
+/firmware/**/build/
+/firmware/**/*.bin
+/firmware/**/*.elf
+/firmware/**/*.map
+/firmware/**/*.exe
+/docs/verification/phase02_2_*.log

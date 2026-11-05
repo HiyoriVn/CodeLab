@@ -2,6 +2,16 @@
 
 Cập nhật 2026-11-05 (Asia/Saigon). Baseline code trước preflight: `codex/integrate-bach-ui` @ `3a81e54aca414524bb949f3b24af6eb3b2e6b88f`. [Báo cáo Phase 01](PHASE01_AUDIT.md), [kế hoạch](IMPLEMENTATION_PLAN.md), [log build Phase 02.1](verification/phase02_1_compile.log).
 
+## Phase 02.2 — BoardConfig & Safe Startup — PASS (2026-11-05)
+
+**VERIFIED_BUILD / READY_FOR_PHASE02_3** cho acceptance phần mềm của [Issue #17](https://github.com/HiyoriVn/CodeLab/issues/17). **PENDING_HARDWARE_VALIDATION** vẫn giữ. Phase 02.3 chưa bắt đầu và không được tự chuyển tiếp.
+
+- BoardConfig biểu diễn đúng 39 GPIO độc lập + các alias, motor6x2/servo6/encoder2, buses và strapping. Static assertions + host test đối chiếu map: PASS.
+- SafeStartup: sáu servo Hi-Z/no pull; preload 12 motor + buzzer LOW trước output; không PWM, bus init hay enable API. Init/repeated call/failure paths test PASS, compile host exit 0, test exit 0. Trạng thái luôn không armed và servo DISABLED. `loop()` chỉ delay nhường scheduler.
+- Arduino CLI 1.5.1, Core 3.3.7; compile FQBN `esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled`: **PASS, exit 0**. Flash accounting 273,391 / 3,342,336 B (8%); RAM globals 21,428 / 327,680 B (6%), còn 306,252 B. BIN 273,536 B được tạo trong build-output ignored.
+- Log local: `docs/verification/phase02_2_compile.log`; [báo cáo/commands/test results](verification/PHASE02_2_TEST_REPORT.md). `git diff --check` PASS, build artifacts ignored, không đổi `src/` hoặc `tools/`.
+- Chưa đo GPIO/reset/USB-only trên board; không có khả năng xác nhận nguồn servo; không giả định POWER_GOOD. Firmware chỉ thiết lập trạng thái sau boot, không thay bảo vệ điện trước khi GPIO được init. PS4 CSV v1 và các lỗi generator đã ghi từ Phase 01 vẫn nguyên trạng.
+
 ## Phase 02.1 — Minimal firmware/toolchain preflight
 
 **TOOLCHAIN_VERIFIED — PASS.** Arduino CLI 1.5.1, ESP32 Arduino Core 3.3.7, FQBN `esp32:esp32:esp32s3`; board details identify “ESP32S3 Dev Module”. Build options: `FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled`. Data directory set per-process to `C:\Users\Admin\AppData\Local\Arduino15`; downloads to `Arduino15\staging`. No system or IDE config changed.
@@ -30,7 +40,8 @@ PS4 transport remains CodeLab UART ASCII CSV v1 compatibility baseline: `connect
 | Phase | Trạng thái | Gate chính |
 |---|---|---|
 | 02.1 Minimal build preflight | Hoàn thành | CLI/core/FQBN, options và empty sketch verified; PENDING_HARDWARE_VALIDATION |
-| 02.2 BoardConfig & Safe Startup | READY_FOR_PHASE02_2 (chưa bắt đầu) | Profile build baseline và servo DISABLED policy chốt; triển khai chỉ sau chỉ thị |
+| 02.2 BoardConfig & Safe Startup | Hoàn thành software acceptance | Host tests + compile exit 0; PENDING_HARDWARE_VALIDATION |
+| 02.3 | READY_FOR_PHASE02_3 (chưa bắt đầu) | Chỉ triển khai sau yêu cầu mới; hardware validation vẫn pending |
 | 03 Sensor & Peripheral Drivers | Chưa bắt đầu | HAL, datasheet/tải, PWM resources, power-stable policy |
 | 04 PS4 Bridge & UART Protocol | Chưa bắt đầu | Chip bridge Classic, nguồn/pins/package, protocol/bit/axis/freshness mapping |
 | 05 Robot Control & Safety | Chưa bắt đầu | Drivers, cơ khí, safety/fault/re-arm requirements |
