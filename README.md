@@ -17,6 +17,8 @@ The hardware/firmware Phase 01 audit is documented in [the report](docs/PHASE01_
 
 See the [hardware baseline](docs/hardware/HARDWARE.md), [pinout](docs/hardware/PINOUT.md), [proposed firmware architecture](docs/architecture/ARCHITECTURE.md), [module gaps](docs/architecture/MODULES.md), [Phase 02-07 plan](docs/IMPLEMENTATION_PLAN.md), [web architecture](docs/ARCHITECTURE.md), [development setup](docs/DEVELOPMENT.md), [verification plan](docs/TESTING.md), and [legacy PS4 contract](docs/PS4-RECEIVER.md). The [historical web roadmap](docs/ROADMAP.md) uses a separate phase numbering scheme. Previously referenced `docs/EXAMPLES.md` and `docs/TROUBLESHOOTING.md` are absent; they remain planned deliverables.
 
+The physical Newmania unit under test reports16MB flash/8MB Octal PSRAM, differing from the documented N8R2. An explicitly authorized experimental LED47/USB Serial profile is available; the original profiles remain unchanged. Do not use N8R2 motor-startup examples on this Octal unit. See [actual hardware results and restrictions](docs/verification/V1_HARDWARE_INTEGRATION.md).
+
 ## Run locally
 
 Robotics blocks now use board capabilities and logical motor/servo channels. Digital/ADC/PWM/Serial generation and servo signal disable have software tests; motor motion and servo enable remain blocked. See [supported examples, compiler evidence and limitations](docs/verification/ROBOTICS_BLOCKS_INTEGRATION.md). Hardware acceptance remains pending.

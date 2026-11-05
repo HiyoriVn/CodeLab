@@ -5,7 +5,10 @@ export function roboticsToolbox(boardId) {
   if(p.capabilities.adc) types.push('codelab_analog_read');
   if(p.capabilities.pwm) types.push('codelab_pwm_write');
   if(p.id===DEFAULT_BOARD_ID) types.push('codelab_hbridge_motor');
-  else types.push('codelab_motor_channel','codelab_servo_write','codelab_servo_disable');
+  else {
+    if(p.capabilities.motorChannels>0) types.push('codelab_motor_channel');
+    if(p.capabilities.servoChannels>0) types.push('codelab_servo_write','codelab_servo_disable');
+  }
   types.push('codelab_serial_print','codelab_serial_available','codelab_serial_read');
   return types.map(type=>({kind:'block',type,...(type==='codelab_pwm_write'?{inputs:{DUTY:{shadow:{type:'math_number',fields:{NUM:0}}}}}:{})}));
 }

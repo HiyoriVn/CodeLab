@@ -3,6 +3,9 @@ import { DEFAULT_BOARD_ID } from './profiles.js';
 // GPIO latch writes precede direction changes. No pulse generation or enable API.
 export function startupCode(profile) {
   if (profile.id===DEFAULT_BOARD_ID) return { includes: [], definitions: '', setup: [] };
+  // Experimental memory variant: unknown PCB wiring; never touch motor/memory GPIO.
+  // Only explicit validated LED blocks configure GPIO47. Requires USB-only/no loads.
+  if (profile.startupPolicy==='no-board-gpio') return { includes: [], definitions: '', setup: [] };
   const motors=profile.pins.motors.flat();
   const low=[...motors,profile.pins.buzzer];
   return {

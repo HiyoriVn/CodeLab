@@ -5,6 +5,18 @@ import { createBridge } from '../tools/arduino-bridge.mjs';
 import { getBoardProfile } from '../src/boards/profiles.js';
 import { writeFile, rm } from 'node:fs/promises';
 const v1=getBoardProfile('newmania-starter-v1');
+
+test('experimental OPI compile target is retained and old V1 cannot upload its build',async()=>{
+ await withServer(async(post,calls)=>{
+  const p=getBoardProfile('newmania-v1-16m-opi-experimental');
+  const code='void setup() {} void loop() {}';
+  const result=await post('/api/compile',{code,boardId:p.id,warnings:[]});
+  assert.equal(result.status,200);assert.equal(result.body.fqbn,p.build.fqbn);
+  assert.equal(calls.find(a=>a[0]==='compile')[2],p.build.fqbn);
+  assert.equal((await post('/api/upload',{buildId:result.body.buildId,boardId:v1.id,code,port:'MOCK_PORT',confirmed:true})).status,409);
+  assert.equal(calls.filter(a=>a[0]==='upload').length,0);
+ });
+});
 async function withServer(action,{compileFail=false,installed='3.3.7'}={}) {
   const calls=[];const dirs=[];
   const server=createBridge({execute:async args=>{

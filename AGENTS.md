@@ -61,3 +61,9 @@
 - The user authorizes profile-aware Robotics blocks/generation, examples and software verification. Preserve native V1/V2 firmware, profile mappings and PS4 bridge. Do not flash/upload or start hardware/A5 work.
 - Resolve motor/servo channels through the profile registry. Preserve unsupported channel values across import/profile switching and report diagnostics; never silently remap them. Motor motion and servo enable/write remain unsupported until driver semantics, power and safety gates are verified. Servo disable only releases the signal to INPUT/FLOATING; it does not control power or prove safe mechanical release.
 - Generator statement chains and standalone expression terminators are regression-tested. Keep derived V1/PS4 golden sketches synchronized after shared generator fixes; this does not authorize changing their native drivers or protocol.
+
+## V1 physical integration / observed-memory variant — 2026-11-05
+
+- User authorizes hardware tests only with confirmed COM and separate approval before each upload. COM4 and USB-only/all loads disconnected confirmed; do not infer approval for later images. No external DC/motor/servo tests, toolchain updates or commit/push.
+- Actual no-GPIO probe initializes8MB Octal PSRAM and reports16MB flash. Module suffix/PCB wiring remain unverified. User approved a separate experimental profile, preserving N8R2/V2/Generic. Only LED47/Serial tests are exposed; all other GPIO, motors/servos/ADC are blocked until wiring verification.
+- Experimental profile startup must not reuse N8R2 LOW motor init: GPIO35–37 may be internal Octal memory. No board-GPIO startup, no claim of safe output levels before boot; requires USB-only/no loads. Old N8R2 examples must not be uploaded to this observed variant unchanged. Each new upload still requires approval.

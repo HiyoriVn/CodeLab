@@ -1,5 +1,9 @@
 # Testing and verification strategy
 
+## Experimental Newmania OPI profile — 2026-11-05
+
+`npm test`32/32 PASS, `npm run build` PASS, exit0. Five added checks cover LED-only allowlist, absence of board/memory GPIO startup, serialization/goldens, invalid old pins/channels retained with diagnostics, HTTP compile target and stale-profile upload rejection. Existing profile/PS4/native checks retained. Rebuild experimental examples with `node tools/v1-opi-examples.mjs`; this never uploads. Only actual CLI/Blink result and individually approved hardware results recorded in [integration report](verification/V1_HARDWARE_INTEGRATION.md).
+
 ## Robotics blocks — 2026-11-05
 
 Run `npm test`, `npm run build`, `npm run examples:robotics` (deterministic fixture regeneration), then `node tools/verify-robotics-build.mjs` with the existing CLI/data/downloads environment configured as in [development setup](DEVELOPMENT.md). The last command performs compile-only HTTP/CLI verification, never port selection/upload. Examples include supported basic I/O/Serial, servo signal disable and intentionally unsupported motor/servo workspaces. Keep unsupported workspaces as JSON only, with warnings that block compile.

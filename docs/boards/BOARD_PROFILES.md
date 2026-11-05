@@ -8,7 +8,15 @@ Cập nhật 2026-11-05. Nguồn cấu hình dùng chung: `src/boards/profiles.j
 | `steam-mainboard-v2` | STEAM Robotics V2.0, ESP32-S3-MINI-1-N8 — board mục tiêu | 8 MB / không PSRAM | FlashSize=8M, PartitionScheme=default_8MB, PSRAM=disabled |
 | `generic-esp32-s3` | Generic ESP32-S3 — tương thích dự án cũ | Phụ thuộc board thực tế, chưa chọn | FQBN generic; giữ khả năng cấu hình CODELAB_FQBN ở bridge cho profile Generic |
 
-Cả ba dùng core `esp32:esp32` **3.3.7**, CLI được kiểm tra 1.5.1. Base FQBN `esp32:esp32:esp32s3`. Bridge kiểm tra installed_version trước compile; không cài/update core. Bluepad32 Core không dùng cho mainboard.
+Tất cả dùng core `esp32:esp32` **3.3.7**, CLI được kiểm tra 1.5.1. Base FQBN `esp32:esp32:esp32s3`. Bridge kiểm tra installed_version trước compile; không cài/update core. Bluepad32 Core không dùng cho mainboard.
+
+## Profile thử nghiệm từ mạch thực tế
+
+Người dùng cho phép thêm profile riêng `newmania-v1-16m-opi-experimental` sau probe không GPIO: Flash16777216 B, PSRAM8388608 B khởi tạo được với OPI, eFuse decode8MB AP_3v3. MCU ESP32-S3; chưa khẳng định suffix N16R8 hoặc revision PCB. Build Core3.3.7: `FlashSize=16M,PartitionScheme=default_8MB,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc`. Partition8MB giữ nguyên bố cục nhỏ cho test, phần flash còn lại không dùng.
+
+Chỉ GPIO47 được phép Digital/PWM cho bài test LED có phê duyệt, Serial qua USB. ADC/motor/servo không được hỗ trợ; mọi GPIO khác reserved, đặc biệt35–37 thuộc bộ nhớ trên module Octal. Không nhập lại mapping motor/servo N8R2 khi chưa xác minh PCB. Startup policy `no-board-gpio`: không ghi LOW motor/buzzer hoặc cấu hình servo vì wiring variant chưa xác minh; chỉ explicit LED block cấu hình47. Không chứng minh trạng thái điện trước boot hoặc an toàn cơ cấu; yêu cầu chỉ USB và rút mọi tải. Không tự remap workspace cũ; chân/kênh không hợp lệ sinh diagnostics chặn compile.
+
+V1 N8R2, V2 và Generic được giữ nguyên. Phần N8R2 bên dưới là baseline từ tài liệu, **không áp dụng cho mạch vừa đo**. Không dùng ví dụ `firmware/newmania_v1/examples/` trực tiếp trên variant Octal; dùng `.codelab.json` mới trong `firmware/verification/v1_opi_examples/`. Blink và Serial Hello được compile/upload với phê duyệt riêng: người dùng xác nhận LED47 nhấp nháy đúng; Serial nhận Hello115200. Minimal của profile mới chỉ sinh/host-test, chưa compile/upload. H3 user confirms compile/upload COM4, LED blink, Serial Monitor connection and stale-source/profile guards. PWM LED compile-only PASS; no upload because user stopped session. Digital/ADC disabled pending wiring/tools. [Kết quả và giới hạn](../verification/V1_HARDWARE_INTEGRATION.md).
 
 ## Nguồn V1 và đánh giá PSRAM
 

@@ -30,11 +30,27 @@ const v2 = {
   capabilities: { digital: true, adc: false, pwm: false, motorChannels: 6, servoChannels: 6, motorControl: false, servoControl: false },
   adc: [], digital: [3,45,46], reserved: Array.from({length:49},(_,i)=>i),
 };
+// Separate observed-memory candidate. PCB wiring/module suffix are not verified.
+// Only LED47 is exposed for explicitly approved tests; do not reuse N8R2 motor startup.
+const v1Opi = {
+  id: 'newmania-v1-16m-opi-experimental',
+  name: 'Newmania V1 — 16MB/OPI8MB (EXPERIMENTAL, LED only)',
+  mcu: 'ESP32-S3 (module suffix unverified)',
+  flashMB: 16, psramMB: 8, psramType: 'Octal', experimental: true,
+  startupPolicy: 'no-board-gpio',
+  build: { core: 'esp32:esp32', version: '3.3.7', fqbn: baseFqbn + ':FlashSize=16M,PartitionScheme=default_8MB,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc' },
+  pins: { motors: [], servos: [], encoders: [], led: 47,
+    memory: [26,27,28,29,30,31,32,33,34,35,36,37],
+    strapping: [0,3,45,46], usb: [19,20] },
+  capabilities: { digital: true, adc: false, pwm: true, motorChannels: 0, servoChannels: 0, motorControl: false, servoControl: false },
+  adc: [], digital: [47],
+  reserved: Array.from({length:49}, (_,i)=>i).filter(pin=>pin!==47),
+};
 function freeze(value) {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
   return value;
 }
-export const BOARD_PROFILES = freeze([generic,v1,v2]);
+export const BOARD_PROFILES = freeze([generic,v1,v2,v1Opi]);
 export const DEFAULT_BOARD_ID = generic.id;
 export function getBoardProfile(id=DEFAULT_BOARD_ID) {
   const profile=BOARD_PROFILES.find(p=>p.id===id);

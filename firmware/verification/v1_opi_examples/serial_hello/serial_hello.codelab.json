@@ -1,0 +1,49 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Experimental OPI serial_hello",
+    "boardId": "newmania-v1-16m-opi-experimental",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "text_print",
+            "id": "serial_hello-1",
+            "x": 0,
+            "y": 0,
+            "inputs": {
+              "TEXT": {
+                "block": {
+                  "type": "text",
+                  "id": "serial_hello-0",
+                  "fields": {
+                    "TEXT": "Hello, Newmania!"
+                  }
+                }
+              }
+            },
+            "next": {
+              "block": {
+                "type": "codelab_delay_ms",
+                "id": "serial_hello-2",
+                "inputs": {
+                  "DURATION": {
+                    "block": {
+                      "type": "math_number",
+                      "id": "serial_hello-3",
+                      "fields": {
+                        "NUM": 1000
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

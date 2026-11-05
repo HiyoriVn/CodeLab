@@ -27,7 +27,7 @@ test('V2 profile matches accepted native BoardConfig without changing it',()=>{
   assert.match(v2.build.fqbn,/PSRAM=disabled/);
 });
 test('profiles are immutable, IDs validated, legacy files default generic',()=>{
-  assert.equal(BOARD_PROFILES.length,3);assert.equal(projectBoardId({workspace:{}}),DEFAULT_BOARD_ID);
+  assert.equal(BOARD_PROFILES.length,4);assert.equal(projectBoardId({workspace:{}}),DEFAULT_BOARD_ID);
   assert.equal(projectBoardId({boardId:v1.id}),v1.id);assert.throws(()=>projectBoardId({boardId:'unknown'}));
   assert.throws(()=>{v1.pins.servos.push(19);});
 });
