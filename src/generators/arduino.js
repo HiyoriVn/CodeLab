@@ -117,8 +117,8 @@ CodeLabPS4Adapter codelabPs4;`;
 
 function variableTypeOf(block, knownTypes) {
   if (!block) return null;
-  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'codelab_analog_read', 'codelab_ps4_axis'].includes(block.type)) return 'number';
-  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_ps4_connected', 'codelab_ps4_button'].includes(block.type)) return 'boolean';
+  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'codelab_analog_read', 'codelab_serial_available', 'codelab_serial_read', 'codelab_ps4_axis'].includes(block.type)) return 'number';
+  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_gpio_read_mode', 'codelab_ps4_connected', 'codelab_ps4_button'].includes(block.type)) return 'boolean';
   if (['text', 'text_join'].includes(block.type)) return 'string';
   if (block.type === 'variables_get') return knownTypes.get(block.getFieldValue('VAR')) || null;
   return null;
@@ -218,10 +218,17 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     initializeVariables(this, workspace);
   }
 
+  scrubNakedValue(code) { return code + ';\n'; }
+
+  scrub_(block, code, thisOnly = false) {
+    const next = block.nextConnection?.targetBlock();
+    return code + (!thisOnly && next ? this.blockToCode(next) : '');
+  }
+
   finish(code) {
     const startup = startupCode(this.profile_);
     const definitions = [startup.definitions, ...Object.values(this.definitions_ || {})].filter(Boolean).join('\n');
-    const includes = ['#include <Arduino.h>', ...startup.includes, ...Object.values(this.includes_ || {})].join('\n');
+    const includes = [...new Set(['#include <Arduino.h>', ...startup.includes, ...Object.values(this.includes_ || {})])].join('\n');
     return [
       includes,
       definitions,
@@ -403,6 +410,51 @@ function registerBlocks(generator) {
     const duty = numberInput(block, 'DUTY', gen, 'Khối PWM');
     configurePwm(gen, pin, 'Khối PWM');
     return 'ledcWrite(' + pin + ', (uint32_t)constrain((int)(' + duty + '), 0, 255));\n';
+  };
+
+  generator.forBlock.codelab_gpio_read_mode = (block, gen) => {
+    const pin=numberInput(block,'PIN',gen,'GPIO input mode');
+    const mode=block.getFieldValue('MODE');
+    configurePin(gen,pin,mode,'GPIO input mode');
+    return ['(digitalRead('+pin+') == HIGH)',ATOMIC];
+  };
+  generator.forBlock.codelab_serial_print = (block, gen) => {
+    const value=gen.valueToCode(block,'VALUE',ATOMIC);
+    if(!value) gen.diagnostics_.add('Serial: chưa nối giá trị cần ghi.');
+    return 'Serial.'+(block.getFieldValue('ENDING')==='RAW'?'print':'println')+'('+(value||'""')+');\n';
+  };
+  generator.forBlock.codelab_serial_available = () => ['Serial.available()',ATOMIC];
+  generator.forBlock.codelab_serial_read = () => ['Serial.read()',ATOMIC];
+  const channelPin = (block, gen, kind) => {
+    const index=Number(block.getFieldValue('CHANNEL'))-1;
+    if(!Number.isInteger(index)||index<0||index>=gen.profile_.pins[kind].length) {
+      gen.diagnostics_.add(kind+': kênh không tồn tại trên profile; không remap workspace.');return null;
+    }
+    return gen.profile_.pins[kind][index];
+  };
+  generator.forBlock.codelab_motor_channel = (block, gen) => {
+    channelPin(block,gen,'motors');
+    numberInput(block,'SPEED',gen,'Motor channel');
+    gen.diagnostics_.add('Motor chuyển động chưa được hỗ trợ: V1 chưa xác minh truth table; V2 chưa có runtime driver/safety gate. Không phát lệnh tải.');
+    return '// Unsupported motor channel request: no actuator code emitted.\n';
+  };
+  generator.forBlock.codelab_servo_write = (block, gen) => {
+    channelPin(block,gen,'servos');
+    numberInput(block,'ANGLE',gen,'Servo channel');
+    gen.diagnostics_.add('Servo enable/write chưa được hỗ trợ: thiếu power-stable interlock và driver đã xác minh.');
+    return '// Unsupported servo write: no pulses emitted.\n';
+  };
+  generator.forBlock.codelab_servo_disable = (block, gen) => {
+    const pin=channelPin(block,gen,'servos');
+    if(pin===null) return '// Unsupported servo channel.\n';
+    gen.includes_['servo_disable_gpio']='#include <driver/gpio.h>';
+    gen.definitions_['servo_disable']=`static void codelabServoDisable(uint8_t pin) {
+  const auto gpio = (gpio_num_t)pin;
+  const bool inputOk = gpio_set_direction(gpio, GPIO_MODE_INPUT) == ESP_OK;
+  const bool pullOk = gpio_set_pull_mode(gpio, GPIO_FLOATING) == ESP_OK;
+  if (!inputOk || !pullOk) Serial.println("Servo disable failed");
+}`;
+    return 'codelabServoDisable('+pin+');\n';
   };
 
   generator.forBlock.codelab_hbridge_motor = (block, gen) => {

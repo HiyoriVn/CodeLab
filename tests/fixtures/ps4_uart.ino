@@ -134,5 +134,7 @@ void setup() {
 
 void loop() {
   codelabPs4.update();
-
+Serial.println(codelabPs4.connected());
+Serial.println(codelabPs4.axis(0));
+Serial.println(codelabPs4.button(0));
 }

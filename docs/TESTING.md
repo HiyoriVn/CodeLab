@@ -1,5 +1,11 @@
 # Testing and verification strategy
 
+## Robotics blocks — 2026-11-05
+
+Run `npm test`, `npm run build`, `npm run examples:robotics` (deterministic fixture regeneration), then `node tools/verify-robotics-build.mjs` with the existing CLI/data/downloads environment configured as in [development setup](DEVELOPMENT.md). The last command performs compile-only HTTP/CLI verification, never port selection/upload. Examples include supported basic I/O/Serial, servo signal disable and intentionally unsupported motor/servo workspaces. Keep unsupported workspaces as JSON only, with warnings that block compile.
+
+27/27 host tests and production build PASS. Tests cover next-block/nested chains, floating C++ expression terminators, serialization, legacy profiles, pin/mode conflicts, channel retention, no motor/servo pulses, parser/publisher and stale upload guards. Browser smoke verified V2 M6 -> V1 preserves the block and reports invalid channel. Hardware remains untested. Final compiler results and limitations: [Robotics report](verification/ROBOTICS_BLOCKS_INTEGRATION.md).
+
 ## Newmania V1 fast track — 2026-11-05
 
 `npm test`: 15/15 host/generator/native fake-GPIO/HTTP tests PASS; `npm run build` PASS; six V1 examples compiled through the real CLI bridge with Core3.3.7/QSPI PSRAM and nonempty binaries. Chrome profile/persistence/device-dialog smoke checks passed. No actual upload, Serial I/O, GPIO waveform or hardware test. Detailed evidence/limits: [fast-track report](verification/NEWMANIA_V1_FAST_TRACK.md); future board checks: [V1 checklist](boards/V1_HARDWARE_TEST.md). SOFTWARE_ACCEPTED applies to this software scope; HARDWARE_UNTESTED remains.

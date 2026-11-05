@@ -4,6 +4,7 @@ import 'blockly/blocks';
 import * as Vietnamese from 'blockly/msg/vi';
 import { generateArduino } from '../generators/arduino.js';
 import '../blocks/robotics.js';
+import { roboticsToolbox } from '../blocks/robotics-toolbox.js';
 import '../blocks/controller.js';
 import { RENDERER, FALLBACK_RENDERER } from '../blocks/renderer.js';
 import { themes } from '../blocks/theme.js';
@@ -106,6 +107,10 @@ const toolbox = {
   ],
 };
 
+function profileToolbox(boardId) {
+  return {...toolbox, contents: toolbox.contents.map(category=>category.name==='Thiết bị & robot' ? {...category,contents: roboticsToolbox(boardId)} : category)};
+}
+
 function BlocklyWorkspace({ boardId, initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
   const hostRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -123,7 +128,7 @@ function BlocklyWorkspace({ boardId, initialState, dark = false, onChange, onCod
   useEffect(() => {
     if (!hostRef.current) return undefined;
     const options = {
-      toolbox,
+      toolbox: profileToolbox(boardIdRef.current),
       sounds: false,
       trashcan: false,
       move: { scrollbars: true, drag: true, wheel: true },
@@ -139,6 +144,8 @@ function BlocklyWorkspace({ boardId, initialState, dark = false, onChange, onCod
       hostRef.current.replaceChildren();
       workspace = Blockly.inject(hostRef.current, { ...options, renderer: FALLBACK_RENDERER });
     }
+    workspace.codelabBoardId=boardIdRef.current;
+    if(workspace.getFlyout()) workspace.getFlyout().getWorkspace().codelabBoardId=boardIdRef.current;
     workspaceRef.current = workspace;
 
     const flyout = workspace.getFlyout();
@@ -211,7 +218,13 @@ function BlocklyWorkspace({ boardId, initialState, dark = false, onChange, onCod
   }, [workspaceRef]);
 
   useEffect(() => {
-    if (workspaceRef.current) onCodeChangeRef.current?.(generateArduino(workspaceRef.current, boardId));
+    const workspace=workspaceRef.current;
+    if(workspace) {
+      workspace.codelabBoardId=boardId;
+      if(workspace.getFlyout()) workspace.getFlyout().getWorkspace().codelabBoardId=boardId;
+      workspace.updateToolbox(profileToolbox(boardId));
+      onCodeChangeRef.current?.(generateArduino(workspace, boardId));
+    }
   }, [boardId, workspaceRef]);
 
   useEffect(() => {

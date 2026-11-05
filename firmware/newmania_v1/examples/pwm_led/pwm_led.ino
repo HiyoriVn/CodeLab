@@ -23,4 +23,5 @@ void setup() {
 void loop() {
 
 ledcWrite(47, (uint32_t)constrain((int)(32), 0, 255));
+delay((uint32_t)max(0.0, (double)(1000)));
 }

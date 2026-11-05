@@ -80,4 +80,6 @@ Deliverables và acceptance: [board profiles](boards/BOARD_PROFILES.md), [hướ
 
 ## Điểm dừng
 
+Robotics software checkpoint (2026-11-05): profile-aware toolbox/channel APIs, Digital/ADC/PWM/Serial examples and generator chain fixes implemented and host-tested. Motor motion/servo enable remain diagnostics-only; sensor drivers, source mappings/build settings and native firmware are not expanded. See [Robotics report](verification/ROBOTICS_BLOCKS_INTEGRATION.md) for exact compile results and next-task gates. This checkpoint does not complete Phase 03/05/06 or authorize hardware validation/A5.
+
 Audit Phase 01 không cho phép tự chạy bất kỳ phase sau. Các phép flash/bench nói ở trên là tiêu chí tương lai, không phải hành động đã thực hiện hoặc được mặc định cho phép trong chat này.

@@ -22,4 +22,5 @@ void setup() {
 void loop() {
 
 Serial.println("Hello, Newmania!");
+delay((uint32_t)max(0.0, (double)(1000)));
 }

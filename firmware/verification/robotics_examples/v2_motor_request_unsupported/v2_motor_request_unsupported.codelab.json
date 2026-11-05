@@ -1,0 +1,35 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "v2_motor_request_unsupported",
+    "boardId": "steam-mainboard-v2",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "codelab_motor_channel",
+            "id": "v2_motor_request_unsupported-0",
+            "x": 0,
+            "y": 0,
+            "fields": {
+              "CHANNEL": "1"
+            },
+            "inputs": {
+              "SPEED": {
+                "block": {
+                  "type": "math_number",
+                  "id": "v2_motor_request_unsupported-1",
+                  "fields": {
+                    "NUM": 50
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

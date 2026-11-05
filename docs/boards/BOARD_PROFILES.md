@@ -37,7 +37,7 @@ USB hardware CDC là **cấu hình thử nghiệm phần mềm**, chưa xác min
 
 Mức tín hiệu ESP32 phải tương thích 3.3 V; nguồn connector không chứng minh tín hiệu chịu được 5 V. Không có xác nhận voltage/pin numbering connector đầy đủ ngoài bảng đã cung cấp. Chân chưa có mapping, flash/PSRAM và strapping0/3/45/46 đều không được test trực tiếp. Hai chức năng khác nhau yêu cầu cùng chân (ví dụ ADC INPUT và digital OUTPUT/PWM) tạo warnings chặn compile; không có tự động remap.
 
-V2 giữ [pinout đã nghiệm thu](../hardware/PINOUT.md): 6 motor, 6 servo, encoder2, IMU/I2C/UART/SPI/buzzer/USB. Profile web hiện chỉ hỗ trợ safe startup cho V2; mọi chân onboard đều được reserved. Các driver điều khiển V2 là nhiệm vụ tiếp theo, chưa triển khai. Generic giữ block types và semantics cũ, cảnh báo rủi ro chip/USB/strapping; không có mapping an toàn universal và không tự thêm startup board-specific.
+V2 giữ [pinout đã nghiệm thu](../hardware/PINOUT.md): 6 motor, 6 servo, encoder2, IMU/I2C/UART/SPI/buzzer/USB. Profile web hiện hỗ trợ safe startup, Serial và vô hiệu tín hiệu servo cho V2; mọi chân onboard đều được reserved đối với generic I/O. Các driver điều khiển V2 là nhiệm vụ tiếp theo, chưa triển khai. Generic giữ block types và semantics cũ, cảnh báo rủi ro chip/USB/strapping; không có mapping an toàn universal và không tự thêm startup board-specific.
 
 ## Generation và firmware
 
@@ -46,6 +46,14 @@ Generator nhận `generateArduino(workspace, boardId)`; không có pin map V1/V2
 `firmware/newmania_v1/newmania_v1.ino` là firmware kiểm thử V1 độc lập, sinh từ cùng registry/generator. `tools/v1-examples.mjs` sinh `.ino` standalone và file workspace đi kèm cho minimal, blink, serial, digital input, ADC, PWM LED. Có thể tái sinh bằng `npm run examples:v1`. Native V2 không sửa, firmware PS4 bridge không thêm.
 
 ## Workspace compatibility và upload
+
+### Robotics toolbox — 2026-11-05
+
+`src/blocks/robotics-toolbox.js` lọc ADC/PWM theo capabilities; V2 không mở các chân onboard reserved cho generic I/O. V1/V2 dùng block kênh motor/servo lấy mapping từ registry, không nhập GPIO motor thủ công. V1 có M1–M4/S1–S4, V2 có M1–M6/S1–S6. Dropdown giữ giá trị 1–6 để bảo toàn workspace khi đổi board; các kênh vượt capability được ghi không hỗ trợ và generator cảnh báo, không remap.
+
+Motor motion và servo enable/write hiện chỉ có API/block cùng diagnostics chặn compile; không sinh lệnh tải. Servo disable sinh INPUT/FLOATING trên signal đã map, không attach/PWM, không cấp/ngắt nguồn và không chứng minh an toàn khi thả cơ cấu. Chưa có power-stable interlock; không giả định POWER_GOOD. Generic giữ block H-bridge legacy; không coi đó là driver V1/V2 đã được xác minh.
+
+Digital input có tùy chọn no pull/pull-up/pull-down; Serial print/println, available và read dùng `Serial` 115200 đã có, không thay UART1 PS4. Sensor hiện chỉ có primitives digital/ADC, chưa có dedicated IMU/encoder/range driver. [Báo cáo và ví dụ Robotics](../verification/ROBOTICS_BLOCKS_INTEGRATION.md).
 
 Giữ `codelab.projects.v1`, định dạng `codelab-project` version1 và nguyên schema Blockly. Thêm trường **optional** `project.boardId`; file/local project cũ thiếu trường chọn Generic. Chọn board lưu metadata, không sửa các số GPIO trong block cũ. Export/import bảo toàn trường board; unknown boardId trong file import báo lỗi trước khi thay dự án. Code được sinh lại từ cùng workspace khi đổi board; warnings nếu pins cũ không phù hợp, không đổi chân âm thầm.
 

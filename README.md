@@ -19,6 +19,8 @@ See the [hardware baseline](docs/hardware/HARDWARE.md), [pinout](docs/hardware/P
 
 ## Run locally
 
+Robotics blocks now use board capabilities and logical motor/servo channels. Digital/ADC/PWM/Serial generation and servo signal disable have software tests; motor motion and servo enable remain blocked. See [supported examples, compiler evidence and limitations](docs/verification/ROBOTICS_BLOCKS_INTEGRATION.md). Hardware acceptance remains pending.
+
 For editor development, use `npm install`, then run `npm run dev` and `npm run bridge` in separate terminals. The bridge requires Arduino CLI and the ESP32 core.
 
 For a standalone local build, run `npm run build` followed by `npm run bridge`, then open `http://127.0.0.1:8787`. Upload requires a successful compile, a currently detected serial port, and explicit confirmation.

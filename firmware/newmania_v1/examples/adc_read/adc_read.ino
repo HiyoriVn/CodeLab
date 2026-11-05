@@ -23,4 +23,5 @@ void setup() {
 void loop() {
 
 Serial.println(analogRead(1));
+delay((uint32_t)max(0.0, (double)(250)));
 }

@@ -22,3 +22,6 @@ package-lock.json
 
 # PS4 A2-A4 local compile evidence
 /docs/verification/ps4_fast_track_*.log
+
+# Robotics CLI verification logs; results summarized in the Markdown report
+/docs/verification/robotics_blocks_*.log

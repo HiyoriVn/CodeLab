@@ -2,6 +2,14 @@
 
 Cập nhật 2026-11-05 (Asia/Saigon). Baseline code trước preflight: `codex/integrate-bach-ui` @ `3a81e54aca414524bb949f3b24af6eb3b2e6b88f`. [Báo cáo Phase 01](PHASE01_AUDIT.md), [kế hoạch](IMPLEMENTATION_PLAN.md), [log build Phase 02.1](verification/phase02_1_compile.log).
 
+## Robotics Blocks & Generator Integration — 2026-11-05
+
+- Implemented profile-aware toolbox, motor/servo channel APIs, servo signal disable, digital input pull modes and Serial print/available/read. ADC/PWM follow capabilities; V2 keeps reserved pins. Motor motion/servo enable remain unsupported diagnostics, with no pulses/load commands generated.
+- Fixed shared generator dropping chained statements and missing semicolons for standalone expressions. Regenerated five derived V1 C++ examples and PS4 UART golden; native V1/V2, profile registry, PS4 Bridge/parser/protocol unchanged. Workspace version1/legacy block types retained; switching V2 M6 -> V1 preserves M6 and reports error instead of remapping.
+- `npm test`: **27/27 PASS, exit0**. `npm run build`: **PASS, exit0** (62 modules; existing chunk/deprecation warnings). Browser smoke PASS for toolbox/channels/profile switching; test workspace restored to initially empty Generic.
+- Arduino CLI1.5.1/Core3.3.7 directly checked. **10/10 generated-example compiles PASS, script exit0**, each with nonempty BIN, through HTTP -> CLI; V1 8MB/QSPI enabled, V2 8MB/PSRAM disabled, Generic unchanged defaults. **SOFTWARE_ACCEPTED** for supported blocks/diagnostics only. [Results/memory/commands](verification/ROBOTICS_BLOCKS_INTEGRATION.md); local raw log `docs/verification/robotics_blocks_compile.log` ignored.
+- **HARDWARE_UNTESTED / PENDING_HARDWARE_VALIDATION** remains. No truth-table/power assumption, hardware/A5, COM selection, upload, flash, commit/push or next-phase execution. Motor safety/servo power interlock and dedicated sensor drivers remain separate tasks.
+
 ## PS4 Fast Track A2 + A3 + A4 — 2026-11-05
 
 - **A2 SOFTWARE_ACCEPTED**: PS4Bluepad321.0.1 axis/17-button mapping, Touchpad exclusion, CSV v1 publisher, report gate and timeout/disconnect/reset behavior. All201 percentage values round-trip through A1 to exact10*p; no second Y inversion, fake fresh heartbeat or cached reconnect control.

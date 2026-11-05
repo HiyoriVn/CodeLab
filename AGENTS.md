@@ -55,3 +55,9 @@
 - Issue19 authorizes the isolated Classic ESP32 bridge candidate and mapping/publisher software only. Do not modify V1/V2 profiles or accepted mainboard/A1 code; do not flash or start A5 automatically.
 - Web Pairing is canceled: no Wi-Fi AP, HTTP server, or pairing UI. Keep PS4Bluepad321.0.1/Bluepad32, CSV v1 and debug/data UART separation. Library sources remain external; temporary extraction for compile is not vendoring into CodeLab.
 - Final bridge MCU/board/pins/power remain unknown. Compile-only ESP32 Dev Module with Bluepad32 core4.1.0 is not hardware acceptance; UART/LED default unassigned/disabled. Real GPIOs require owner confirmation.
+
+## Robotics blocks integration — 2026-11-05
+
+- The user authorizes profile-aware Robotics blocks/generation, examples and software verification. Preserve native V1/V2 firmware, profile mappings and PS4 bridge. Do not flash/upload or start hardware/A5 work.
+- Resolve motor/servo channels through the profile registry. Preserve unsupported channel values across import/profile switching and report diagnostics; never silently remap them. Motor motion and servo enable/write remain unsupported until driver semantics, power and safety gates are verified. Servo disable only releases the signal to INPUT/FLOATING; it does not control power or prove safe mechanical release.
+- Generator statement chains and standalone expression terminators are regression-tested. Keep derived V1/PS4 golden sketches synchronized after shared generator fixes; this does not authorize changing their native drivers or protocol.
