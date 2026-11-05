@@ -1,5 +1,7 @@
 # PS4 mecanum controller — simulation only
 
+Later same-day integration work adds a [mainboard demo and UART rewire candidates](../../firmware/demos/newmania_ps4_mecanum/README.md). RZ7899 reference truth table is now verified; actual Octal PCB motor routing remains unresolved and hardware actuators stay blocked. [Current build/test evidence](../verification/WORKING_MECANUM_DEMO.md). Logic below remains unchanged.
+
 2026-11-05, baseline `d91502c36c96a1baf8d4f4183b687ef8249c0e1c`, initially clean. User authorizes logic/interfaces/mocks/tests and safe compile-only, not uploads or profile changes. Prior stopped hardware session stays stopped.
 
 ## Implemented boundary

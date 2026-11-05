@@ -1,5 +1,9 @@
 # Testing and verification strategy
 
+## Integrated PS4 robot demo attempt — 2026-11-05
+
+`npm test`37/37 PASS and `npm run build` PASS/exit0. New demo runtime tests cover monitor preventing arm, explicit SIM, blocked hardware commands, low capped RZ7899 plans, Share/Options/PS, servo mock, timeout/reconnect, canonical header reuse; negative compiler cases reject35–37 even with UART confirmation flag. Default S3, proposed-rewire UART S3 and D1 bridge all compile PASS/exit0; all nonempty binaries. [Commands/results](verification/WORKING_MECANUM_DEMO.md), [wiring and deferred load tests](../firmware/demos/newmania_ps4_mecanum/README.md). No hardware test/upload in this task; actuator backend blocked by unresolved actual GPIO/power.
+
 ## PS4 mecanum simulation — 2026-11-05
 
 `npm test`34/34 PASS, `npm run build` PASS/exit0. New native C++ host scenarios test4913 mixer vectors, mapping/permutation/inversion/saturation, arming/neutral/deadzone/acceleration, disconnect/reconnect/held buttons,250/251ms/wrap/stall, servo bounds/power/backend failures; actual existing CSV publisher and parser are included. Standalone parser header must match generator byte-for-byte; regeneration: `node tools/robot-parser-header.mjs`. Arduino INPUT macro collision guarded in native compile. `pwsh -NoProfile -File tools/verify-mecanum.ps1` compile-only PASS/exit0 with unchanged experimental16MB/OPI/Core3.3.7; no UART/GPIO or actuator initialization in sketch. [Full results/API/hardware gates](robotics/PS4_MECANUM.md). Pure logic/mock acceptance only; no hardware actuation tests.

@@ -1,4 +1,9 @@
 # Compile-only candidate, no install/update/COM/upload. Dependency stays outside repository.
+param(
+  [int]$Tx=-1,[int]$Rx=-1,
+  [string]$Log='docs/verification/ps4_fast_track_bridge.log',
+  [string]$OutputDir='firmware/ps4_bridge/build-output'
+)
 $ErrorActionPreference='Stop'
 $cli=$env:ARDUINO_CLI_PATH
 if(!$cli){$cli='C:\Users\Admin\AppData\Local\Programs\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe'}
@@ -12,11 +17,22 @@ if(!($cores | Where-Object {$_.id -eq 'esp32-bluepad32:esp32' -and $_.installed_
 $external=Join-Path $env:TEMP ('codelab-ps4-external-'+[guid]::NewGuid())
 Expand-Archive -LiteralPath $zip -DestinationPath $external
 $lib=Join-Path $external 'ps4-esp32-lib-main'
-$log='docs/verification/ps4_fast_track_bridge.log'
+$log=$Log
 "External dependency: $lib; ZIP SHA256=$expected; compile-only ESP32 Classic candidate, pins unassigned/LED off" | Set-Content $log
 & $cli version 2>&1 | Tee-Object -FilePath $log -Append
 & $cli board details --fqbn esp32-bluepad32:esp32:esp32 2>&1 | Add-Content $log
-& $cli compile --fqbn esp32-bluepad32:esp32:esp32 --library $lib --output-dir firmware/ps4_bridge/build-output firmware/ps4_bridge 2>&1 | Tee-Object -FilePath $log -Append
+$compileArgs=@('compile','--fqbn','esp32-bluepad32:esp32:esp32','--library',$lib,'--output-dir',$OutputDir)
+if($Tx -ge 0 -or $Rx -ge 0) {
+  $compileArgs+=@('--build-property',"compiler.cpp.extra_flags=-DCODELAB_BRIDGE_TX=$Tx -DCODELAB_BRIDGE_RX=$Rx")
+}
+"COMMAND: $cli $($compileArgs -join ' ') firmware/ps4_bridge" | Add-Content $log
+& $cli @compileArgs firmware/ps4_bridge 2>&1 | Tee-Object -FilePath $log -Append
 $code=$LASTEXITCODE
 "EXIT_CODE=$code" | Tee-Object -FilePath $log -Append
+if($code -eq 0) {
+  $binary=Join-Path $OutputDir 'ps4_bridge.ino.bin'
+  if(!(Test-Path $binary) -or (Get-Item $binary).Length -eq 0){throw 'Missing bridge binary'}
+  Get-Item $binary | Select-Object Length | Format-List | Out-String | Tee-Object $log -Append
+  Get-FileHash $binary | Format-List | Out-String | Tee-Object $log -Append
+}
 exit $code

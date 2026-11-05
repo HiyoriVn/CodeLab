@@ -1,5 +1,13 @@
 # Progress - hardware/firmware roadmap
 
+## Integrated working-demo attempt — 2026-11-05 — UART_READY_FOR_REWIRE / ACTUATORS_BLOCKED
+
+- One mainboard demo `firmware/demos/newmania_ps4_mecanum/newmania_ps4_mecanum.ino` reuses canonical CSV parser, RobotController/MecanumMixer/ServoController; USB monitor/commands, explicit SIM mode,15% logical RZ7899 PWM cap. No real motor/servo output, no GPIO35–37 or profile change. No working four-motor hardware claim.
+- User identified onboard RZ7899 and supplied reference schematic/pin tables; manufacturer truth table10 forward/01 reverse/00 coast/11 brake verified. Old M1/M2 pins35–37 still conflict with observed16MB/OPI unit; actual PCB routing unresolved. Servo signal/power stability also not verified. Hardware backend and motor/servo tests remain BLOCKED.
+- User confirms former D1 connection was I2C and authorizes preparing rewire: D1 TX21 -> S3 reference RX21, D1 RX22 <- S3 reference TX18, commonGND, no power tie. Rewire not performed/observed. Default UART disabled; separate UART-enabled compile candidate provided. Stock ZIP SerialMonitor prints text, not CSV; exact running D1 image unknown. Reused unchanged A2–A4 bridge/pairing/MAC/library with proposed data pins.
+- Host tests **37/37 PASS**, web build **PASS**, exit0. CLI1.5.1: default S3 demo/Core3.3.7 compile PASS (BIN343152 B), UART-enabled S3 PASS (BIN352064 B), existing Classic bridge/Core4.1.0 TX21/RX22 PASS (BIN725632 B), all exit0/nonempty binaries. [Detailed evidence/blockers](verification/WORKING_MECANUM_DEMO.md), [short wiring/test instructions](../firmware/demos/newmania_ps4_mecanum/README.md).
+- No COM open/flash/upload, actual PS4/UART/load test, toolchain install/update, commit/push or further phase. Prior stopped hardware session remains stopped. Compile readiness does not establish a moving robot.
+
 ## PS4 mecanum controller — 2026-11-05 — SOFTWARE_ACCEPTED (mock only)
 
 - Portable C++ MecanumMixer, RobotController DISARMED/ARMED/FAULT, deadzone/per-wheel acceleration and logical ServoController with motor/servo interfaces/mock implementations. Defaults/signs/button bindings are software proposals, not verified chassis settings. D-pad never auto-enables servo; explicit enable+confirmed power required. Reconnect never arms, FAULT remains latched until explicit neutral/fresh recovery.

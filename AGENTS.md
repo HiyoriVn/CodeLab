@@ -73,3 +73,9 @@
 - User authorizes portable RobotController/MecanumMixer/servo logic, interfaces/mock backends, host simulation and safe compile-only. No flash/upload, hardware tests, new motor/servo backend or board profile changes. Prior hardware session remains stopped.
 - Reuse CSV v1 publisher/parser; parser freshness metadata is read-only. No repeated poll may invent a fresh report. Reconnect never arms; faults stop mocks and require explicit recovery. Servo remains disabled without explicit enable plus independently verified power readiness; no POWER_GOOD pin assumed.
 - Experimental35–37 remain unavailable. Keep all actuators mocked; compile sketch must not initialize board GPIO or UART until separately reviewed wiring. See `docs/robotics/PS4_MECANUM.md` for coordinate/binding proposals and remaining hardware gates.
+
+## Integrated robot demo attempt — 2026-11-05
+
+- User authorizes integrated UART/demo code, onboard RZ7899 investigation, safe backends only when actual mapping/power verified, host tests and compile-only. No flash/upload, load activation, UI work or profile changes. No external motor driver recommendation without evidence onboard drivers unusable.
+- User confirms old D1 wiring was I2C:21 to SCL,22 to SDA, and permits preparing UART rewire. Proposed D1 TX21 -> S3 reference RX21; D1 RX22 <- S3 reference TX18; GND only, no5V tie. Physical rewire remains unconfirmed; default demo UART gate off, UART-enabled binary is a compile candidate only.
+- User reference images identify RZ7899 and old motor35/36,37/38,39/40,41/42, servo12..15 and5V bus. Reference truth table is verified against manufacturer PDF; actual Octal PCB mapping/power not verified. Never drive35–37, disable PSRAM, bypass motor validation or claim a working four-motor/servo robot from compile/mock results. Demo motor/servo hardware remains blocked; current RZ7899 output is a logical PWM plan only.
