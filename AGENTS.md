@@ -9,7 +9,7 @@
 - Keep the MVP on ESP32-S3 and Arduino C++. Do not add MicroPython generation or conversion to MVP scope unless the project owner changes this decision.
 - The confirmed mainboard is STEAM Robotics Mainboard V2.0 with ESP32-S3-MINI-1-N8. Use `docs/hardware/HARDWARE.md` and `docs/hardware/PINOUT.md`, including their source and unknown-value labels. Do not change GPIO assignments.
 - The external ESP32 is a PS4 bridge only; it must not control motors or servos. V2 mainboard UART1 uses TX GPIO6 and RX GPIO7, with crossed TX/RX and common ground. Signals are 3.3 V; do not connect the header's +5V_Core to the bridge before its power input is verified. The bridge chip and its UART pins remain unknown; enable Bluetooth Classic only after confirming chip support.
-- Existing UART/I2C Blockly adapters are legacy source, not verified support for this board. The selected PS4 connection is UART1, not I2C. The selected bridge library is PS4Bluepad32 1.0.1 / Bluepad32 on a separate ESP32; the ZIP is reference source and is not vendored or integrated bridge firmware. UART CSV v1 remains the mainboard compatibility baseline.
+- Existing UART/I2C Blockly adapters are legacy source, not verified support for this board. The selected PS4 connection is UART1, not I2C. The selected bridge library is PS4Bluepad32 1.0.1 / Bluepad32 on a separate ESP32; the ZIP is used externally by the compile-only bridge candidate and is not vendored. UART CSV v1 remains the mainboard compatibility baseline.
 
 ## Implementation guidance
 
@@ -49,3 +49,9 @@
 - Read `docs/boards/BOARD_PROFILES.md` and `docs/boards/V1_HARDWARE_TEST.md`. Use `src/boards/profiles.js` for web/build mappings; keep blocks generic. Do not silently remap pins in old workspaces. Missing optional project.boardId means Generic.
 - V1 N8R2 has QSPI PSRAM: Core3.3.7, FlashSize=8M, PartitionScheme=default_8MB, PSRAM=enabled; V2 N8 remains PSRAM=disabled. Runtime memory/USB and power need hardware validation.
 - Do not enable motor/servo or infer that DC3–15V board input is safe for 3–6V kit motors. No auto-upload, COM selection, commit/push, MotorDriver V2 or PS4Bridge work is authorized by this fast track.
+
+## PS4 A2–A4 scope — 2026-11-05
+
+- Issue19 authorizes the isolated Classic ESP32 bridge candidate and mapping/publisher software only. Do not modify V1/V2 profiles or accepted mainboard/A1 code; do not flash or start A5 automatically.
+- Web Pairing is canceled: no Wi-Fi AP, HTTP server, or pairing UI. Keep PS4Bluepad321.0.1/Bluepad32, CSV v1 and debug/data UART separation. Library sources remain external; temporary extraction for compile is not vendoring into CodeLab.
+- Final bridge MCU/board/pins/power remain unknown. Compile-only ESP32 Dev Module with Bluepad32 core4.1.0 is not hardware acceptance; UART/LED default unassigned/disabled. Real GPIOs require owner confirmation.

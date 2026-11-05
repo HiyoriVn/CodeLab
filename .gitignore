@@ -19,3 +19,6 @@ package-lock.json
 
 # PS4 A1 raw CLI verification evidence
 /docs/verification/ps4_a1_*.log
+
+# PS4 A2-A4 local compile evidence
+/docs/verification/ps4_fast_track_*.log

@@ -1,8 +1,8 @@
 # PS4 receiver and CodeLab adapter contract
 
-This document describes the **legacy CodeLab UART/I2C adapter contract**, not a verified hardware implementation. The selected V2 mainboard architecture uses a separate ESP32 PS4 bridge over UART1 TX GPIO6 / RX GPIO7. Bridge chip/pins/power remain open. UART ASCII CSV v1 below is the selected compatibility baseline. The supplied PS4Bluepad32 1.0.1 library has different axis and button representations and no UART publisher; see [library audit](architecture/PS4_LIBRARY_AUDIT.md).
+This document describes the **legacy CodeLab UART/I2C adapter contract**, not a verified hardware implementation. The selected V2 mainboard architecture uses a separate ESP32 PS4 bridge over UART1 TX GPIO6 / RX GPIO7. Bridge chip/pins/power remain open. UART ASCII CSV v1 below is the selected compatibility baseline. PS4Bluepad32 1.0.1 itself has different axis/button representations and no UART publisher; the new isolated bridge supplies conversion/publication. See [library audit](architecture/PS4_LIBRARY_AUDIT.md).
 
-The 2026-11-05 **A1** update fixes the previously reproduced `includes_ / ps4_stdio` exception and generated LF/CR/NUL escaping. UART generation/parser are software-tested; see [A1 results](verification/PS4_A1_STABILIZATION.md). PS4Bluepad32 1.0.1 / Bluepad32 remain on the separate ESP32. No direct PS4 Bluetooth support is added to ESP32-S3, no bridge is implemented here, and hardware remains untested. The separate NewmaniaCodeLab reference archive does not establish this protocol.
+The 2026-11-05 **A1** update fixes the previously reproduced `includes_ / ps4_stdio` exception and generated LF/CR/NUL escaping. UART generation/parser are software-tested; see [A1 results](verification/PS4_A1_STABILIZATION.md). PS4Bluepad32 1.0.1 / Bluepad32 remain on the separate ESP32. No direct PS4 Bluetooth support is added to ESP32-S3, A2–A4 now add an isolated compile-only Classic ESP32 bridge; hardware remains untested. The separate NewmaniaCodeLab reference archive does not establish this protocol.
 
 ## CodeLab UART frame
 
@@ -69,3 +69,13 @@ The existing UART RX16/TX17 defaults conflict with V2 servo3/4 and must not be u
 - Pairing/reset behavior, update cadence, reconnect behavior, and desired robot safe state.
 
 Historical web Phase 5 is not hardware-accepted. The new firmware roadmap places PS4 bridge/protocol in Phase 04 and CodeLab migration in Phase 06; full phase acceptance remains open; A1 receiver generation/parsing is separately verified above. Results must be recorded in [the verification plan](TESTING.md) and [progress](PROGRESS.md).
+
+## PS4 A2–A4 — selected bridge contract (2026-11-05)
+
+`firmware/ps4_bridge/MappingPublisher.h` maps library percentages p in[-100,100] to q=`ceil((10*p+1000)*65535/2000)-32768`, with zero encoded0. This inverts the existing Arduino integer map so all201 integer percentages round-trip exactly to10*p (including endpoints-1000/+1000). Invalid percentages fail closed. The library already inverts Y and applies deadzone; bridge preserves Y and does not apply another deadzone. Existing bit table above is the destination: explicitly remap L1 source Share10->8,Options11->9,L3 8->10,R3 9->11,D-pad14..17->13..16; Touchpad13 and unknown source bits are omitted. Analog trigger pressures have no CSV v1 fields; only L2/R2 digital bits survive.
+
+Publisher serializes exactly six decimal fields and LF, no schema/version/CRC/heartbeat changes. It sends a connected frame only on a new report event, accepting identical fresh values. On disconnect/stale>250ms/reset it emits `0,0,0,0,0,0\n` then stops cached connected publication. Busy output is dropped, never queued as stale control. A1 receiver remains unchanged and neutralizes independently on its timeout.
+
+Pinned Bluepad32 SDK4.1.0 exposes `BP32.update()` boolean and per-update `Controller::hasData()`; a thin ReportGate uses that evidence before PS4Bluepad32.getData, rather than assuming every successful cached read is fresh. RESET_MAC inhibits until disconnect is observed. Pairing/MAC persistence/reconnect remain delegated to the library, no Web Pairing/AP/server. Reset application MAC is not bond-key deletion.
+
+[Bridge configuration/pairing](../firmware/ps4_bridge/README.md) and [A2–A4 verification](verification/PS4_FAST_TRACK_A2_A4.md) distinguish compile-only candidate `esp32-bluepad32:esp32:esp32` core4.1.0 from mainboard S3 core3.3.7. Final bridge TX/RX/LED/board/power remain unconfirmed; default UART/LED disabled. SOFTWARE_ACCEPTED applies only to tested pure software and candidate compile, not hardware/pairing. A5 remains deferred.

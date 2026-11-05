@@ -8,6 +8,12 @@ Chủ dự án đã chốt PS4Bluepad32 1.0.1 / Bluepad32 chạy trên ESP32 r�
 
 A1 chỉ sửa generator/parser phía mainboard, đã có regression/golden và compile thật; [báo cáo A1](../verification/PS4_A1_STABILIZATION.md). Mapping/publisher/freshness từ PS4Bluepad32 vẫn là A2; chưa có bridge build/hardware acceptance.
 
+## PS4 Fast Track A2–A4 — 2026-11-05
+
+Thêm wrapper/publisher và bridge candidate trong `firmware/ps4_bridge`, dùng nguyên ZIP1.0.1 như external compile dependency ngoài repo. Core Bluepad324.1.0 đã compile tương thích target Classic `esp32-bluepad32:esp32:esp32`. Đây là candidate, chưa xác nhận PCB/nguồn/UART bridge. Không vendor hoặc sửa thư viện.
+
+SDK4.1.0 installed headers `ArduinoBluepad32.h` và `ArduinoController.h` mô tả update-return-data-changed và hasData-per-update. Thin adapter gọi BP32.update một lần, rồi gated ps4::getData; không suy ra freshness từ getData/loop đơn lẻ. Không phát lại cache/heartbeat. Web Pairing đã hủy; RESET_MAC tường minh qua debug Serial giữ semantics application MAC reset, không xóa bonds. Pairing/reconnect thực vẫn HARDWARE_UNTESTED. [Báo cáo A2–A4](../verification/PS4_FAST_TRACK_A2_A4.md) supersedes các gap “chưa triển khai” lịch sử ở dưới cho phạm vi software/candidate compile này.
+
 ## Nội dung thực tế
 
 - `ps4-esp32-lib-main/library.properties`: PS4Bluepad32 **1.0.1**, `architectures=esp32`, include `PS4Bluepad32.h`.

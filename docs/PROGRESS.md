@@ -2,6 +2,16 @@
 
 Cập nhật 2026-11-05 (Asia/Saigon). Baseline code trước preflight: `codex/integrate-bach-ui` @ `3a81e54aca414524bb949f3b24af6eb3b2e6b88f`. [Báo cáo Phase 01](PHASE01_AUDIT.md), [kế hoạch](IMPLEMENTATION_PLAN.md), [log build Phase 02.1](verification/phase02_1_compile.log).
 
+## PS4 Fast Track A2 + A3 + A4 — 2026-11-05
+
+- **A2 SOFTWARE_ACCEPTED**: PS4Bluepad321.0.1 axis/17-button mapping, Touchpad exclusion, CSV v1 publisher, report gate and timeout/disconnect/reset behavior. All201 percentage values round-trip through A1 to exact10*p; no second Y inversion, fake fresh heartbeat or cached reconnect control.
+- **A3 BRIDGE_CANDIDATE_BUILD_PASSED**, exit0: CLI1.5.1, Bluepad32 core4.1.0, Classic ESP32 `esp32-bluepad32:esp32:esp32`. External ZIP1.0.1 compiled from temporary directory outside repo, hash/version pinned, no vendoring/install. Final program719,069 B, globals87,108 B; BIN725,648 B. Final board/pins/power unknown; TX/RX/LED default-1 and data UART disabled.
+- **A4 SOFTWARE_IMPLEMENTED / host gate tests PASS; HARDWARE_UNTESTED**: library pairing/NVS/reconnect, explicit RESET_MAC debug command with disconnect epoch gate. Application MAC reset is not bond deletion. No AP/web server/Web Pairing; no robot-arm or motor/servo controls.
+- `npm test` **19/19 PASS**, `npm run build` PASS (existing bundle/deprecation warnings); mainboard UART sketch compile PASS/exit0 with unchanged A1/Core3.3.7/V2 profile, BIN313,296 B. No A1 regression or profile/project/mainboard changes.
+- Freshness uses pinned BP32.update boolean and library per-controller hasData, not cached getData success or value changes. SDK API contract verified in installed headers; radio behavior/timing still needs A5. CSVv1 cannot detect arbitrary replay from third-party publisher.
+- Review checks PASS: `git diff --check`, documentation links, ignored build/log outputs; no src/A1/profile/mainboard diff or tracked binaries. Earlier BRIDGE_COMPILE_PENDING is superseded for the candidate only, not final hardware.
+- **A5 execution BLOCKED**, hardware/COM/upload approval pending. Software ready for A5 planning only. No flash, controller test, COM selection, commit/push or other phase. [Report/build evidence/staging commands](verification/PS4_FAST_TRACK_A2_A4.md), [bridge setup/pairing](../firmware/ps4_bridge/README.md).
+
 ## PS4 A1 — Generator Stabilization — 2026-11-05 — PASS
 
 **A1 SOFTWARE_ACCEPTED / HARDWARE_UNTESTED. READY_FOR_A2 software contract/mapping tests; BRIDGE_COMPILE_PENDING.** Issue18 A2 and bridge hardware remain open, not implemented in this task.
