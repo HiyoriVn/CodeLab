@@ -1,6 +1,18 @@
 # Progress - hardware/firmware roadmap
 
-Cập nhật 2026-11-04 (Asia/Saigon). Baseline local: `codex/integrate-bach-ui` @ `f3a839825ca2e83fcb82337cbfe4f8dd2afc3efc`. Nhánh chưa được audit này commit/push. [Báo cáo đầy đủ](PHASE01_AUDIT.md), [kế hoạch](IMPLEMENTATION_PLAN.md).
+Cập nhật 2026-11-05 (Asia/Saigon). Baseline code trước preflight: `codex/integrate-bach-ui` @ `3a81e54aca414524bb949f3b24af6eb3b2e6b88f`. [Báo cáo Phase 01](PHASE01_AUDIT.md), [kế hoạch](IMPLEMENTATION_PLAN.md), [log build Phase 02.1](verification/phase02_1_compile.log).
+
+## Phase 02.1 — Minimal firmware/toolchain preflight
+
+**TOOLCHAIN_VERIFIED — PASS.** Arduino CLI 1.5.1, ESP32 Arduino Core 3.3.7, FQBN `esp32:esp32:esp32s3`; board details identify “ESP32S3 Dev Module”. Build options: `FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled`. Data directory set per-process to `C:\Users\Admin\AppData\Local\Arduino15`; downloads to `Arduino15\staging`. No system or IDE config changed.
+
+**MINIMAL_BUILD_PASSED — PASS (exit 0).** Empty `setup()`/`loop()` sketch compiled. Program 271,423 / 3,342,336 bytes (8%); globals 21,420 / 327,680 bytes (6%), 306,260 bytes remaining. ELF and BIN emitted to `firmware/verification/minimal_build/build-output/`. First sandbox compile hit Windows `Illegal System DLL Relocation` launching Xtensa GCC; rerun with approved out-of-sandbox execution succeeded. Exact commands/output and failure evidence are in the log.
+
+**READY_FOR_PHASE02_1: PASS. READY_FOR_PHASE02_2: PASS for starting the board-config/safe-startup implementation only. PENDING_HARDWARE_VALIDATION: YES.** This build selects a generic ESP32-S3 Dev Module profile with explicit 8 MB flash; it does not prove the board's USB/boot settings, physical PCB, resets, or power sequencing. Core 3.3.7 is installed; `core list` reports newer 3.3.12 available, but none was installed or selected. Bluepad32 Core 4.1.0 is not used for mainboard builds.
+
+Servo output policy for Phase 02.2: **DISABLED by default**. Do not attach or emit servo pulses during init/USB-only operation. Enabling requires an explicit software command and an affirmative, independently verifiable power-stable interlock. No `POWER_GOOD` pin is documented; until a real condition is identified and verified, servo enable remains unavailable. This decision does not implement a servo driver.
+
+PS4 transport remains CodeLab UART ASCII CSV v1 compatibility baseline: `connected,lx,ly,rx,ry,buttons\n`, default 115200 baud and stale threshold 250 ms. Phase 02.1 does not implement its parser, bridge, or application changes. Existing PS4 generator defects `includes_ / ps4_stdio` and helper escaping remain open; see [Phase 01 audit](PHASE01_AUDIT.md).
 
 ## Phase 01
 
@@ -17,7 +29,8 @@ Cập nhật 2026-11-04 (Asia/Saigon). Baseline local: `codex/integrate-bach-ui`
 
 | Phase | Trạng thái | Gate chính |
 |---|---|---|
-| 02 Firmware Core & HAL | Chưa bắt đầu | Yêu cầu triển khai mới, pinned toolchain/profile, boot/output inhibit design |
+| 02.1 Minimal build preflight | Hoàn thành | CLI/core/FQBN, options và empty sketch verified; PENDING_HARDWARE_VALIDATION |
+| 02.2 BoardConfig & Safe Startup | READY_FOR_PHASE02_2 (chưa bắt đầu) | Profile build baseline và servo DISABLED policy chốt; triển khai chỉ sau chỉ thị |
 | 03 Sensor & Peripheral Drivers | Chưa bắt đầu | HAL, datasheet/tải, PWM resources, power-stable policy |
 | 04 PS4 Bridge & UART Protocol | Chưa bắt đầu | Chip bridge Classic, nguồn/pins/package, protocol/bit/axis/freshness mapping |
 | 05 Robot Control & Safety | Chưa bắt đầu | Drivers, cơ khí, safety/fault/re-arm requirements |
@@ -25,6 +38,10 @@ Cập nhật 2026-11-04 (Asia/Saigon). Baseline local: `codex/integrate-bach-ui`
 | 07 Validation & Release | Chưa bắt đầu | Host/compile/UI + hardware records đầy đủ |
 
 ## Verification hiện tại
+
+- Phase 02.1: CLI 1.5.1 + Core 3.3.7; compile PASS/exit 0 cho `esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled`; size 271,423 B flash image accounting và 21,420 B globals. Chi tiết: `docs/verification/phase02_1_compile.log`.
+- Hardware: **PENDING_HARDWARE_VALIDATION**. Không flash; chưa xác minh target trên PCB.
+- PS4 generator: còn `includes_ / ps4_stdio`, raw character escaping; không liên quan kết quả minimal build.
 
 - PASS: production web build (59 modules; chunk warning >500 kB), bridge JavaScript syntax, dependency inventory.
 - FAIL được tái hiện: PS4 UART (hai bộ pin) và I2C generation lỗi `includes_`/`ps4_stdio`; helper còn có LF/CR/NUL escaping defect.
