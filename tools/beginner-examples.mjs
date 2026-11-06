@@ -31,11 +31,13 @@ export function beginnerWorkspace(name) {
     const wait=block('beginner_wait');condition.nextConnection.connect(wait.previousConnection);
   } else if(name==='lesson_counter') {
     const variable=w.getVariableMap().createVariable('dem','','lesson-counter-var');
-    const start=block('beginner_start'),set=block('variables_set'),zero=block('math_number');
-    set.setFieldValue(variable.getId(),'VAR');set.getInput('VALUE').connection.connect(zero.outputConnection);append(start,set);
-    const repeat=block('controls_repeat_ext'),count=block('math_number');count.setFieldValue(5,'NUM');repeat.getInput('TIMES').connection.connect(count.outputConnection);set.nextConnection.connect(repeat.previousConnection);root.dispose();
+    const set=block('variables_set'),zero=block('math_number');
+    set.setFieldValue(variable.getId(),'VAR');set.getInput('VALUE').connection.connect(zero.outputConnection);append(root,set);
+    const repeat=block('controls_repeat_ext'),count=block('math_number');count.setFieldValue(5,'NUM');repeat.getInput('TIMES').connection.connect(count.outputConnection);set.nextConnection.connect(repeat.previousConnection);
     const change=block('math_change'),one=block('math_number');one.setFieldValue(1,'NUM');change.setFieldValue(variable.getId(),'VAR');change.getInput('DELTA').connection.connect(one.outputConnection);append(repeat,change);
-    const get=block('variables_get');get.setFieldValue(variable.getId(),'VAR');change.nextConnection.connect(message(get).previousConnection);
+    const get=block('variables_get');get.setFieldValue(variable.getId(),'VAR');const print=message(get);change.nextConnection.connect(print.previousConnection);
+    print.nextConnection.connect(block('beginner_wait').previousConnection);
+    const pause=block('beginner_wait');pause.setFieldValue(2,'SECONDS');repeat.nextConnection.connect(pause.previousConnection);
   } else if(name==='lesson_random') {
     const variable=w.getVariableMap().createVariable('diem','','lesson-random-var');
     const set=block('variables_set'),random=block('math_random_int'),low=block('math_number'),high=block('math_number');low.setFieldValue(1,'NUM');high.setFieldValue(10,'NUM');random.getInput('FROM').connection.connect(low.outputConnection);random.getInput('TO').connection.connect(high.outputConnection);set.setFieldValue(variable.getId(),'VAR');set.getInput('VALUE').connection.connect(random.outputConnection);append(root,set);

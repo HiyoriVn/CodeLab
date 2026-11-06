@@ -10,15 +10,15 @@
         "languageVersion": 0,
         "blocks": [
           {
-            "type": "beginner_start",
-            "id": "lesson_counter-1",
-            "x": 0,
-            "y": 0,
+            "type": "beginner_forever",
+            "id": "lesson_counter-0",
+            "x": 45,
+            "y": 35,
             "inputs": {
               "DO": {
                 "block": {
                   "type": "variables_set",
-                  "id": "lesson_counter-2",
+                  "id": "lesson_counter-1",
                   "fields": {
                     "VAR": {
                       "id": "lesson-counter-var"
@@ -28,7 +28,7 @@
                     "VALUE": {
                       "block": {
                         "type": "math_number",
-                        "id": "lesson_counter-3",
+                        "id": "lesson_counter-2",
                         "fields": {
                           "NUM": 0
                         }
@@ -38,12 +38,12 @@
                   "next": {
                     "block": {
                       "type": "controls_repeat_ext",
-                      "id": "lesson_counter-4",
+                      "id": "lesson_counter-3",
                       "inputs": {
                         "TIMES": {
                           "block": {
                             "type": "math_number",
-                            "id": "lesson_counter-5",
+                            "id": "lesson_counter-4",
                             "fields": {
                               "NUM": 5
                             }
@@ -52,7 +52,7 @@
                         "DO": {
                           "block": {
                             "type": "math_change",
-                            "id": "lesson_counter-6",
+                            "id": "lesson_counter-5",
                             "fields": {
                               "VAR": {
                                 "id": "lesson-counter-var"
@@ -62,7 +62,7 @@
                               "DELTA": {
                                 "block": {
                                   "type": "math_number",
-                                  "id": "lesson_counter-7",
+                                  "id": "lesson_counter-6",
                                   "fields": {
                                     "NUM": 1
                                   }
@@ -72,12 +72,12 @@
                             "next": {
                               "block": {
                                 "type": "beginner_message",
-                                "id": "lesson_counter-9",
+                                "id": "lesson_counter-8",
                                 "inputs": {
                                   "VALUE": {
                                     "block": {
                                       "type": "variables_get",
-                                      "id": "lesson_counter-8",
+                                      "id": "lesson_counter-7",
                                       "fields": {
                                         "VAR": {
                                           "id": "lesson-counter-var"
@@ -85,9 +85,27 @@
                                       }
                                     }
                                   }
+                                },
+                                "next": {
+                                  "block": {
+                                    "type": "beginner_wait",
+                                    "id": "lesson_counter-9",
+                                    "fields": {
+                                      "SECONDS": 1
+                                    }
+                                  }
                                 }
                               }
                             }
+                          }
+                        }
+                      },
+                      "next": {
+                        "block": {
+                          "type": "beginner_wait",
+                          "id": "lesson_counter-10",
+                          "fields": {
+                            "SECONDS": 2
                           }
                         }
                       }
@@ -106,7 +124,7 @@
         },
         {
           "name": "item",
-          "id": "WS(^S?Ns+v]WzxzSvu/Z"
+          "id": "y^XZaS|t4{Mp)N]{A;=w"
         }
       ]
     }

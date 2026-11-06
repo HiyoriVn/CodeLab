@@ -729,7 +729,7 @@ function registerBlocks(generator) {
   generator.forBlock.controls_whileUntil = (block, gen) => {
     let condition = gen.valueToCode(block, 'BOOL', ATOMIC) || 'false';
     if (block.getFieldValue('MODE') === 'UNTIL') condition = '(!(' + condition + '))';
-    return 'while (' + condition + ') {\n' + gen.statementToCode(block, 'DO') + '}\n';
+    return 'while (' + condition + ') {\n  delay(1);\n' + gen.statementToCode(block, 'DO') + '}\n';
   };
 
   generator.forBlock.controls_flow_statements = (block) => (
