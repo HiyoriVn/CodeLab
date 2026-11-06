@@ -80,6 +80,8 @@ class RobotController {
     if(!motors_.write(wheels_)) fail(Fault::BACKEND);
   }
   State state() const { return state_; }
+  // Transport may latch a timeout even while DISARMED (e.g. I2C polling a dead slave).
+  void linkFault() { fail(Fault::LINK); }
   Fault fault() const { return fault_; }
   const ServoController& servo() const { return servo_; }
 };

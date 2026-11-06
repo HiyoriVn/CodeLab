@@ -26,3 +26,4 @@ package-lock.json
 # Robotics CLI verification logs; results summarized in the Markdown report
 /docs/verification/robotics_blocks_*.log
 /docs/verification/mecanum_*.log
+/docs/verification/ps4_i2c_*.log

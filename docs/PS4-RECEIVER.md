@@ -1,5 +1,9 @@
 # PS4 receiver and CodeLab adapter contract
 
+## Issue20 selected I2C demo — 2026-11-05
+
+Latest user selects dedicated I2C demo: D1 SDA22/SCL21 slave0x30 -> S3 SDA8/SCL9 master. Owner's actual supplied sketch used0x55/ASCII; both new images use13-byte binary. Bit0 stays connected, flags bits1..7 carry BT-report sequence modulo128. Only new accepted sequence advances freshness; repeats do not. Dedicated receiver neutralizes/faults after>250ms, quarantines first frame after loss, no reconnect auto-arm. Old legacy I2C decoder below does **not** enforce sequence and must not replace this robot receiver. UART CSVv1 remains unchanged for existing projects. [Build PASS, wiring and user upload steps](../firmware/demos/newmania_ps4_i2c/README.md); no physical I2C/actuator acceptance yet.
+
 ## Mecanum consumer — 2026-11-05
 
 The new [simulation-only RobotController](robotics/PS4_MECANUM.md) consumes this same UART CSV v1 contract. Parser `hasReport()`/`lastReportAt()` expose read-only freshness metadata; they do not refresh the timestamp or change parsing/axes. The controller watchdog uses actual accepted-report age, not repeated accessor reads. Bridge/publisher, CSV schema and250ms boundary are unchanged. Motor/servo remain mocks; no UART or actuator is enabled on the experimental board by this consumer.

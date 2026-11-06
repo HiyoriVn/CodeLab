@@ -1,5 +1,16 @@
 # Progress - hardware/firmware roadmap
 
+## Issue20 physical I2C session — 2026-11-05 — STOPPED BY USER (quota)
+
+D1 COM5 and S3 COM4 identities individually confirmed; both approved I2C uploads PASS/exit0, EraseFlash=none, hashes verified, no MAC reset. PS4 connection PASS and actual I2C frames PASS after user replugged wiring; no firmware fix/reflash needed. S3 connected1/sequence/fresh and axes/buttons changed, errors40213 remained constant over8s. Structured joystick/buttons/mock-wheel and PS4 disconnect/reconnect tests deferred, not claimed PASS. Captures closed both ports; no further hardware actions after user stop, no motor/servo test or commit/push. [Checkpoint/raw logs](verification/PS4_I2C_HARDWARE.md). Resume only when user requests.
+
+## Issue20 — Fast I2C PS4 mecanum — 2026-11-05 — BUILD_PASS / HARDWARE_UNTESTED
+
+- Read actual owner sketch `ps4ble_newmania_firmware.ino`:0x55/ASCII, default Wire pins. Added dedicated D1 slave0x30 SDA22/SCL21 and S3 master SDA8/SCL9,13-byte binary with7-bit report sequence. Reuses A2 mapping/report gate and existing robot/mixer/servo; pairing/NVS/MAC library unchanged. Snapshot callback atomic; slave/receiver independent freshness, polling cannot revive stale data.
+- Sequence receiver baseline/quarantine/repeats/wrap/errors verified; >250ms neutral+FAULT even while DISARMED; reconnect requires explicit neutral recovery/re-arm. No physical motor/servo output; new BOM N16R8/RZ7899-MS retained,35–37 still unavailable; Flash16MB/OPI unchanged, no board profile changes.
+- Host tests **39/39 PASS**, web build **PASS**, exit0. CLI1.5.1: D1 Bluepad32 core4.1.0 compile **PASS exit0**, BIN732416 B; S3 core3.3.7 compile **PASS exit0**, BIN341808 B. Logs `docs/verification/ps4_i2c_*_compile.log` ignored. [Two firmware paths/wiring/user upload commands/expected Serial](../firmware/demos/newmania_ps4_i2c/README.md).
+- No COM open, actual I2C/PS4 observation, flash/upload, motor/servo test, commit/push or next phase. Both images prepared; hardware acceptance awaits user's separately chosen upload and observations. No auto-resumption of prior stopped load tests.
+
 ## Integrated working-demo attempt — 2026-11-05 — UART_READY_FOR_REWIRE / ACTUATORS_BLOCKED
 
 - One mainboard demo `firmware/demos/newmania_ps4_mecanum/newmania_ps4_mecanum.ino` reuses canonical CSV parser, RobotController/MecanumMixer/ServoController; USB monitor/commands, explicit SIM mode,15% logical RZ7899 PWM cap. No real motor/servo output, no GPIO35–37 or profile change. No working four-motor hardware claim.

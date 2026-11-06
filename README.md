@@ -21,6 +21,8 @@ The physical Newmania unit under test reports16MB flash/8MB Octal PSRAM, differi
 
 ## Run locally
 
+Issue20 now supplies [D1/S3 I2C PS4 demo firmware](firmware/demos/newmania_ps4_i2c/README.md), both compile-tested: address0x30,13-byte sequence-aware freshness, USB control-state output and mock-only actuators. The guide includes wiring and manual upload commands; no hardware upload was performed.
+
 The [integrated Newmania PS4 demo](firmware/demos/newmania_ps4_mecanum/README.md) now has UART/USB diagnostics and compile-ready images for a proposed D1/S3 rewire. Actual onboard motor GPIO/servo power remain unresolved, so hardware actuators are locked; this is not yet a moving four-wheel robot. [Build evidence and blockers](docs/verification/WORKING_MECANUM_DEMO.md).
 
 PS4 mecanum logic is available as a portable C++ library with host mocks, latched faults and a disabled-by-default logical servo. It does not drive motors/servos on the experimental board. See [simulation/API/wiring gates](docs/robotics/PS4_MECANUM.md).
