@@ -27,3 +27,4 @@ package-lock.json
 /docs/verification/robotics_blocks_*.log
 /docs/verification/mecanum_*.log
 /docs/verification/ps4_i2c_*.log
+/docs/verification/beginner_*.log

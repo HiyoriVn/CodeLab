@@ -1,5 +1,15 @@
 # Progress - hardware/firmware roadmap
 
+## Issue22 — Scratch-first UX — 2026-11-06 — SOFTWARE_ACCEPTED
+
+- New projects default Cơ bản; legacy missing editorMode keeps Nâng cao. Optional version1 metadata survives import/export/local save. Toolbox updates in place; board/GPIO/channel/block IDs unchanged on mode switching. Three one-click lessons open separate projects; importable JSON and deterministic C++ committed as source.
+- Added15 beginner block types: startup/forever/wait, onboard LED/blink, message/Serial readiness, profile UART PS4 setup plus explicit simulated state/readers, motor/stop/servo requests. Motor/servo remain compile-blocked with friendly diagnostics; no accepted actuator backend invented. New simulation is isolated from actual UART; mixing sources is rejected including old UART blocks. No raw pin/address/baud fields in Cơ bản.
+- Fixed generator nameDB initialization exposed by new variable regression; existing golden sketches remain byte-identical. All board profiles, PS4 firmware/protocols and robotics drivers preserved.
+- **npm test47/47 PASS**, exit0, including8 focused checks; **npm run build PASS**, exit0; **git diff --check PASS**. Existing Blockly deprecated-API and Vite chunk-size warnings remain. Restricted localhost HTTP attempt failed EACCES; local-permission rerun passed without test/source workaround.
+- Arduino CLI1.5.1 / Core3.3.7, experimental ESP32-S3 Flash16M/default_8MB/OPI, hwcdc+CDCOnBoot: **3/3 compile PASS, exit0**, nonempty binaries: Blink313744B, message314048B, PS4 simulation314096B. Raw ignored evidence: `docs/verification/beginner_compile.log` (`EXIT_CODE=0`). Only these three new lessons were compiled, no full firmware rebuild.
+- Chrome smoke PASS: default mode, all three lessons, actual drag/drop, mode switching, profile change preserving blocks and warning on missing LED, Advanced toolbox and reload persistence. [Screenshot](verification/SCRATCH_FIRST_UI.png), [usage/API/limits](SCRATCH_FIRST.md). New lessons remain **HARDWARE_UNTESTED**; PS4 simulation only changes LX/X, multiple forever stacks run sequentially and waits block. Physical sensors/motor/servo need separate accepted backends/wiring/power.
+- No COM detection/access, flash/upload, hardware test, dependency/toolchain changes, commit/push or automatic hardware resumption.
+
 ## Issue20 physical I2C session — 2026-11-05 — STOPPED BY USER (quota)
 
 D1 COM5 and S3 COM4 identities individually confirmed; both approved I2C uploads PASS/exit0, EraseFlash=none, hashes verified, no MAC reset. PS4 connection PASS and actual I2C frames PASS after user replugged wiring; no firmware fix/reflash needed. S3 connected1/sequence/fresh and axes/buttons changed, errors40213 remained constant over8s. Structured joystick/buttons/mock-wheel and PS4 disconnect/reconnect tests deferred, not claimed PASS. Captures closed both ports; no further hardware actions after user stop, no motor/servo test or commit/push. [Checkpoint/raw logs](verification/PS4_I2C_HARDWARE.md). Resume only when user requests.

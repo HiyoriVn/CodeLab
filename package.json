@@ -10,7 +10,8 @@
     "bridge": "node tools/arduino-bridge.mjs",
     "test": "node --test tests/*.test.mjs",
     "examples:v1": "node tools/v1-examples.mjs",
-    "examples:robotics": "node tools/robotics-examples.mjs"
+    "examples:robotics": "node tools/robotics-examples.mjs",
+    "examples:beginner": "node tools/beginner-examples.mjs"
   },
   "dependencies": {
     "blockly": "^12.3.0",

@@ -1,5 +1,9 @@
 # Testing and verification strategy
 
+## Issue22 Scratch-first editor — 2026-11-06
+
+`npm test`: **47/47 PASS**, exit0 (8 focused beginner checks plus existing regressions). `npm run build`: **PASS**, exit0. Initial restricted run had localhost EACCES in five HTTP tests; rerun with local execution permission passed, with no source workaround or hardware access. Existing Blockly deprecation and Vite large-chunk warnings remain. Browser smoke verified default Beginner, all three lessons, drag/drop, Advanced toolbox, mode/profile switching, unsupported LED warning and reload preserving blocks/profile/mode. [Usage, fixtures, compile-only command and evidence](SCRATCH_FIRST.md); final compiler results recorded in PROGRESS.
+
 ## Issue20 I2C sequence demo — 2026-11-05
 
 `npm test`39/39 PASS; web build PASS, exit0. New native frame tests cover13-byte LE/flags, unchanged polling and fresh-identical reports, sequence127→0, invalid/partial/torn frames, timeout/bus recovery quarantine,250/251ms/clock wrap, actual A2 mapping201 axis values and mecanum/servo mock/latched FAULT/re-arm. Header copies must match canonical A2 byte-for-byte. D1 core4.1.0 and S3 core3.3.7 compiles PASS/exit0, OPI preserved. [Short test/upload guide](../firmware/demos/newmania_ps4_i2c/README.md). No device access, upload, I2C radio/physical observations or load tests in this task.

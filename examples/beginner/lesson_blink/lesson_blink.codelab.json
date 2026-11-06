@@ -1,0 +1,33 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "lesson_blink",
+    "boardId": "newmania-v1-16m-opi-experimental",
+    "editorMode": "beginner",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "beginner_forever",
+            "id": "lesson_blink-0",
+            "x": 45,
+            "y": 35,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "beginner_blink",
+                  "id": "lesson_blink-1",
+                  "fields": {
+                    "SECONDS": 0.5
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

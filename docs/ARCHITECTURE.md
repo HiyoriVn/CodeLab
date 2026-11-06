@@ -2,6 +2,10 @@
 
 CodeLab is a browser-first React/Vite + Blockly editor that generates Arduino C++ for ESP32-S3. This page describes the existing web application and legacy adapter design. The 2026-11-04 [audit](PHASE01_AUDIT.md) records a passing web build, limited historical UI checks, and a reproduced PS4 generator error; hardware verification remains outstanding. The [new firmware architecture](architecture/ARCHITECTURE.md) is a proposal, not implemented code.
 
+## Scratch-first editor — 2026-11-06
+
+`src/blocks/beginner.js` adds new IDs alongside legacy registrations; `beginner-toolbox.js` builds mode/profile-specific categories. Optional `project.editorMode` is persisted/exported by App; no metadata means Advanced for legacy compatibility. BlocklyWorkspace updates the toolbox in place. The Arduino generator adds setup-only events, loop bodies and explicit PS4 simulation alongside unchanged UART helpers; unsupported actuator requests return diagnostics consumed by the existing compile gate. New lessons are version1 JSON plus deterministic C++ in `examples/beginner`. [Details](SCRATCH_FIRST.md). The historical audit descriptions below retain their original context; this section describes Issue22 only.
+
 ## Modules
 
 - **Editor UI:** Blockly workspace, code preview, workspace import/export, and build/device panel.

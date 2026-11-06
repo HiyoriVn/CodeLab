@@ -2,6 +2,10 @@
 
 CodeLab is a browser-first visual programming environment for ESP32-S3 robotics. It uses Blockly-style blocks to generate Arduino C++.
 
+## Scratch-first editor
+
+New projects default to **Cơ bản**; switch to **Nâng cao** for GPIO/bus settings without losing blocks. Open one of three lessons from **Bài mẫu**; each opens a separate project. Motor/servo requests stay compile-blocked until an accepted hardware backend exists. [Usage and verification](docs/SCRATCH_FIRST.md).
+
 ## Product decisions
 
 - MVP mainboard: STEAM Robotics Mainboard V2.0, ESP32-S3-MINI-1-N8. The accepted native BoardConfig/SafeStartup and web board profile are present; hardware validation remains pending. Newmania Starter V1.0 (ESP32-S3-WROOM-1-N8R2) is the additional hardware test board.

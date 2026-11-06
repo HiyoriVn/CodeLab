@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
 import { BOARD_PROFILES, DEFAULT_BOARD_ID, projectBoardId } from './boards/profiles.js';
+import { projectEditorMode } from './blocks/beginner-toolbox.js';
+import blinkLesson from '../examples/beginner/lesson_blink/lesson_blink.codelab.json';
+import messageLesson from '../examples/beginner/lesson_message/lesson_message.codelab.json';
+import ps4Lesson from '../examples/beginner/lesson_ps4_simulation/lesson_ps4_simulation.codelab.json';
 import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
 import CodePreview from './components/CodePreview.jsx';
 import DevicePanel from './components/DevicePanel.jsx';
@@ -15,15 +19,15 @@ const LEGACY_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-project';
 const FILE_VERSION = 1;
 const emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } };
-function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = DEFAULT_BOARD_ID) {
-  return { id: crypto.randomUUID(), name, workspace, boardId, updatedAt: new Date().toISOString() };
+function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = DEFAULT_BOARD_ID, editorMode = 'beginner') {
+  return { id: crypto.randomUUID(), name, workspace, boardId, editorMode, updatedAt: new Date().toISOString() };
 }
 function readProjects() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved?.projects?.length) return saved;
     const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
-    const project = makeProject('Chương trình robot của tôi', legacy || emptyWorkspace);
+    const project = makeProject('Chương trình robot của tôi', legacy || emptyWorkspace, DEFAULT_BOARD_ID, legacy ? 'advanced' : 'beginner');
     return { activeId: project.id, projects: [project] };
   } catch {
     const project = makeProject('Chương trình robot của tôi');
@@ -47,6 +51,8 @@ function App() {
   const project = projectStore.projects.find((item) => item.id === projectStore.activeId) || projectStore.projects[0];
 
   const boardId = projectBoardId(project);
+  const editorMode = projectEditorMode(project);
+  const changeMode = (event) => persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id ? {...item, editorMode: event.target.value} : item) });
   const changeBoard = (event) => persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id ? {...item, boardId: event.target.value} : item) });
 
   const showToast = useCallback((message) => {
@@ -91,13 +97,20 @@ function App() {
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
     setDialog(null); showToast('Đã tạo dự án mới');
   };
+  const openLesson = (event) => {
+    const lesson = {blink:blinkLesson,message:messageLesson,ps4:ps4Lesson}[event.target.value]?.project;
+    if (!lesson) return;
+    const nextProject = makeProject(lesson.name, lesson.workspace, lesson.boardId, 'beginner');
+    persist({activeId:nextProject.id,projects:[...snapshotProjects(),nextProject]});
+    showToast('Đã mở bài mẫu trên profile Newmania OPI; chưa nạp lên mạch.');
+  };
   const renameProject = (event) => {
     const name = event.target.value;
     setProjectStore((current) => ({ ...current, projects: current.projects.map((item) => item.id === current.activeId ? { ...item, name } : item) }));
   };
   const saveProjectFile = () => {
     const state = workspaceRef.current ? Blockly.serialization.workspaces.save(workspaceRef.current) : project.workspace;
-    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state, boardId } };
+    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state, boardId, editorMode } };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url; link.download = `${project.name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'codelab-project'}.codelab.json`; link.click(); URL.revokeObjectURL(url);
     showToast('Đã tải tệp dự án xuống');
@@ -116,7 +129,7 @@ function App() {
       } finally {
         validationWorkspace.dispose();
       }
-      const imported = makeProject(content.name || file.name, content.workspace, projectBoardId(content));
+      const imported = makeProject(content.name || file.name, content.workspace, projectBoardId(content), projectEditorMode(content));
       persist({ activeId: imported.id, projects: [...snapshotProjects(), imported] });
       showToast(`Đã mở ${file.name}`);
     } catch (error) { window.alert(error.message || 'Không thể mở dự án.'); }
@@ -164,10 +177,10 @@ function App() {
         onLanguage={() => showToast('Chưa có bản dịch, hiện chỉ có Tiếng Việt')}
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
-      <div className="board-profile-toolbar"><label>Board <select aria-label="Board profile" value={boardId} onChange={changeBoard}>{BOARD_PROFILES.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}</select></label><small>SOFTWARE profile · HARDWARE_UNTESTED</small></div>
+      <div className="board-profile-toolbar"><label>Chế độ <select aria-label="Chế độ lập trình" value={editorMode} onChange={changeMode}><option value="beginner">Cơ bản</option><option value="advanced">Nâng cao</option></select></label><label>Board <select aria-label="Board profile" value={boardId} onChange={changeBoard}>{BOARD_PROFILES.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}</select></label><label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}><option value="">Chọn bài (Newmania OPI)…</option><option value="blink">Đèn nhấp nháy</option><option value="message">Lời nhắn &amp; tín hiệu</option><option value="ps4">PS4 mô phỏng</option></select></label><small>Chưa nạp chương trình lên mạch</small></div>
       <div className="main">
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
-          <BlocklyWorkspace key={project?.id} boardId={boardId} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
+          <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode={editorMode} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
           <ZoomControls workspaceRef={workspaceRef} />
           <div className="workspace-status"><span><i className="status-dot" />Sẵn sàng chỉnh sửa</span><span>{blockCount} khối đang dùng</span></div>
         </div>

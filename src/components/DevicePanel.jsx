@@ -81,6 +81,7 @@ function DevicePanel({ code, warnings, boardId }) {
         <button className="button button-quiet" onClick={refresh} disabled={busy}>Làm mới cổng</button>
       </div>
       <p className="device-message" style={{ whiteSpace: 'pre-wrap' }} role="status">{message}</p>
+      {warnings.length > 0 && <div role="alert" className="beginner-help"><strong>Chưa thể biên dịch. Hãy sửa các mục sau:</strong><ul>{warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></div>}
       <div className="device-actions">
         <label>Cổng thiết bị
           <select value={port} onChange={(event) => setPort(event.target.value)} disabled={busy || !ports.length}>

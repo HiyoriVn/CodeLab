@@ -119,8 +119,8 @@ CodeLabPS4Adapter codelabPs4;`;
 
 function variableTypeOf(block, knownTypes) {
   if (!block) return null;
-  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'codelab_analog_read', 'codelab_serial_available', 'codelab_serial_read', 'codelab_ps4_axis'].includes(block.type)) return 'number';
-  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_gpio_read_mode', 'codelab_ps4_connected', 'codelab_ps4_button'].includes(block.type)) return 'boolean';
+  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'codelab_analog_read', 'codelab_serial_available', 'codelab_serial_read', 'codelab_ps4_axis', 'beginner_ps4_axis'].includes(block.type)) return 'number';
+  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_gpio_read_mode', 'codelab_ps4_connected', 'codelab_ps4_button', 'beginner_ps4_connected', 'beginner_ps4_button', 'beginner_serial_ready'].includes(block.type)) return 'boolean';
   if (['text', 'text_join'].includes(block.type)) return 'string';
   if (block.type === 'variables_get') return knownTypes.get(block.getFieldValue('VAR')) || null;
   return null;
@@ -214,9 +214,17 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     this.diagnostics_ = new Set();
     this.pinModes_ = new Map();
     this.setupStatements_ = new Map();
+    this.beginnerStartup_ = [];
+    const simulations = workspace.getAllBlocks(false).filter(b => b.type === 'beginner_ps4_sim' && b.isEnabled() && !b.getInheritedDisabled());
+    this.beginnerSimulation_ = simulations.length > 0;
+    if (simulations.length > 1) this.diagnostics_.add('Chỉ dùng một khối Mô phỏng PS4 để tránh dữ liệu chồng nhau.');
+    if (this.beginnerSimulation_) this.addReservedWords('lessonConnected,lessonLX,lessonCross');
     this.loopPreamble_ = '';
     this.controllerRequested_ = false;
     this.controllerConfigured_ = false;
+    this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
+    this.nameDB_.setVariableMap(workspace.getVariableMap());
+    this.nameDB_.populateVariables(workspace);
     initializeVariables(this, workspace);
   }
 
@@ -238,6 +246,7 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
       ...startup.setup.map(line => '  ' + line),
       '  Serial.begin(115200);',
       ...Array.from(this.setupStatements_.values()).map((line) => '  ' + line),
+      ...this.beginnerStartup_,
       '}',
       '',
       'void loop() {',
@@ -490,6 +499,10 @@ function registerBlocks(generator) {
   };
 
   const configureController = (gen, mode, settings) => {
+    if (gen.beginnerSimulation_) {
+      gen.diagnostics_.add('Chọn PS4 thật hoặc mô phỏng, không dùng cả hai.');
+      return;
+    }
     if (gen.controllerConfigured_) {
       gen.diagnostics_.add('Chỉ cấu hình một bộ nhận PS4 trong mỗi chương trình.');
       return;
@@ -568,6 +581,63 @@ function registerBlocks(generator) {
     const buttons = { CROSS: 0, CIRCLE: 1, SQUARE: 2, TRIANGLE: 3, L1: 4, R1: 5, L2: 6, R2: 7, SHARE: 8, OPTIONS: 9, L3: 10, R3: 11, PS: 12, UP: 13, DOWN: 14, LEFT: 15, RIGHT: 16 };
     return ['codelabPs4.button(' + (buttons[block.getFieldValue('BUTTON')] ?? 0) + ')', ATOMIC];
   };
+
+  generator.forBlock.beginner_start = (block, gen) => {
+    if (block.getParent()) gen.diagnostics_.add('Đặt khối Khi bắt đầu ở ngoài cùng, không nằm trong khối khác.');
+    gen.beginnerStartup_.push(gen.statementToCode(block, 'DO'));
+    return '';
+  };
+  generator.forBlock.beginner_forever = (block, gen) => {
+    if (block.getParent()) gen.diagnostics_.add('Đặt khối Lặp lại mãi mãi ở ngoài cùng.');
+    return gen.statementToCode(block, 'DO') + 'delay(1);\n';
+  };
+  generator.forBlock.beginner_wait = block => 'delay(' + Math.round(Number(block.getFieldValue('SECONDS')) * 1000) + ');\n';
+  const beginnerLed = gen => {
+    const pin = gen.profile_.pins.led;
+    if (!Number.isInteger(pin)) {
+      gen.diagnostics_.add('Board này chưa có đèn được xác định. Hãy chọn board có đèn trên mạch.');
+      return null;
+    }
+    configurePin(gen, String(pin), 'OUTPUT', 'Đèn trên mạch');
+    return pin;
+  };
+  generator.forBlock.beginner_led = (block, gen) => {
+    const pin = beginnerLed(gen);
+    return pin === null ? '' : 'digitalWrite(' + pin + ', ' + block.getFieldValue('STATE') + ');\n';
+  };
+  generator.forBlock.beginner_blink = (block, gen) => {
+    const pin = beginnerLed(gen), ms = Math.round(Number(block.getFieldValue('SECONDS')) * 1000);
+    return pin === null ? '' : `digitalWrite(${pin}, HIGH);\ndelay(${ms});\ndigitalWrite(${pin}, LOW);\ndelay(${ms});\n`;
+  };
+  generator.forBlock.beginner_message = (block, gen) => 'Serial.println(' + (gen.valueToCode(block, 'VALUE', ATOMIC) || '"Hello!"') + ');\n';
+  generator.forBlock.beginner_serial_ready = () => ['(Serial.available() > 0)', ATOMIC];
+  for (const type of ['beginner_motor','beginner_motor_stop','beginner_servo']) {
+    generator.forBlock[type] = (block, gen) => {
+      const servo = type === 'beginner_servo';
+      const channel = Number(block.getFieldValue('CHANNEL'));
+      if (channel > (gen.profile_.capabilities[servo ? 'servoChannels' : 'motorChannels'] || 0)) gen.diagnostics_.add('Kênh ' + (servo ? 'S' : 'M') + channel + ' không có trên board đang chọn. Giá trị được giữ nguyên.');
+      gen.diagnostics_.add(servo ? 'Chưa thể chạy servo: nguồn và bộ điều khiển an toàn chưa được xác minh. Hãy bỏ khối servo trước khi biên dịch.' : 'Chưa thể chạy động cơ trên board này. Bộ điều khiển motor chưa được nghiệm thu; hãy bỏ khối động cơ trước khi biên dịch.');
+      return '';
+    };
+  }
+  generator.forBlock.beginner_ps4_setup = (_block, gen) => {
+    const uart = gen.profile_.pins.uart1;
+    if (!uart || gen.beginnerSimulation_) {
+      gen.diagnostics_.add(gen.beginnerSimulation_ ? 'Chọn PS4 thật hoặc mô phỏng, không dùng cả hai.' : 'Board này chưa có cổng PS4 được xác định. Hãy dùng khối Mô phỏng PS4.');
+      return '';
+    }
+    reservePin(gen, String(uart.rx), 'UART', 'PS4 RX');
+    reservePin(gen, String(uart.tx), 'UART', 'PS4 TX');
+    configureController(gen, 'UART', {...uart,baud:115200});
+    return '';
+  };
+  generator.forBlock.beginner_ps4_sim = (block, gen) => {
+    gen.definitions_.beginner_sim = '// PS4 SIMULATION ONLY: no Bluetooth or actuator commands.\nstatic bool lessonConnected = false;\nstatic int lessonLX = 0;\nstatic bool lessonCross = false;';
+    return `lessonConnected = ${block.getFieldValue('CONNECTED') === 'TRUE'};\nlessonLX = lessonConnected ? ${Number(block.getFieldValue('LX'))} : 0;\nlessonCross = lessonConnected && ${block.getFieldValue('PRESSED') === 'TRUE'};\n`;
+  };
+  generator.forBlock.beginner_ps4_connected = (block, gen) => gen.beginnerSimulation_ ? ['lessonConnected', ATOMIC] : gen.forBlock.codelab_ps4_connected(block, gen);
+  generator.forBlock.beginner_ps4_button = (block, gen) => gen.beginnerSimulation_ ? [block.getFieldValue('BUTTON') === 'CROSS' ? 'lessonCross' : 'false', ATOMIC] : gen.forBlock.codelab_ps4_button(block, gen);
+  generator.forBlock.beginner_ps4_axis = (block, gen) => gen.beginnerSimulation_ ? [block.getFieldValue('AXIS') === 'LX' ? 'lessonLX' : '0', ATOMIC] : gen.forBlock.codelab_ps4_axis(block, gen);
 
   generator.forBlock.controls_if = (block, gen) => {
     let code = '';

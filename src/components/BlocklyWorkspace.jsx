@@ -4,114 +4,15 @@ import 'blockly/blocks';
 import * as Vietnamese from 'blockly/msg/vi';
 import { generateArduino } from '../generators/arduino.js';
 import '../blocks/robotics.js';
-import { roboticsToolbox } from '../blocks/robotics-toolbox.js';
+import { editorToolbox } from '../blocks/beginner-toolbox.js';
+import '../blocks/beginner.js';
 import '../blocks/controller.js';
 import { RENDERER, FALLBACK_RENDERER } from '../blocks/renderer.js';
 import { themes } from '../blocks/theme.js';
 
 Blockly.setLocale(Vietnamese);
 
-const toolbox = {
-  kind: 'categoryToolbox',
-  contents: [
-    {
-      kind: 'category',
-      name: 'Điều khiển',
-      categorystyle: 'loop_category',
-      contents: [
-        { kind: 'block', type: 'controls_if' },
-        { kind: 'block', type: 'controls_repeat_ext', inputs: { TIMES: { shadow: { type: 'math_number', fields: { NUM: 5 } } } } },
-        { kind: 'block', type: 'controls_whileUntil' },
-        { kind: 'block', type: 'controls_for' },
-        { kind: 'block', type: 'controls_flow_statements' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Logic',
-      categorystyle: 'logic_category',
-      contents: [
-        { kind: 'block', type: 'logic_compare' },
-        { kind: 'block', type: 'logic_operation' },
-        { kind: 'block', type: 'logic_negate' },
-        { kind: 'block', type: 'logic_boolean' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Toán học',
-      categorystyle: 'math_category',
-      contents: [
-        { kind: 'block', type: 'math_number', fields: { NUM: 1 } },
-        { kind: 'block', type: 'math_arithmetic' },
-        { kind: 'block', type: 'math_single', fields: { OP: 'ROOT' } },
-        { kind: 'block', type: 'math_modulo' },
-        { kind: 'block', type: 'math_random_int' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Thiết bị & robot',
-      categorystyle: 'variable_category',
-      contents: [
-        { kind: 'block', type: 'codelab_delay_ms' },
-        { kind: 'block', type: 'codelab_gpio_write' },
-        { kind: 'block', type: 'codelab_gpio_read' },
-        { kind: 'block', type: 'codelab_analog_read' },
-        { kind: 'block', type: 'codelab_pwm_write', inputs: { DUTY: { shadow: { type: 'math_number', fields: { NUM: 0 } } } } },
-        { kind: 'block', type: 'codelab_hbridge_motor' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Tay cầm PS4',
-      categorystyle: 'logic_category',
-      contents: [
-        { kind: 'block', type: 'codelab_ps4_begin_uart', inputs: {
-          RX: { shadow: { type: 'math_number', fields: { NUM: 16 } } },
-          TX: { shadow: { type: 'math_number', fields: { NUM: 17 } } },
-          BAUD: { shadow: { type: 'math_number', fields: { NUM: 115200 } } },
-        } },
-        { kind: 'block', type: 'codelab_ps4_begin_i2c', inputs: {
-          SDA: { shadow: { type: 'math_number', fields: { NUM: 8 } } },
-          SCL: { shadow: { type: 'math_number', fields: { NUM: 9 } } },
-          ADDRESS: { shadow: { type: 'math_number', fields: { NUM: 48 } } },
-        } },
-        { kind: 'block', type: 'codelab_ps4_connected' },
-        { kind: 'block', type: 'codelab_ps4_axis' },
-        { kind: 'block', type: 'codelab_ps4_button' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Văn bản',
-      categorystyle: 'text_category',
-      contents: [
-        { kind: 'block', type: 'text' },
-        { kind: 'block', type: 'text_print' },
-        { kind: 'block', type: 'text_join' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Biến',
-      categorystyle: 'variable_category',
-      custom: 'VARIABLE',
-    },
-    {
-      kind: 'category',
-      name: 'Hàm',
-      categorystyle: 'procedure_category',
-      custom: 'PROCEDURE',
-    },
-  ],
-};
-
-function profileToolbox(boardId) {
-  return {...toolbox, contents: toolbox.contents.map(category=>category.name==='Thiết bị & robot' ? {...category,contents: roboticsToolbox(boardId)} : category)};
-}
-
-function BlocklyWorkspace({ boardId, initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
+function BlocklyWorkspace({ boardId, editorMode, initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
   const hostRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const onCodeChangeRef = useRef(onCodeChange);
@@ -119,6 +20,8 @@ function BlocklyWorkspace({ boardId, initialState, dark = false, onChange, onCod
   const darkRef = useRef(dark);
   const boardIdRef = useRef(boardId);
   boardIdRef.current = boardId;
+  const modeRef = useRef(editorMode);
+  modeRef.current = editorMode;
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -128,7 +31,7 @@ function BlocklyWorkspace({ boardId, initialState, dark = false, onChange, onCod
   useEffect(() => {
     if (!hostRef.current) return undefined;
     const options = {
-      toolbox: profileToolbox(boardIdRef.current),
+      toolbox: editorToolbox(boardIdRef.current, modeRef.current),
       sounds: false,
       trashcan: false,
       move: { scrollbars: true, drag: true, wheel: true },
@@ -222,10 +125,10 @@ function BlocklyWorkspace({ boardId, initialState, dark = false, onChange, onCod
     if(workspace) {
       workspace.codelabBoardId=boardId;
       if(workspace.getFlyout()) workspace.getFlyout().getWorkspace().codelabBoardId=boardId;
-      workspace.updateToolbox(profileToolbox(boardId));
+      workspace.updateToolbox(editorToolbox(boardId, editorMode));
       onCodeChangeRef.current?.(generateArduino(workspace, boardId));
     }
-  }, [boardId, workspaceRef]);
+  }, [boardId, editorMode, workspaceRef]);
 
   useEffect(() => {
     darkRef.current = dark;
