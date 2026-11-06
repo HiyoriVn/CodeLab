@@ -4,6 +4,8 @@ import { BOARD_PROFILES, DEFAULT_BOARD_ID, projectBoardId } from './boards/profi
 import { projectEditorMode } from './blocks/beginner-toolbox.js';
 import blinkLesson from '../examples/beginner/lesson_blink/lesson_blink.codelab.json';
 import messageLesson from '../examples/beginner/lesson_message/lesson_message.codelab.json';
+import counterLesson from '../examples/beginner/lesson_counter/lesson_counter.codelab.json';
+import randomLesson from '../examples/beginner/lesson_random/lesson_random.codelab.json';
 import ps4Lesson from '../examples/beginner/lesson_ps4_simulation/lesson_ps4_simulation.codelab.json';
 import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
 import CodePreview from './components/CodePreview.jsx';
@@ -98,7 +100,7 @@ function App() {
     setDialog(null); showToast('Đã tạo dự án mới');
   };
   const openLesson = (event) => {
-    const lesson = {blink:blinkLesson,message:messageLesson,ps4:ps4Lesson}[event.target.value]?.project;
+    const lesson = {blink:blinkLesson,message:messageLesson,ps4:ps4Lesson,counter:counterLesson,random:randomLesson}[event.target.value]?.project;
     if (!lesson) return;
     const nextProject = makeProject(lesson.name, lesson.workspace, lesson.boardId, 'beginner');
     persist({activeId:nextProject.id,projects:[...snapshotProjects(),nextProject]});
@@ -177,7 +179,7 @@ function App() {
         onLanguage={() => showToast('Chưa có bản dịch, hiện chỉ có Tiếng Việt')}
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
-      <div className="board-profile-toolbar"><label>Chế độ <select aria-label="Chế độ lập trình" value={editorMode} onChange={changeMode}><option value="beginner">Cơ bản</option><option value="advanced">Nâng cao</option></select></label><label>Board <select aria-label="Board profile" value={boardId} onChange={changeBoard}>{BOARD_PROFILES.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}</select></label><label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}><option value="">Chọn bài (Newmania OPI)…</option><option value="blink">Đèn nhấp nháy</option><option value="message">Lời nhắn &amp; tín hiệu</option><option value="ps4">PS4 mô phỏng</option></select></label><small>Chưa nạp chương trình lên mạch</small></div>
+      <div className="board-profile-toolbar"><label>Chế độ <select aria-label="Chế độ lập trình" value={editorMode} onChange={changeMode}><option value="beginner">Cơ bản</option><option value="advanced">Nâng cao</option></select></label><label>Board <select aria-label="Board profile" value={boardId} onChange={changeBoard}>{BOARD_PROFILES.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}</select></label><label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}><option value="">Chọn bài (Newmania OPI)…</option><option value="blink">Đèn nhấp nháy</option><option value="message">Lời nhắn &amp; tín hiệu</option><option value="ps4">PS4 mô phỏng</option><option value="counter">Vòng lặp đếm số</option><option value="random">Điều kiện và số ngẫu nhiên</option></select></label><small>Chưa nạp chương trình lên mạch</small></div>
       <div className="main">
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
           <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode={editorMode} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />

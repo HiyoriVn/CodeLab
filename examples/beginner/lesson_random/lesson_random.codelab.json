@@ -1,0 +1,158 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "lesson_random",
+    "boardId": "newmania-v1-16m-opi-experimental",
+    "editorMode": "beginner",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "beginner_forever",
+            "id": "lesson_random-0",
+            "x": 45,
+            "y": 35,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "variables_set",
+                  "id": "lesson_random-1",
+                  "fields": {
+                    "VAR": {
+                      "id": "lesson-random-var"
+                    }
+                  },
+                  "inputs": {
+                    "VALUE": {
+                      "block": {
+                        "type": "math_random_int",
+                        "id": "lesson_random-2",
+                        "inputs": {
+                          "FROM": {
+                            "block": {
+                              "type": "math_number",
+                              "id": "lesson_random-3",
+                              "fields": {
+                                "NUM": 1
+                              }
+                            }
+                          },
+                          "TO": {
+                            "block": {
+                              "type": "math_number",
+                              "id": "lesson_random-4",
+                              "fields": {
+                                "NUM": 10
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "next": {
+                    "block": {
+                      "type": "controls_if",
+                      "id": "lesson_random-5",
+                      "extraState": {
+                        "hasElse": true
+                      },
+                      "inputs": {
+                        "IF0": {
+                          "block": {
+                            "type": "logic_compare",
+                            "id": "lesson_random-6",
+                            "fields": {
+                              "OP": "GT"
+                            },
+                            "inputs": {
+                              "A": {
+                                "block": {
+                                  "type": "variables_get",
+                                  "id": "lesson_random-7",
+                                  "fields": {
+                                    "VAR": {
+                                      "id": "lesson-random-var"
+                                    }
+                                  }
+                                }
+                              },
+                              "B": {
+                                "block": {
+                                  "type": "math_number",
+                                  "id": "lesson_random-8",
+                                  "fields": {
+                                    "NUM": 5
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "DO0": {
+                          "block": {
+                            "type": "beginner_message",
+                            "id": "lesson_random-10",
+                            "inputs": {
+                              "VALUE": {
+                                "block": {
+                                  "type": "text",
+                                  "id": "lesson_random-9",
+                                  "fields": {
+                                    "TEXT": "Lon hon 5"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "ELSE": {
+                          "block": {
+                            "type": "beginner_message",
+                            "id": "lesson_random-12",
+                            "inputs": {
+                              "VALUE": {
+                                "block": {
+                                  "type": "text",
+                                  "id": "lesson_random-11",
+                                  "fields": {
+                                    "TEXT": "Khong lon hon 5"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "next": {
+                        "block": {
+                          "type": "beginner_wait",
+                          "id": "lesson_random-13",
+                          "fields": {
+                            "SECONDS": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "variables": [
+        {
+          "name": "diem",
+          "id": "lesson-random-var"
+        },
+        {
+          "name": "item",
+          "id": "_ND}$@W%!TI]AduC`pwM"
+        }
+      ]
+    }
+  }
+}

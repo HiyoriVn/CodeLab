@@ -8,7 +8,8 @@ const log=['Issue22 beginner lessons — compile only, no ports/upload'];
 const server=createBridge();server.listen(0,'127.0.0.1');await once(server,'listening');
 let failed=false;
 try {
-  for(const name of BEGINNER_EXAMPLES) {
+  for(const name of (process.argv.length > 2 ? process.argv.slice(2) : BEGINNER_EXAMPLES)) {
+    if (!BEGINNER_EXAMPLES.includes(name)) throw new Error('Unknown lesson: '+name);
     const w=beginnerWorkspace(name);let result;
     try {result=generateArduino(w,LESSON_BOARD);} finally {w.dispose();}
     if(result.warnings.length)throw new Error(result.warnings.join('\n'));

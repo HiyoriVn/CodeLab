@@ -39,10 +39,11 @@ test('toolbox is compact, profile-aware and raw hardware appears only in Advance
     const basic=editorToolbox(board.id,'beginner'),advanced=editorToolbox(board.id,'advanced');
     assert.ok(!types(basic).includes('codelab_gpio_write'));assert.ok(types(advanced).includes('codelab_gpio_write'));
     assert.equal(types(basic).includes('beginner_led'),Number.isInteger(board.pins.led));
-    assert.equal(types(basic).includes('beginner_motor'),board.capabilities.motorChannels>0);
-    assert.equal(types(basic).includes('beginner_ps4_setup'),!!board.pins.uart1);
+    assert.ok(!types(basic).includes('beginner_motor'));
+    assert.equal(types(advanced).includes('beginner_motor'),board.capabilities.motorChannels>0);
+    assert.ok(!types(basic).includes('beginner_ps4_setup'));
     assert.ok(!types(basic).some(t=>t?.includes('begin_i2c')));
-    for(const c of basic.contents)for(const entry of c.contents)assert.ok(Blockly.Blocks[entry.type],entry.type);
+    for(const c of basic.contents)for(const entry of c.contents||[])assert.ok(Blockly.Blocks[entry.type],entry.type);
   }
 });
 test('startup runs once after pin setup; forever uses Arduino loop without nested infinite loop',()=>{
@@ -80,4 +81,23 @@ test('beginner value blocks work with existing variables, including helper-name 
   const set=w.newBlock('variables_set');set.setFieldValue(variable.getId(),'VAR');set.getInput('VALUE').connection.connect(w.newBlock('beginner_ps4_axis').outputConnection);
   const result=generateArduino(w,LESSON_BOARD);assert.deepEqual(result.warnings,[]);
   assert.doesNotMatch(result.code,/double lessonLX =/);w.dispose();
+});
+
+test('nested repeat, condition, variables and random survive serialization',()=>{
+  const w=beginnerWorkspace('lesson_counter');
+  const outer=w.getAllBlocks(false).find(b=>b.type==='controls_repeat_ext');
+  const change=outer.getInputTargetBlock('DO');
+  const inner=w.newBlock('controls_repeat_ext'),count=w.newBlock('math_number');count.setFieldValue(2,'NUM');inner.getInput('TIMES').connection.connect(count.outputConnection);
+  change.unplug(true);outer.getInput('DO').connection.connect(inner.previousConnection);inner.getInput('DO').connection.connect(change.previousConnection);
+  const before=generateArduino(w,LESSON_BOARD);assert.deepEqual(before.warnings,[]);assert.match(before.code,/__codelab_repeat_0[\s\S]*__codelab_repeat_1[\s\S]*dem \+= 1/);
+  const saved=Blockly.serialization.workspaces.save(w),copy=new Blockly.Workspace();Blockly.serialization.workspaces.load(saved,copy);assert.equal(generateArduino(copy,LESSON_BOARD).code,before.code);copy.dispose();w.dispose();
+  const random=beginnerWorkspace('lesson_random'),result=generateArduino(random,LESSON_BOARD);assert.deepEqual(result.warnings,[]);assert.match(result.code,/codelabRandom\(1, 10\)/);assert.match(result.code,/else \{/);random.dispose();
+});
+test('change rejects non-numeric variables',()=>{
+  const w=new Blockly.Workspace(),v=w.getVariableMap().createVariable('chu'),set=w.newBlock('variables_set'),value=w.newBlock('text'),change=w.newBlock('math_change');set.setFieldValue(v.getId(),'VAR');set.getInput('VALUE').connection.connect(value.outputConnection);change.setFieldValue(v.getId(),'VAR');
+  assert.ok(generateArduino(w,LESSON_BOARD).warnings.some(x=>x.includes('kiểu số')));w.dispose();
+});
+
+test('number division keeps fractional results and new math blocks generate',()=>{
+ const w=new Blockly.Workspace(),divide=w.newBlock('math_arithmetic');divide.setFieldValue('DIVIDE','OP');const one=w.newBlock('math_number'),two=w.newBlock('math_number');one.setFieldValue(1,'NUM');two.setFieldValue(2,'NUM');divide.getInput('A').connection.connect(one.outputConnection);divide.getInput('B').connection.connect(two.outputConnection);w.newBlock('math_round');w.newBlock('math_constrain');const out=generateArduino(w,LESSON_BOARD);assert.deepEqual(out.warnings,[]);assert.match(out.code,/\(double\)\(1\) \/ \(double\)\(2\)/);assert.match(out.code,/codelabClamp/);assert.match(out.code,/round\(/);w.dispose();
 });

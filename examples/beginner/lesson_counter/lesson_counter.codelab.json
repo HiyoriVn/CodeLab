@@ -1,0 +1,131 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "lesson_counter",
+    "boardId": "newmania-v1-16m-opi-experimental",
+    "editorMode": "beginner",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "beginner_forever",
+            "id": "lesson_counter-0",
+            "x": 45,
+            "y": 35,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "controls_repeat_ext",
+                  "id": "lesson_counter-4",
+                  "inputs": {
+                    "TIMES": {
+                      "block": {
+                        "type": "math_number",
+                        "id": "lesson_counter-5",
+                        "fields": {
+                          "NUM": 5
+                        }
+                      }
+                    },
+                    "DO": {
+                      "block": {
+                        "type": "math_change",
+                        "id": "lesson_counter-6",
+                        "fields": {
+                          "VAR": {
+                            "id": "lesson-counter-var"
+                          }
+                        },
+                        "inputs": {
+                          "DELTA": {
+                            "block": {
+                              "type": "math_number",
+                              "id": "lesson_counter-7",
+                              "fields": {
+                                "NUM": 1
+                              }
+                            }
+                          }
+                        },
+                        "next": {
+                          "block": {
+                            "type": "beginner_message",
+                            "id": "lesson_counter-9",
+                            "inputs": {
+                              "VALUE": {
+                                "block": {
+                                  "type": "variables_get",
+                                  "id": "lesson_counter-8",
+                                  "fields": {
+                                    "VAR": {
+                                      "id": "lesson-counter-var"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "next": {
+                    "block": {
+                      "type": "beginner_wait",
+                      "id": "lesson_counter-10",
+                      "fields": {
+                        "SECONDS": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "beginner_start",
+            "id": "lesson_counter-1",
+            "x": 0,
+            "y": 0,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "variables_set",
+                  "id": "lesson_counter-2",
+                  "fields": {
+                    "VAR": {
+                      "id": "lesson-counter-var"
+                    }
+                  },
+                  "inputs": {
+                    "VALUE": {
+                      "block": {
+                        "type": "math_number",
+                        "id": "lesson_counter-3",
+                        "fields": {
+                          "NUM": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "variables": [
+        {
+          "name": "dem",
+          "id": "lesson-counter-var"
+        },
+        {
+          "name": "item",
+          "id": "6`tN9RP+%DOi(htecNOY"
+        }
+      ]
+    }
+  }
+}

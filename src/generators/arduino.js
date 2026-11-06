@@ -119,7 +119,7 @@ CodeLabPS4Adapter codelabPs4;`;
 
 function variableTypeOf(block, knownTypes) {
   if (!block) return null;
-  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'codelab_analog_read', 'codelab_serial_available', 'codelab_serial_read', 'codelab_ps4_axis', 'beginner_ps4_axis'].includes(block.type)) return 'number';
+  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'math_random_int', 'math_round', 'math_constrain', 'codelab_analog_read', 'codelab_serial_available', 'codelab_serial_read', 'codelab_ps4_axis', 'beginner_ps4_axis'].includes(block.type)) return 'number';
   if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_gpio_read_mode', 'codelab_ps4_connected', 'codelab_ps4_button', 'beginner_ps4_connected', 'beginner_ps4_button', 'beginner_serial_ready'].includes(block.type)) return 'boolean';
   if (['text', 'text_join'].includes(block.type)) return 'string';
   if (block.type === 'variables_get') return knownTypes.get(block.getFieldValue('VAR')) || null;
@@ -202,7 +202,7 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     super('Arduino');
     this.profile_ = profile;
     this.ORDER_ATOMIC = ATOMIC;
-    this.addReservedWords('setup,loop,Serial,boolean,bool,char,int,long,float,double,void,const,if,else,for,while,break,continue,return,true,false');
+    this.addReservedWords('codelabRandom,codelabClamp,setup,loop,Serial,boolean,bool,char,int,long,float,double,void,const,if,else,for,while,break,continue,return,true,false');
   }
 
   init(workspace) {
@@ -294,6 +294,7 @@ function registerBlocks(generator) {
       gen.definitions_['include_math'] = '#include <math.h>';
       return ['pow(' + left + ', ' + right + ')', ATOMIC];
     }
+    if (operation === 'DIVIDE') return ['((double)(' + left + ') / (double)(' + right + '))', ATOMIC];
     const operators = { ADD: '+', MINUS: '-', MULTIPLY: '*', DIVIDE: '/' };
     return ['(' + left + ' ' + (operators[operation] || '+') + ' ' + right + ')', ATOMIC];
   };
@@ -320,6 +321,41 @@ function registerBlocks(generator) {
     if (!fn) return ['0 /* unsupported math operation */', ATOMIC];
     gen.definitions_['include_math'] = '#include <math.h>';
     return [fn + '(' + value + ')', ATOMIC];
+  };
+
+  generator.forBlock.math_modulo = (block, gen) => {
+    gen.definitions_.include_math = '#include <math.h>';
+    const a = gen.valueToCode(block, 'DIVIDEND', ATOMIC) || '0';
+    const b = gen.valueToCode(block, 'DIVISOR', ATOMIC) || '1';
+    return ['fmod(' + a + ', ' + b + ')', ATOMIC];
+  };
+  generator.forBlock.math_random_int = (block, gen) => {
+    const from = gen.valueToCode(block, 'FROM', ATOMIC) || '0';
+    const to = gen.valueToCode(block, 'TO', ATOMIC) || '0';
+    gen.definitions_.beginner_random = 'long codelabRandom(long a, long b) { if (a > b) { long t = a; a = b; b = t; } if (b == LONG_MAX) return a; return random(a, b + 1); }';
+    gen.definitions_.include_limits = '#include <limits.h>';
+    return ['codelabRandom(' + from + ', ' + to + ')', ATOMIC];
+  };
+  generator.forBlock.math_round = (block, gen) => {
+    gen.definitions_.include_math = '#include <math.h>';
+    const fn = {ROUND:'round',ROUNDUP:'ceil',ROUNDDOWN:'floor'}[block.getFieldValue('OP')];
+    if (!fn) { gen.diagnostics_.add('Phép làm tròn chưa được hỗ trợ.'); return ['0', ATOMIC]; }
+    return [fn + '(' + (gen.valueToCode(block, 'NUM', ATOMIC) || '0') + ')', ATOMIC];
+  };
+  generator.forBlock.math_constrain = (block, gen) => {
+    gen.definitions_.beginner_clamp = 'double codelabClamp(double value, double low, double high) { if (low > high) { double t = low; low = high; high = t; } return value < low ? low : (value > high ? high : value); }';
+    const value = gen.valueToCode(block, 'VALUE', ATOMIC) || '0';
+    const low = gen.valueToCode(block, 'LOW', ATOMIC) || '0';
+    const high = gen.valueToCode(block, 'HIGH', ATOMIC) || '0';
+    return ['codelabClamp(' + value + ', ' + low + ', ' + high + ')', ATOMIC];
+  };
+  generator.forBlock.math_change = (block, gen) => {
+    const id = block.getFieldValue('VAR');
+    if (gen.invalidVariableIds_.has(id) || gen.variableTypes_.get(id) !== 'number') {
+      gen.diagnostics_.add('Chỉ thay đổi biến có kiểu số.');
+      return '// Cannot change non-numeric variable.\n';
+    }
+    return gen.getVariableName(id) + ' += ' + (gen.valueToCode(block, 'DELTA', ATOMIC) || '0') + ';\n';
   };
 
   generator.forBlock.text = (block) => [JSON.stringify(block.getFieldValue('TEXT') || ''), ATOMIC];
