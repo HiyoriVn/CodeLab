@@ -101,3 +101,10 @@ test('change rejects non-numeric variables',()=>{
 test('number division keeps fractional results and new math blocks generate',()=>{
  const w=new Blockly.Workspace(),divide=w.newBlock('math_arithmetic');divide.setFieldValue('DIVIDE','OP');const one=w.newBlock('math_number'),two=w.newBlock('math_number');one.setFieldValue(1,'NUM');two.setFieldValue(2,'NUM');divide.getInput('A').connection.connect(one.outputConnection);divide.getInput('B').connection.connect(two.outputConnection);w.newBlock('math_round');w.newBlock('math_constrain');const out=generateArduino(w,LESSON_BOARD);assert.deepEqual(out.warnings,[]);assert.match(out.code,/\(double\)\(1\) \/ \(double\)\(2\)/);assert.match(out.code,/codelabClamp/);assert.match(out.code,/round\(/);w.dispose();
 });
+
+test('counter lesson counts 1 to 5 once at startup',()=>{
+  const w=beginnerWorkspace('lesson_counter'),out=generateArduino(w,LESSON_BOARD);
+  assert.deepEqual(out.warnings,[]);const [setup,loop]=out.code.split('void loop()');
+  assert.match(setup,/dem = 0;[\s\S]*codelabRepeatCount\(5\)[\s\S]*dem \+= 1;[\s\S]*Serial.println\(dem\)/);
+  assert.doesNotMatch(loop,/dem|Serial.println/);w.dispose();
+});

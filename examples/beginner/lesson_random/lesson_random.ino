@@ -1,8 +1,15 @@
 #include <Arduino.h>
 double diem = 0;
 double item = 0;
-long codelabRandom(long a, long b) { if (a > b) { long t = a; a = b; b = t; } if (b == LONG_MAX) return a; return random(a, b + 1); }
-#include <limits.h>
+int32_t codelabRandom(int32_t a, int32_t b) {
+  if (a > b) { int32_t t = a; a = b; b = t; }
+  const uint64_t span = (int64_t)b - (int64_t)a + 1;
+  const uint64_t range = UINT64_C(1) << 32;
+  const uint64_t limit = range - range % span;
+  uint64_t sample;
+  do { sample = ((uint32_t)random(65536) << 16) | (uint32_t)random(65536); } while (sample >= limit);
+  return (int32_t)((int64_t)a + (int64_t)(sample % span));
+}
 void setup() {
   Serial.begin(115200);
 }

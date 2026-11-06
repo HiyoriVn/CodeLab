@@ -51,7 +51,7 @@ test('statement chains and nested statements preserve execution order',()=>{
  repeat.getInput('DO').connection.connect(a.previousConnection);a.nextConnection.connect(b.previousConnection);repeat.nextConnection.connect(c.previousConnection);
  const out=generateArduino(w);assert.deepEqual(out.warnings,[]);
  assert.ok(out.code.indexOf('inside-a')<out.code.indexOf('inside-b'));assert.ok(out.code.indexOf('inside-b')<out.code.indexOf('after-loop'));
- assert.match(out.code,/Serial.println\("inside-b"\);\n\s*}\s*\nSerial.println\("after-loop"\)/);w.dispose();
+ assert.match(out.code,/Serial.println\("inside-b"\);\n\s*}\s*}\s*\nSerial.println\("after-loop"\)/);w.dispose();
 });
 test('V1 full I/O example emits all connected blocks and pull configuration',()=>{
  const w=roboticsWorkspace(CASES[0]);const out=generateArduino(w,CASES[0].boardId);

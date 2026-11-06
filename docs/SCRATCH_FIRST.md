@@ -37,7 +37,7 @@ Raw compile log: `docs/verification/beginner_compile.log` (ignored). Ảnh smoke
 
 ## Mở rộng Issue #23
 
-Toolbox Cơ bản có điều kiện nếu/không, lặp đến khi, phép chia dư, trị tuyệt đối, số ngẫu nhiên, làm tròn, giới hạn số, nối chữ và nhóm Biến (tạo, đặt, thay đổi, đọc). Các phép toán dùng số; không chia dư cho 0. Nhiều khối mãi mãi chạy tuần tự; đợi và lặp đến khi đều chặn chương trình. Bài `lesson_counter` đếm và in 5 lần; `lesson_random` in kết quả so sánh số ngẫu nhiên. Cả hai mở từ menu Bài mẫu.
+Toolbox Cơ bản có điều kiện nếu/không, lặp đến khi, phép chia dư, trị tuyệt đối, số ngẫu nhiên, làm tròn, giới hạn số, nối chữ và nhóm Biến (tạo, đặt, thay đổi, đọc). Số lần lặp được lấy một lần khi bắt đầu, phần lẻ bị bỏ và số âm trở thành 0; mỗi lượt nhường CPU 1 ms. Chia dư cho 0 cố định sẽ báo lỗi trước khi biên dịch; nếu số chia bằng 0 lúc chạy, Bảng lệnh báo một lần và kết quả là 0. Nhiều khối mãi mãi chạy tuần tự; đợi và lặp đến khi đều chặn chương trình. Bài `lesson_counter` đếm và in 1–5 một lần khi khởi động; `lesson_random` in kết quả so sánh số ngẫu nhiên. Cả hai mở từ menu Bài mẫu.
 
 Cơ bản chỉ cung cấp PS4 mô phỏng: adapter I2C legacy chưa có cơ chế sequence/freshness của demo D1 0x30/S3 SDA8 SCL9. UART cũ vẫn ở Nâng cao và không phải kết nối I2C. Motor/servo chỉ xuất hiện trong Nâng cao trên profile có kênh và chặn biên dịch; cảm biến vật lý chưa được xác minh. LED chỉ hiện trên profile có LED. Chưa có kiểm thử phần cứng.
 

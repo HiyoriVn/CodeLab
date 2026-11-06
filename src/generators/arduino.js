@@ -202,7 +202,7 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     super('Arduino');
     this.profile_ = profile;
     this.ORDER_ATOMIC = ATOMIC;
-    this.addReservedWords('codelabRandom,codelabClamp,setup,loop,Serial,boolean,bool,char,int,long,float,double,void,const,if,else,for,while,break,continue,return,true,false');
+    this.addReservedWords('codelabRandom,codelabClamp,codelabRepeatCount,codelabModulo,setup,loop,Serial,boolean,bool,char,int,long,float,double,void,const,if,else,for,while,break,continue,return,true,false');
   }
 
   init(workspace) {
@@ -327,13 +327,25 @@ function registerBlocks(generator) {
     gen.definitions_.include_math = '#include <math.h>';
     const a = gen.valueToCode(block, 'DIVIDEND', ATOMIC) || '0';
     const b = gen.valueToCode(block, 'DIVISOR', ATOMIC) || '1';
-    return ['fmod(' + a + ', ' + b + ')', ATOMIC];
+    const divisor = block.getInputTargetBlock('DIVISOR');
+    if (divisor?.type === 'math_number' && Number(divisor.getFieldValue('NUM')) === 0) {
+      gen.diagnostics_.add('Không thể chia dư cho 0. Hãy chọn số chia khác 0.');
+    }
+    gen.definitions_.beginner_modulo = 'double codelabModulo(double a, double b) { if (b == 0) { static bool warned = false; if (!warned) { Serial.println("Khong the chia du cho 0. Hay chon so chia khac 0."); warned = true; } return 0; } return fmod(a, b); }';
+    return ['codelabModulo(' + a + ', ' + b + ')', ATOMIC];
   };
   generator.forBlock.math_random_int = (block, gen) => {
     const from = gen.valueToCode(block, 'FROM', ATOMIC) || '0';
     const to = gen.valueToCode(block, 'TO', ATOMIC) || '0';
-    gen.definitions_.beginner_random = 'long codelabRandom(long a, long b) { if (a > b) { long t = a; a = b; b = t; } if (b == LONG_MAX) return a; return random(a, b + 1); }';
-    gen.definitions_.include_limits = '#include <limits.h>';
+    gen.definitions_.beginner_random = `int32_t codelabRandom(int32_t a, int32_t b) {
+  if (a > b) { int32_t t = a; a = b; b = t; }
+  const uint64_t span = (int64_t)b - (int64_t)a + 1;
+  const uint64_t range = UINT64_C(1) << 32;
+  const uint64_t limit = range - range % span;
+  uint64_t sample;
+  do { sample = ((uint32_t)random(65536) << 16) | (uint32_t)random(65536); } while (sample >= limit);
+  return (int32_t)((int64_t)a + (int64_t)(sample % span));
+}`;
     return ['codelabRandom(' + from + ', ' + to + ')', ATOMIC];
   };
   generator.forBlock.math_round = (block, gen) => {
@@ -694,8 +706,12 @@ function registerBlocks(generator) {
     const count = gen.valueToCode(block, 'TIMES', ATOMIC) || '0';
     const index = gen.repeatIndex_++;
     const body = gen.statementToCode(block, 'DO');
-    const variable = '__codelab_repeat_' + index;
-    return 'for (uint32_t ' + variable + ' = 0; ' + variable + ' < (' + count + '); ++' + variable + ') {\n' + body + '}\n';
+    const variable = gen.nameDB_.getDistinctName('__codelab_repeat_' + index, Blockly.Names.NameType.DEVELOPER_VARIABLE);
+    const limit = gen.nameDB_.getDistinctName('__codelab_repeat_limit_' + index, Blockly.Names.NameType.DEVELOPER_VARIABLE);
+    gen.definitions_.include_math = '#include <math.h>';
+    gen.definitions_.repeat_count = 'uint32_t codelabRepeatCount(double n) { if (!isfinite(n) || n <= 0) return 0; if (n >= UINT32_MAX) return UINT32_MAX; return (uint32_t)n; }';
+    return '{\nconst uint32_t ' + limit + ' = codelabRepeatCount(' + count + ');\n' +
+      'for (uint32_t ' + variable + ' = 0; ' + variable + ' < ' + limit + '; ++' + variable + ', delay(1)) {\n' + body + '}\n}\n';
   };
 
   generator.forBlock.controls_for = (block, gen) => {
