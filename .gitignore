@@ -28,3 +28,4 @@ package-lock.json
 /docs/verification/mecanum_*.log
 /docs/verification/ps4_i2c_*.log
 /docs/verification/beginner_*.log
+/docs/verification/ps4_motor_*.log
