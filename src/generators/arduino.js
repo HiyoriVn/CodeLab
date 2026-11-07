@@ -1,8 +1,10 @@
 import * as Blockly from 'blockly';
+import { getBoardProfile, DEFAULT_BOARD_ID, validatePin } from '../boards/profiles.js';
+import { startupCode } from '../boards/startup.js';
 
 const ATOMIC = 0;
 
-const PS4_HELPER = `class CodeLabPS4Adapter {
+export const PS4_HELPER = String.raw`class CodeLabPS4Adapter {
   HardwareSerial* serial_ = nullptr;
   uint8_t address_ = 0;
   bool i2c_ = false;
@@ -14,13 +16,42 @@ const PS4_HELPER = `class CodeLabPS4Adapter {
   size_t lineLength_ = 0;
   bool discardLine_ = false;
 
-  void applyFrame(int connected, int x, int y, int rx, int ry, unsigned long buttons) {
-    axes_[0] = (int16_t)constrain(x, -32768, 32767);
-    axes_[1] = (int16_t)constrain(y, -32768, 32767);
-    axes_[2] = (int16_t)constrain(rx, -32768, 32767);
-    axes_[3] = (int16_t)constrain(ry, -32768, 32767);
-    buttons_ = (uint32_t)buttons;
-    receiverConnected_ = connected != 0;
+  bool hasFrame_ = false;
+
+  static bool unsignedField(const char*& p, uint32_t limit, uint32_t& value) {
+    if (*p < '0' || *p > '9') return false;
+    value = 0;
+    do {
+      const uint32_t digit = (uint32_t)(*p - '0');
+      if (digit > limit || value > (limit - digit) / 10U) return false;
+      value = value * 10U + digit;
+      ++p;
+    } while (*p >= '0' && *p <= '9');
+    return true;
+  }
+
+  static bool signedField(const char*& p, int16_t& value) {
+    const bool negative = *p == '-';
+    if (negative) ++p;
+    uint32_t magnitude;
+    if (!unsignedField(p, negative ? 32768U : 32767U, magnitude)) return false;
+    value = (int16_t)(negative ? -(int32_t)magnitude : (int32_t)magnitude);
+    return true;
+  }
+
+  void parseLine() {
+    const char* p = line_;
+    uint32_t connected, buttons;
+    int16_t axes[4];
+    if (!unsignedField(p, 1U, connected) || *p++ != ',') return;
+    for (uint8_t i = 0; i < 4; ++i) {
+      if (!signedField(p, axes[i]) || *p++ != ',') return;
+    }
+    if (!unsignedField(p, UINT32_MAX, buttons) || *p != '\0') return;
+    for (uint8_t i = 0; i < 4; ++i) axes_[i] = connected ? axes[i] : 0;
+    buttons_ = connected ? buttons : 0;
+    receiverConnected_ = connected == 1;
+    hasFrame_ = true;
     lastFrameAt_ = millis();
   }
 
@@ -28,19 +59,15 @@ const PS4_HELPER = `class CodeLabPS4Adapter {
     if (!serial_) return;
     while (serial_->available()) {
       const char ch = (char)serial_->read();
-      if (ch == '\n' || ch == '\r') {
+      if (ch == '\n') {
         if (lineLength_ && !discardLine_) {
+          if (line_[lineLength_ - 1] == '\r') --lineLength_;
           line_[lineLength_] = '\0';
-          int connected, x, y, rx, ry, consumed = 0;
-          unsigned long buttons;
-          if (sscanf(line_, "%d,%d,%d,%d,%d,%lu%n", &connected, &x, &y, &rx, &ry, &buttons, &consumed) == 6 &&
-              line_[consumed] == '\0') {
-            applyFrame(connected, x, y, rx, ry, buttons);
-          }
+          if (lineLength_) parseLine();
         }
         lineLength_ = 0;
         discardLine_ = false;
-      } else if (!discardLine_ && lineLength_ < sizeof(line_) - 1) {
+      } else if (ch != '\0' && !discardLine_ && lineLength_ < sizeof(line_) - 1) {
         line_[lineLength_++] = ch;
       } else {
         lineLength_ = 0;
@@ -69,6 +96,7 @@ const PS4_HELPER = `class CodeLabPS4Adapter {
     buttons_ = (uint32_t)frame[9] | ((uint32_t)frame[10] << 8) |
       ((uint32_t)frame[11] << 16) | ((uint32_t)frame[12] << 24);
     receiverConnected_ = (frame[0] & 0x01) != 0;
+    hasFrame_ = true;
     lastFrameAt_ = millis();
   }
 
@@ -76,7 +104,9 @@ public:
   void beginUart(HardwareSerial& serial) { serial_ = &serial; i2c_ = false; }
   void beginI2c(uint8_t address) { address_ = address; i2c_ = true; }
   void update() { if (i2c_) readI2c(); else readUart(); }
-  bool connected() const { return receiverConnected_ && (uint32_t)(millis() - lastFrameAt_) <= 250; }
+  bool hasReport() const { return hasFrame_; }
+  uint32_t lastReportAt() const { return lastFrameAt_; }
+  bool connected() const { return hasFrame_ && receiverConnected_ && (uint32_t)(millis() - lastFrameAt_) <= 250; }
   int axis(uint8_t index) const {
     if (!connected() || index > 3) return 0;
     return (int)map(axes_[index], -32768, 32767, -1000, 1000);
@@ -89,8 +119,8 @@ CodeLabPS4Adapter codelabPs4;`;
 
 function variableTypeOf(block, knownTypes) {
   if (!block) return null;
-  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'codelab_analog_read', 'codelab_ps4_axis'].includes(block.type)) return 'number';
-  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_ps4_connected', 'codelab_ps4_button'].includes(block.type)) return 'boolean';
+  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'math_random_int', 'math_round', 'math_constrain', 'codelab_analog_read', 'codelab_serial_available', 'codelab_serial_read', 'codelab_ps4_axis', 'beginner_ps4_axis'].includes(block.type)) return 'number';
+  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_gpio_read_mode', 'codelab_ps4_connected', 'codelab_ps4_button', 'beginner_ps4_connected', 'beginner_ps4_button', 'beginner_serial_ready'].includes(block.type)) return 'boolean';
   if (['text', 'text_join'].includes(block.type)) return 'string';
   if (block.type === 'variables_get') return knownTypes.get(block.getFieldValue('VAR')) || null;
   return null;
@@ -168,35 +198,55 @@ function initializeVariables(generator, workspace) {
 }
 
 class ArduinoGenerator extends Blockly.CodeGenerator {
-  constructor() {
+  constructor(profile) {
     super('Arduino');
+    this.profile_ = profile;
     this.ORDER_ATOMIC = ATOMIC;
-    this.addReservedWords('setup,loop,Serial,boolean,bool,char,int,long,float,double,void,const,if,else,for,while,break,continue,return,true,false');
+    this.addReservedWords('codelabRandom,codelabClamp,codelabRepeatCount,codelabModulo,setup,loop,Serial,boolean,bool,char,int,long,float,double,void,const,if,else,for,while,break,continue,return,true,false');
   }
 
   init(workspace) {
     super.init(workspace);
     this.definitions_ = Object.create(null);
+    this.includes_ = Object.create(null);
     this.repeatIndex_ = 0;
     this.motorIndex_ = 0;
     this.diagnostics_ = new Set();
     this.pinModes_ = new Map();
     this.setupStatements_ = new Map();
+    this.beginnerStartup_ = [];
+    const simulations = workspace.getAllBlocks(false).filter(b => b.type === 'beginner_ps4_sim' && b.isEnabled() && !b.getInheritedDisabled());
+    this.beginnerSimulation_ = simulations.length > 0;
+    if (simulations.length > 1) this.diagnostics_.add('Chỉ dùng một khối Mô phỏng PS4 để tránh dữ liệu chồng nhau.');
+    if (this.beginnerSimulation_) this.addReservedWords('lessonConnected,lessonLX,lessonCross');
     this.loopPreamble_ = '';
     this.controllerRequested_ = false;
     this.controllerConfigured_ = false;
+    this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
+    this.nameDB_.setVariableMap(workspace.getVariableMap());
+    this.nameDB_.populateVariables(workspace);
     initializeVariables(this, workspace);
   }
 
+  scrubNakedValue(code) { return code + ';\n'; }
+
+  scrub_(block, code, thisOnly = false) {
+    const next = block.nextConnection?.targetBlock();
+    return code + (!thisOnly && next ? this.blockToCode(next) : '');
+  }
+
   finish(code) {
-    const definitions = Object.values(this.definitions_ || {}).join('\n');
-    const includes = ['#include <Arduino.h>', ...Object.values(this.includes_ || {})].join('\n');
+    const startup = startupCode(this.profile_);
+    const definitions = [startup.definitions, ...Object.values(this.definitions_ || {})].filter(Boolean).join('\n');
+    const includes = [...new Set(['#include <Arduino.h>', ...startup.includes, ...Object.values(this.includes_ || {})])].join('\n');
     return [
       includes,
       definitions,
       'void setup() {',
+      ...startup.setup.map(line => '  ' + line),
       '  Serial.begin(115200);',
       ...Array.from(this.setupStatements_.values()).map((line) => '  ' + line),
+      ...this.beginnerStartup_,
       '}',
       '',
       'void loop() {',
@@ -244,6 +294,7 @@ function registerBlocks(generator) {
       gen.definitions_['include_math'] = '#include <math.h>';
       return ['pow(' + left + ', ' + right + ')', ATOMIC];
     }
+    if (operation === 'DIVIDE') return ['((double)(' + left + ') / (double)(' + right + '))', ATOMIC];
     const operators = { ADD: '+', MINUS: '-', MULTIPLY: '*', DIVIDE: '/' };
     return ['(' + left + ' ' + (operators[operation] || '+') + ' ' + right + ')', ATOMIC];
   };
@@ -270,6 +321,53 @@ function registerBlocks(generator) {
     if (!fn) return ['0 /* unsupported math operation */', ATOMIC];
     gen.definitions_['include_math'] = '#include <math.h>';
     return [fn + '(' + value + ')', ATOMIC];
+  };
+
+  generator.forBlock.math_modulo = (block, gen) => {
+    gen.definitions_.include_math = '#include <math.h>';
+    const a = gen.valueToCode(block, 'DIVIDEND', ATOMIC) || '0';
+    const b = gen.valueToCode(block, 'DIVISOR', ATOMIC) || '1';
+    const divisor = block.getInputTargetBlock('DIVISOR');
+    if (divisor?.type === 'math_number' && Number(divisor.getFieldValue('NUM')) === 0) {
+      gen.diagnostics_.add('Không thể chia dư cho 0. Hãy chọn số chia khác 0.');
+    }
+    gen.definitions_.beginner_modulo = 'double codelabModulo(double a, double b) { if (b == 0) { static bool warned = false; if (!warned) { Serial.println("Khong the chia du cho 0. Hay chon so chia khac 0."); warned = true; } return 0; } return fmod(a, b); }';
+    return ['codelabModulo(' + a + ', ' + b + ')', ATOMIC];
+  };
+  generator.forBlock.math_random_int = (block, gen) => {
+    const from = gen.valueToCode(block, 'FROM', ATOMIC) || '0';
+    const to = gen.valueToCode(block, 'TO', ATOMIC) || '0';
+    gen.definitions_.beginner_random = `int32_t codelabRandom(int32_t a, int32_t b) {
+  if (a > b) { int32_t t = a; a = b; b = t; }
+  const uint64_t span = (int64_t)b - (int64_t)a + 1;
+  const uint64_t range = UINT64_C(1) << 32;
+  const uint64_t limit = range - range % span;
+  uint64_t sample;
+  do { sample = ((uint32_t)random(65536) << 16) | (uint32_t)random(65536); } while (sample >= limit);
+  return (int32_t)((int64_t)a + (int64_t)(sample % span));
+}`;
+    return ['codelabRandom(' + from + ', ' + to + ')', ATOMIC];
+  };
+  generator.forBlock.math_round = (block, gen) => {
+    gen.definitions_.include_math = '#include <math.h>';
+    const fn = {ROUND:'round',ROUNDUP:'ceil',ROUNDDOWN:'floor'}[block.getFieldValue('OP')];
+    if (!fn) { gen.diagnostics_.add('Phép làm tròn chưa được hỗ trợ.'); return ['0', ATOMIC]; }
+    return [fn + '(' + (gen.valueToCode(block, 'NUM', ATOMIC) || '0') + ')', ATOMIC];
+  };
+  generator.forBlock.math_constrain = (block, gen) => {
+    gen.definitions_.beginner_clamp = 'double codelabClamp(double value, double low, double high) { if (low > high) { double t = low; low = high; high = t; } return value < low ? low : (value > high ? high : value); }';
+    const value = gen.valueToCode(block, 'VALUE', ATOMIC) || '0';
+    const low = gen.valueToCode(block, 'LOW', ATOMIC) || '0';
+    const high = gen.valueToCode(block, 'HIGH', ATOMIC) || '0';
+    return ['codelabClamp(' + value + ', ' + low + ', ' + high + ')', ATOMIC];
+  };
+  generator.forBlock.math_change = (block, gen) => {
+    const id = block.getFieldValue('VAR');
+    if (gen.invalidVariableIds_.has(id) || gen.variableTypes_.get(id) !== 'number') {
+      gen.diagnostics_.add('Chỉ thay đổi biến có kiểu số.');
+      return '// Cannot change non-numeric variable.\n';
+    }
+    return gen.getVariableName(id) + ' += ' + (gen.valueToCode(block, 'DELTA', ATOMIC) || '0') + ';\n';
   };
 
   generator.forBlock.text = (block) => [JSON.stringify(block.getFieldValue('TEXT') || ''), ATOMIC];
@@ -306,12 +404,7 @@ function registerBlocks(generator) {
       gen.diagnostics_.add(label + ': chân GPIO phải là một số nguyên cố định.');
       return;
     }
-    const valid = (numericPin >= 0 && numericPin <= 21) || (numericPin >= 26 && numericPin <= 48);
-    if (!valid) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' không tồn tại trên ESP32-S3.');
-    if ([0, 3, 45, 46].includes(numericPin)) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' là chân strapping; tránh tải ngoài có thể ảnh hưởng lúc khởi động.');
-    if (numericPin === 19 || numericPin === 20) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' thường được dùng cho USB; kiểm tra cấu hình bo mạch.');
-    if (numericPin >= 26 && numericPin <= 37) gen.diagnostics_.add(label + ': GPIO ' + numericPin + ' có thể được dùng cho flash/PSRAM tùy module.');
-    if (analog && (numericPin < 1 || numericPin > 20)) gen.diagnostics_.add(label + ': ADC của ESP32-S3 chỉ có trên GPIO 1–20.');
+    for (const warning of validatePin(gen.profile_, numericPin, analog)) gen.diagnostics_.add(label + ': ' + warning);
   };
 
   const numberInput = (block, name, gen, label) => {
@@ -367,6 +460,7 @@ function registerBlocks(generator) {
   generator.forBlock.codelab_analog_read = (block, gen) => {
     const pin = numberInput(block, 'PIN', gen, 'Khối đọc ADC');
     pinWarnings(pin, gen, 'Khối đọc ADC', true);
+    configurePin(gen, pin, 'INPUT', 'Khối đọc ADC');
     return ['analogRead(' + pin + ')', ATOMIC];
   };
 
@@ -377,7 +471,53 @@ function registerBlocks(generator) {
     return 'ledcWrite(' + pin + ', (uint32_t)constrain((int)(' + duty + '), 0, 255));\n';
   };
 
+  generator.forBlock.codelab_gpio_read_mode = (block, gen) => {
+    const pin=numberInput(block,'PIN',gen,'GPIO input mode');
+    const mode=block.getFieldValue('MODE');
+    configurePin(gen,pin,mode,'GPIO input mode');
+    return ['(digitalRead('+pin+') == HIGH)',ATOMIC];
+  };
+  generator.forBlock.codelab_serial_print = (block, gen) => {
+    const value=gen.valueToCode(block,'VALUE',ATOMIC);
+    if(!value) gen.diagnostics_.add('Serial: chưa nối giá trị cần ghi.');
+    return 'Serial.'+(block.getFieldValue('ENDING')==='RAW'?'print':'println')+'('+(value||'""')+');\n';
+  };
+  generator.forBlock.codelab_serial_available = () => ['Serial.available()',ATOMIC];
+  generator.forBlock.codelab_serial_read = () => ['Serial.read()',ATOMIC];
+  const channelPin = (block, gen, kind) => {
+    const index=Number(block.getFieldValue('CHANNEL'))-1;
+    if(!Number.isInteger(index)||index<0||index>=gen.profile_.pins[kind].length) {
+      gen.diagnostics_.add(kind+': kênh không tồn tại trên profile; không remap workspace.');return null;
+    }
+    return gen.profile_.pins[kind][index];
+  };
+  generator.forBlock.codelab_motor_channel = (block, gen) => {
+    channelPin(block,gen,'motors');
+    numberInput(block,'SPEED',gen,'Motor channel');
+    gen.diagnostics_.add('Motor chuyển động chưa được hỗ trợ: V1 chưa xác minh truth table; V2 chưa có runtime driver/safety gate. Không phát lệnh tải.');
+    return '// Unsupported motor channel request: no actuator code emitted.\n';
+  };
+  generator.forBlock.codelab_servo_write = (block, gen) => {
+    channelPin(block,gen,'servos');
+    numberInput(block,'ANGLE',gen,'Servo channel');
+    gen.diagnostics_.add('Servo enable/write chưa được hỗ trợ: thiếu power-stable interlock và driver đã xác minh.');
+    return '// Unsupported servo write: no pulses emitted.\n';
+  };
+  generator.forBlock.codelab_servo_disable = (block, gen) => {
+    const pin=channelPin(block,gen,'servos');
+    if(pin===null) return '// Unsupported servo channel.\n';
+    gen.includes_['servo_disable_gpio']='#include <driver/gpio.h>';
+    gen.definitions_['servo_disable']=`static void codelabServoDisable(uint8_t pin) {
+  const auto gpio = (gpio_num_t)pin;
+  const bool inputOk = gpio_set_direction(gpio, GPIO_MODE_INPUT) == ESP_OK;
+  const bool pullOk = gpio_set_pull_mode(gpio, GPIO_FLOATING) == ESP_OK;
+  if (!inputOk || !pullOk) Serial.println("Servo disable failed");
+}`;
+    return 'codelabServoDisable('+pin+');\n';
+  };
+
   generator.forBlock.codelab_hbridge_motor = (block, gen) => {
+    if (gen.profile_.id !== DEFAULT_BOARD_ID) gen.diagnostics_.add('Board profile chưa cho phép điều khiển motor; block H-bridge generic chỉ dùng trên profile Generic đã kiểm tra wiring.');
     const in1 = numberInput(block, 'IN1', gen, 'Driver IN1');
     const in2 = numberInput(block, 'IN2', gen, 'Driver IN2');
     const pwm = numberInput(block, 'PWM', gen, 'Driver PWM');
@@ -396,7 +536,8 @@ function registerBlocks(generator) {
   };
 
   const reservePin = (gen, pin, mode, label) => {
-    pinWarnings(pin, gen, label);
+    const uart = gen.profile_.pins.uart1;
+    if (!(mode === 'UART' && uart && [uart.rx, uart.tx].includes(Number(pin)))) pinWarnings(pin, gen, label);
     const existing = gen.pinModes_.get(pin);
     if (existing && existing !== mode) {
       gen.diagnostics_.add(label + ': GPIO ' + pin + ' đã được dùng cho ' + existing + '.');
@@ -406,6 +547,10 @@ function registerBlocks(generator) {
   };
 
   const configureController = (gen, mode, settings) => {
+    if (gen.beginnerSimulation_) {
+      gen.diagnostics_.add('Chọn PS4 thật hoặc mô phỏng, không dùng cả hai.');
+      return;
+    }
     if (gen.controllerConfigured_) {
       gen.diagnostics_.add('Chỉ cấu hình một bộ nhận PS4 trong mỗi chương trình.');
       return;
@@ -427,8 +572,13 @@ function registerBlocks(generator) {
     const rx = numberInput(block, 'RX', gen, 'PS4 UART RX');
     const tx = numberInput(block, 'TX', gen, 'PS4 UART TX');
     const baud = numberInput(block, 'BAUD', gen, 'PS4 UART baud');
-    pinWarnings(rx, gen, 'PS4 UART RX');
-    pinWarnings(tx, gen, 'PS4 UART TX');
+    if (gen.profile_.id === DEFAULT_BOARD_ID) {
+      pinWarnings(rx, gen, 'PS4 UART RX');
+      pinWarnings(tx, gen, 'PS4 UART TX');
+    } else {
+      const uart = gen.profile_.pins.uart1;
+      if (!uart || Number(rx) !== uart.rx || Number(tx) !== uart.tx) gen.diagnostics_.add('PS4 UART: RX/TX phải khớp UART1 của board profile.');
+    }
     if (rx === tx) gen.diagnostics_.add('PS4 UART: RX và TX phải dùng GPIO khác nhau.');
     if (!/^\d+$/.test(baud) || Number(baud) < 1200 || Number(baud) > 2000000) gen.diagnostics_.add('PS4 UART: baud phải nằm trong khoảng 1200–2000000.');
     reservePin(gen, rx, 'UART', 'PS4 UART RX');
@@ -452,6 +602,7 @@ function registerBlocks(generator) {
   };
 
   generator.forBlock.codelab_ps4_connected = (_block, gen) => {
+    gen.loopPreamble_ = 'codelabPs4.update();';
     gen.controllerRequested_ = true;
     gen.definitions_['ps4_adapter'] = PS4_HELPER;
     gen.includes_['ps4_stdio'] = '#include <stdio.h>';
@@ -479,6 +630,63 @@ function registerBlocks(generator) {
     return ['codelabPs4.button(' + (buttons[block.getFieldValue('BUTTON')] ?? 0) + ')', ATOMIC];
   };
 
+  generator.forBlock.beginner_start = (block, gen) => {
+    if (block.getParent()) gen.diagnostics_.add('Đặt khối Khi bắt đầu ở ngoài cùng, không nằm trong khối khác.');
+    gen.beginnerStartup_.push(gen.statementToCode(block, 'DO'));
+    return '';
+  };
+  generator.forBlock.beginner_forever = (block, gen) => {
+    if (block.getParent()) gen.diagnostics_.add('Đặt khối Lặp lại mãi mãi ở ngoài cùng.');
+    return gen.statementToCode(block, 'DO') + 'delay(1);\n';
+  };
+  generator.forBlock.beginner_wait = block => 'delay(' + Math.round(Number(block.getFieldValue('SECONDS')) * 1000) + ');\n';
+  const beginnerLed = gen => {
+    const pin = gen.profile_.pins.led;
+    if (!Number.isInteger(pin)) {
+      gen.diagnostics_.add('Board này chưa có đèn được xác định. Hãy chọn board có đèn trên mạch.');
+      return null;
+    }
+    configurePin(gen, String(pin), 'OUTPUT', 'Đèn trên mạch');
+    return pin;
+  };
+  generator.forBlock.beginner_led = (block, gen) => {
+    const pin = beginnerLed(gen);
+    return pin === null ? '' : 'digitalWrite(' + pin + ', ' + block.getFieldValue('STATE') + ');\n';
+  };
+  generator.forBlock.beginner_blink = (block, gen) => {
+    const pin = beginnerLed(gen), ms = Math.round(Number(block.getFieldValue('SECONDS')) * 1000);
+    return pin === null ? '' : `digitalWrite(${pin}, HIGH);\ndelay(${ms});\ndigitalWrite(${pin}, LOW);\ndelay(${ms});\n`;
+  };
+  generator.forBlock.beginner_message = (block, gen) => 'Serial.println(' + (gen.valueToCode(block, 'VALUE', ATOMIC) || '"Hello!"') + ');\n';
+  generator.forBlock.beginner_serial_ready = () => ['(Serial.available() > 0)', ATOMIC];
+  for (const type of ['beginner_motor','beginner_motor_stop','beginner_servo']) {
+    generator.forBlock[type] = (block, gen) => {
+      const servo = type === 'beginner_servo';
+      const channel = Number(block.getFieldValue('CHANNEL'));
+      if (channel > (gen.profile_.capabilities[servo ? 'servoChannels' : 'motorChannels'] || 0)) gen.diagnostics_.add('Kênh ' + (servo ? 'S' : 'M') + channel + ' không có trên board đang chọn. Giá trị được giữ nguyên.');
+      gen.diagnostics_.add(servo ? 'Chưa thể chạy servo: nguồn và bộ điều khiển an toàn chưa được xác minh. Hãy bỏ khối servo trước khi biên dịch.' : 'Chưa thể chạy động cơ trên board này. Bộ điều khiển motor chưa được nghiệm thu; hãy bỏ khối động cơ trước khi biên dịch.');
+      return '';
+    };
+  }
+  generator.forBlock.beginner_ps4_setup = (_block, gen) => {
+    const uart = gen.profile_.pins.uart1;
+    if (!uart || gen.beginnerSimulation_) {
+      gen.diagnostics_.add(gen.beginnerSimulation_ ? 'Chọn PS4 thật hoặc mô phỏng, không dùng cả hai.' : 'Board này chưa có cổng PS4 được xác định. Hãy dùng khối Mô phỏng PS4.');
+      return '';
+    }
+    reservePin(gen, String(uart.rx), 'UART', 'PS4 RX');
+    reservePin(gen, String(uart.tx), 'UART', 'PS4 TX');
+    configureController(gen, 'UART', {...uart,baud:115200});
+    return '';
+  };
+  generator.forBlock.beginner_ps4_sim = (block, gen) => {
+    gen.definitions_.beginner_sim = '// PS4 SIMULATION ONLY: no Bluetooth or actuator commands.\nstatic bool lessonConnected = false;\nstatic int lessonLX = 0;\nstatic bool lessonCross = false;';
+    return `lessonConnected = ${block.getFieldValue('CONNECTED') === 'TRUE'};\nlessonLX = lessonConnected ? ${Number(block.getFieldValue('LX'))} : 0;\nlessonCross = lessonConnected && ${block.getFieldValue('PRESSED') === 'TRUE'};\n`;
+  };
+  generator.forBlock.beginner_ps4_connected = (block, gen) => gen.beginnerSimulation_ ? ['lessonConnected', ATOMIC] : gen.forBlock.codelab_ps4_connected(block, gen);
+  generator.forBlock.beginner_ps4_button = (block, gen) => gen.beginnerSimulation_ ? [block.getFieldValue('BUTTON') === 'CROSS' ? 'lessonCross' : 'false', ATOMIC] : gen.forBlock.codelab_ps4_button(block, gen);
+  generator.forBlock.beginner_ps4_axis = (block, gen) => gen.beginnerSimulation_ ? [block.getFieldValue('AXIS') === 'LX' ? 'lessonLX' : '0', ATOMIC] : gen.forBlock.codelab_ps4_axis(block, gen);
+
   generator.forBlock.controls_if = (block, gen) => {
     let code = '';
     let branch = 0;
@@ -498,8 +706,12 @@ function registerBlocks(generator) {
     const count = gen.valueToCode(block, 'TIMES', ATOMIC) || '0';
     const index = gen.repeatIndex_++;
     const body = gen.statementToCode(block, 'DO');
-    const variable = '__codelab_repeat_' + index;
-    return 'for (uint32_t ' + variable + ' = 0; ' + variable + ' < (' + count + '); ++' + variable + ') {\n' + body + '}\n';
+    const variable = gen.nameDB_.getDistinctName('__codelab_repeat_' + index, Blockly.Names.NameType.DEVELOPER_VARIABLE);
+    const limit = gen.nameDB_.getDistinctName('__codelab_repeat_limit_' + index, Blockly.Names.NameType.DEVELOPER_VARIABLE);
+    gen.definitions_.include_math = '#include <math.h>';
+    gen.definitions_.repeat_count = 'uint32_t codelabRepeatCount(double n) { if (!isfinite(n) || n <= 0) return 0; if (n >= UINT32_MAX) return UINT32_MAX; return (uint32_t)n; }';
+    return '{\nconst uint32_t ' + limit + ' = codelabRepeatCount(' + count + ');\n' +
+      'for (uint32_t ' + variable + ' = 0; ' + variable + ' < ' + limit + '; ++' + variable + ', delay(1)) {\n' + body + '}\n}\n';
   };
 
   generator.forBlock.controls_for = (block, gen) => {
@@ -517,7 +729,7 @@ function registerBlocks(generator) {
   generator.forBlock.controls_whileUntil = (block, gen) => {
     let condition = gen.valueToCode(block, 'BOOL', ATOMIC) || 'false';
     if (block.getFieldValue('MODE') === 'UNTIL') condition = '(!(' + condition + '))';
-    return 'while (' + condition + ') {\n' + gen.statementToCode(block, 'DO') + '}\n';
+    return 'while (' + condition + ') {\n  delay(1);\n' + gen.statementToCode(block, 'DO') + '}\n';
   };
 
   generator.forBlock.controls_flow_statements = (block) => (
@@ -525,8 +737,8 @@ function registerBlocks(generator) {
   );
 }
 
-export function generateArduino(workspace) {
-  const generator = new ArduinoGenerator();
+export function generateArduino(workspace, boardId = DEFAULT_BOARD_ID) {
+  const generator = new ArduinoGenerator(getBoardProfile(boardId));
   registerBlocks(generator);
 
   const unsupported = new Set();
@@ -554,7 +766,7 @@ export function generateArduino(workspace) {
     for (const name of unsupportedVariables) {
       warnings.push('Biến "' + name + '" có kiểu chưa xác định hoặc bị gán nhiều kiểu; mã xem trước có placeholder.');
     }
-    return { code, warnings };
+    return { code, warnings, boardId };
   } catch (error) {
     return {
       code: '// Không thể sinh mã Arduino C++ cho workspace này.\n',

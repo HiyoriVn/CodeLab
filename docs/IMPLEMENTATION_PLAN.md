@@ -1,6 +1,12 @@
 # Kế hoạch Phase 01-07: mainboard, PS4 bridge và CodeLab
 
-Ngày 2026-11-04. Đây là **kế hoạch**, không phải công việc được tự động cho phép thực hiện. Phase 01 kết thúc ở audit/tài liệu; Phase 02-07 chưa bắt đầu. Dãy số này khác [roadmap web lịch sử](ROADMAP.md). Baseline và blockers xem [PROGRESS.md](PROGRESS.md), [audit](PHASE01_AUDIT.md).
+Ngày 2026-11-04. Đây là **kế hoạch**, không phải công việc được tự động cho phép thực hiện. Đây là baseline kế hoạch Phase 01; trạng thái triển khai từng phần Phase 02 và fast track hiện tại được ghi ở PROGRESS.md. Dãy số này khác [roadmap web lịch sử](ROADMAP.md). Baseline và blockers xem [PROGRESS.md](PROGRESS.md), [audit](PHASE01_AUDIT.md).
+
+## Fast track Newmania Starter V1.0 — 2026-11-05
+
+Yêu cầu mới cho phép tích hợp nhiều board để chuẩn bị board kiểm thử V1. V2 vẫn là board mục tiêu; native V2 BoardConfig/SafeStartup giữ nguyên. Phạm vi: registry/profile validation, lựa chọn board trong project, generated basic digital/ADC/PWM LED47 + serial, six compile-only examples, HTTP compile/upload target binding và checklist hardware. Không mở rộng sang MotorDriver V2 hoặc PS4Bridge. SOFTWARE_ACCEPTED chỉ áp dụng phạm vi đã test; HARDWARE_UNTESTED vẫn giữ.
+
+Deliverables và acceptance: [board profiles](boards/BOARD_PROFILES.md), [hướng dẫn/checklist V1](boards/V1_HARDWARE_TEST.md), [báo cáo build/test/commit-ready](verification/NEWMANIA_V1_FAST_TRACK.md). Core pin3.3.7; V1 N8R2 dùng QSPI PSRAM enabled, V2 N8 giữ disabled. Giữ format project version1 với optional boardId, thiếu -> Generic; không sửa pin ngầm. Hoàn tất ở chuẩn bị hardware testing, không tự chạy upload hoặc phase tiếp theo.
 
 ## Phase 01 - Repository Audit & Hardware Mapping
 
@@ -73,5 +79,9 @@ Ngày 2026-11-04. Đây là **kế hoạch**, không phải công việc đượ
 - **Risks:** giả định dòng định mức là dòng board liên tục, chưa đủ thiết bị đo, Bluetooth/USB khác theo host, dependency drift do không lock, thiếu review phân phối. Không phát hành “hardware verified” khi chỉ chạy mô phỏng/build.
 
 ## Điểm dừng
+
+PS4 mecanum software checkpoint (2026-11-05): portable RobotController/MecanumMixer/logical servo and interfaces with mock backends are host-tested; simulation-only Arduino compile PASS. [Results and physical gates](robotics/PS4_MECANUM.md). No mainboard GPIO/profile change, real motor/servo driver, UART pin enable or hardware task. Do not mark Phase03/05 complete from this logic-only acceptance.
+
+Robotics software checkpoint (2026-11-05): profile-aware toolbox/channel APIs, Digital/ADC/PWM/Serial examples and generator chain fixes implemented and host-tested. Motor motion/servo enable remain diagnostics-only; sensor drivers, source mappings/build settings and native firmware are not expanded. See [Robotics report](verification/ROBOTICS_BLOCKS_INTEGRATION.md) for exact compile results and next-task gates. This checkpoint does not complete Phase 03/05/06 or authorize hardware validation/A5.
 
 Audit Phase 01 không cho phép tự chạy bất kỳ phase sau. Các phép flash/bench nói ở trên là tiêu chí tương lai, không phải hành động đã thực hiện hoặc được mặc định cho phép trong chat này.

@@ -1,0 +1,72 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "lesson_message",
+    "boardId": "newmania-v1-16m-opi-experimental",
+    "editorMode": "beginner",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "beginner_forever",
+            "id": "lesson_message-0",
+            "x": 45,
+            "y": 35,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "beginner_message",
+                  "id": "lesson_message-5",
+                  "inputs": {
+                    "VALUE": {
+                      "block": {
+                        "type": "beginner_serial_ready",
+                        "id": "lesson_message-4"
+                      }
+                    }
+                  },
+                  "next": {
+                    "block": {
+                      "type": "beginner_wait",
+                      "id": "lesson_message-6",
+                      "fields": {
+                        "SECONDS": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "beginner_start",
+            "id": "lesson_message-1",
+            "x": 45,
+            "y": 210,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "beginner_message",
+                  "id": "lesson_message-3",
+                  "inputs": {
+                    "VALUE": {
+                      "block": {
+                        "type": "text",
+                        "id": "lesson_message-2",
+                        "fields": {
+                          "TEXT": "Hello, CodeLab!"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

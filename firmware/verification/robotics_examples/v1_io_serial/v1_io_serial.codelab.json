@@ -1,0 +1,191 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "v1_io_serial",
+    "boardId": "newmania-starter-v1",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "codelab_gpio_write",
+            "id": "v1_io_serial-0",
+            "x": 0,
+            "y": 0,
+            "fields": {
+              "STATE": "LOW"
+            },
+            "inputs": {
+              "PIN": {
+                "block": {
+                  "type": "math_number",
+                  "id": "v1_io_serial-1",
+                  "fields": {
+                    "NUM": 4
+                  }
+                }
+              }
+            },
+            "next": {
+              "block": {
+                "type": "codelab_serial_print",
+                "id": "v1_io_serial-4",
+                "fields": {
+                  "ENDING": "LN"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "block": {
+                      "type": "codelab_gpio_read_mode",
+                      "id": "v1_io_serial-2",
+                      "fields": {
+                        "MODE": "INPUT_PULLUP"
+                      },
+                      "inputs": {
+                        "PIN": {
+                          "block": {
+                            "type": "math_number",
+                            "id": "v1_io_serial-3",
+                            "fields": {
+                              "NUM": 1
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "next": {
+                  "block": {
+                    "type": "codelab_serial_print",
+                    "id": "v1_io_serial-7",
+                    "fields": {
+                      "ENDING": "LN"
+                    },
+                    "inputs": {
+                      "VALUE": {
+                        "block": {
+                          "type": "codelab_analog_read",
+                          "id": "v1_io_serial-5",
+                          "inputs": {
+                            "PIN": {
+                              "block": {
+                                "type": "math_number",
+                                "id": "v1_io_serial-6",
+                                "fields": {
+                                  "NUM": 2
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "next": {
+                      "block": {
+                        "type": "codelab_pwm_write",
+                        "id": "v1_io_serial-8",
+                        "inputs": {
+                          "PIN": {
+                            "block": {
+                              "type": "math_number",
+                              "id": "v1_io_serial-9",
+                              "fields": {
+                                "NUM": 47
+                              }
+                            }
+                          },
+                          "DUTY": {
+                            "block": {
+                              "type": "math_number",
+                              "id": "v1_io_serial-10",
+                              "fields": {
+                                "NUM": 32
+                              }
+                            }
+                          }
+                        },
+                        "next": {
+                          "block": {
+                            "type": "codelab_serial_print",
+                            "id": "v1_io_serial-12",
+                            "fields": {
+                              "ENDING": "LN"
+                            },
+                            "inputs": {
+                              "VALUE": {
+                                "block": {
+                                  "type": "codelab_serial_available",
+                                  "id": "v1_io_serial-11"
+                                }
+                              }
+                            },
+                            "next": {
+                              "block": {
+                                "type": "codelab_serial_print",
+                                "id": "v1_io_serial-14",
+                                "fields": {
+                                  "ENDING": "LN"
+                                },
+                                "inputs": {
+                                  "VALUE": {
+                                    "block": {
+                                      "type": "codelab_serial_read",
+                                      "id": "v1_io_serial-13"
+                                    }
+                                  }
+                                },
+                                "next": {
+                                  "block": {
+                                    "type": "codelab_serial_print",
+                                    "id": "v1_io_serial-16",
+                                    "fields": {
+                                      "ENDING": "LN"
+                                    },
+                                    "inputs": {
+                                      "VALUE": {
+                                        "block": {
+                                          "type": "text",
+                                          "id": "v1_io_serial-15",
+                                          "fields": {
+                                            "TEXT": "Robotics \"software\" test\n"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "next": {
+                                      "block": {
+                                        "type": "codelab_delay_ms",
+                                        "id": "v1_io_serial-17",
+                                        "inputs": {
+                                          "DURATION": {
+                                            "block": {
+                                              "type": "math_number",
+                                              "id": "v1_io_serial-18",
+                                              "fields": {
+                                                "NUM": 250
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

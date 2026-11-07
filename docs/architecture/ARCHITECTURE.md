@@ -1,6 +1,22 @@
 # Kiến trúc firmware và CodeLab - đề xuất Phase 01
 
-Ngày: 2026-11-04. **Chưa triển khai kiến trúc firmware này.** Nền web đang tồn tại được mô tả ở [kiến trúc ứng dụng](../ARCHITECTURE.md); không thay thế ứng dụng bằng một scaffold mới. Arduino C++ vẫn là MVP, React/Vite/Blockly vẫn là nền tảng browser-first. Không bổ sung MicroPython hoặc Scratch VM.
+Ngày: 2026-11-04. **Phần lớn kiến trúc dưới đây vẫn là đề xuất; cập nhật Phase 02.2 bên dưới xác định phần đã có.** Nền web đang tồn tại được mô tả ở [kiến trúc ứng dụng](../ARCHITECTURE.md); không thay thế ứng dụng bằng một scaffold mới. Arduino C++ vẫn là MVP, React/Vite/Blockly vẫn là nền tảng browser-first. Không bổ sung MicroPython hoặc Scratch VM.
+
+## Triển khai Phase 02.2 — 2026-11-05
+
+`firmware/mainboard/` là sketch Arduino CLI, gồm `BoardConfig.h`, `SafeStartup.h` và `mainboard.ino`. BoardConfig giữ mapping H1 cố định, unique physical reservations và expansion aliases; static assertions chặn map sai phạm vi/trùng GPIO. Không khởi tạo bus từ cấu hình.
+
+SafeStartup có interface I/O nhỏ (template) để chạy fake trên host. Arduino adapter dùng ESP-IDF GPIO API: servo về INPUT/GPIO_FLOATING; nạp latch LOW cho toàn bộ 12 input motor và buzzer trước khi bật bất kỳ output nào. Không dùng Arduino digitalWrite để preload vì cần ghi latch trực tiếp trước direction. Mọi lời gọi trả về lỗi đều giữ trạng thái init không thành công; lỗi preload/Hi-Z không bật output. Lỗi đổi direction có thể để một số chân thành output LOW, không armed. Gọi lại cùng instance là no-op, trả kết quả lần đầu; chỉ dùng một instance trong setup, trước drivers/tasks. Không có API enable/arming/PWM trong phase này.
+
+`setup()` thực hiện startup, giữ kết quả trong instance; `loop()` chỉ `delay(1000)` để nhường scheduler. Không có UART/IMU/encoder initialization. PS4 UART CSV v1 vẫn nguyên hợp đồng và chưa có parser/bridge mainboard.
+
+USB-only vẫn không phát PWM hoặc enable tải; firmware không suy đoán nguồn USB hay nguồn servo. Servo chỉ có thể được enable ở phase sau sau lệnh tường minh và điều kiện nguồn có thể kiểm chứng; chưa có POWER_GOOD. Phần mềm chỉ đặt trạng thái sau khi CPU chạy, không bảo đảm mức điện lúc reset/trước GPIO init; cần kiểm tra pull-state/PCB và waveform thực tế. Host tests xác minh các thao tác được yêu cầu, không đo điện áp/chuyển động thật.
+
+Bằng chứng và giới hạn: [báo cáo Phase 02.2](../verification/PHASE02_2_TEST_REPORT.md). Các lớp còn lại dưới đây là kiến trúc dự kiến, chưa phải chức năng đã chạy.
+
+## Multi-board V1 fast track — 2026-11-05
+
+Profile registry/shared startup renderer ở `src/boards/` được UI, generator, backend và example generator dùng chung. V1 firmware/examples độc lập trong `firmware/newmania_v1`; V2 native đã nghiệm thu không sửa. Optional project.boardId giữ version1/Generic fallback và không remap pin block. Tích hợp mới chỉ hỗ trợ basic I/O/ADC/PWM LED và compile/upload guards; các lớp robot/drivers/PS4 dưới đây vẫn planned. [Thiết kế và migration](../boards/BOARD_PROFILES.md), [bằng chứng/giới hạn](../verification/NEWMANIA_V1_FAST_TRACK.md).
 
 ## Hai firmware độc lập
 
@@ -67,10 +83,12 @@ Safety boot tối thiểu phải có từ Phase 02; Phase 05 hoàn thiện chín
 
 ## Tích hợp với ứng dụng hiện hữu
 
+2026-11-05: portable `firmware/libraries/CodeLabRobot` implements mecanum mixing, PS4 mapping, DISARMED/ARMED/FAULT control and logical servo with interfaces/mock backends. Actual publisher -> canonical parser -> controller scenarios run on host; simulation sketch compiles without board GPIO/UART enable. No hardware motor/servo driver, generator load-control block or changed profile. [API, state policy, tests and wiring gates](../robotics/PS4_MECANUM.md). This does not mark hardware roadmap phases complete.
+
 Hướng đề xuất là generated Arduino gọi API mainboard và SafetyManager trong sketch đã build, giữ mô hình compile/upload của CodeLab. Chưa chọn giao thức live điều khiển robot từ browser; không giả định SerialMonitor đã là SerialCLI firmware.
 
 Giữ nguyên `codelab.projects.v1` và file version 1 ở Phase 01. Phase 06 phải định nghĩa profile/version migration, golden fixtures và cảnh báo cho block H-bridge ba chân/UART16/17 cũ. Không đổi ngầm nội dung dự án người dùng. Thay đổi generator cần deterministic code, helper ổn định và source/block mapping khi khả thi.
 
 ## Trạng thái
 
-Tất cả lớp firmware trên còn là thiết kế. Chỉ web editor, generator generic và local Arduino CLI bridge có code trong repository. Bộ sinh PS4 đang lỗi khi kiểm tra headless; xem [audit](../PHASE01_AUDIT.md), [module gaps](MODULES.md), [kế hoạch](../IMPLEMENTATION_PLAN.md).
+Ngoài BoardConfig/SafeStartup và sketch Phase 02.2 mô tả ở trên, các lớp firmware còn là thiết kế. Chỉ web editor, generator generic và local Arduino CLI bridge có code trong repository. Bộ sinh PS4 đang lỗi khi kiểm tra headless; xem [audit](../PHASE01_AUDIT.md), [module gaps](MODULES.md), [kế hoạch](../IMPLEMENTATION_PLAN.md).

@@ -2,22 +2,36 @@
 
 CodeLab is a browser-first visual programming environment for ESP32-S3 robotics. It uses Blockly-style blocks to generate Arduino C++.
 
+## Scratch-first editor
+
+New projects default to **Cơ bản**; switch to **Nâng cao** for GPIO/bus settings without losing blocks. Open one of three lessons from **Bài mẫu**; each opens a separate project. Motor/servo requests stay compile-blocked until an accepted hardware backend exists. [Usage and verification](docs/SCRATCH_FIRST.md).
+
 ## Product decisions
 
-- MVP mainboard: STEAM Robotics Mainboard V2.0, ESP32-S3-MINI-1-N8. Hardware mapping is documented; its software board profile is still planned.
+- MVP mainboard: STEAM Robotics Mainboard V2.0, ESP32-S3-MINI-1-N8. The accepted native BoardConfig/SafeStartup and web board profile are present; hardware validation remains pending. Newmania Starter V1.0 (ESP32-S3-WROOM-1-N8R2) is the additional hardware test board.
 - MVP language: Arduino C++; MicroPython is out of scope.
 - Web stack: React, Vite, and Blockly.
 - PS4 controller: a separate ESP32 handles the controller and forwards state over mainboard UART1 (TX GPIO6, RX GPIO7). The bridge chip, bridge pins/power input, toolchain and wire protocol still need confirmation. Legacy UART/I2C blocks remain in source; the selected board integration uses UART1.
 
 ## Current status
 
-The audited local checkout contains the Blockly editor and workspace persistence, a subset of Arduino C++ generation, GPIO/ADC/PWM/delay/H-bridge blocks, a local Arduino CLI compile/upload flow, and PS4 adapter source. The production web build passed on 2026-11-04, and earlier limited UI checks are recorded in the testing document. Arduino compilation, upload and hardware acceptance remain unverified. Headless audit reproduced a PS4 code-generation error (`includes_` / `ps4_stdio`); web bundling does not establish PS4 functionality.
+The audited local checkout contains the Blockly editor and workspace persistence, a subset of Arduino C++ generation, GPIO/ADC/PWM/delay/H-bridge blocks, a local Arduino CLI compile/upload flow, and PS4 adapter source. The production web build passed on 2026-11-04, and earlier limited UI checks are recorded in the testing document. Minimal V2 and six V1 generated examples have now been Arduino-compiled; upload and hardware acceptance remain unverified. PS4 A1 fixes the previously reproduced `includes_` / `ps4_stdio` and escaping errors; the generated UART CSV v1 receiver has host regression tests and an actual S3 compile. Bridge mapping/publisher and a Bluepad32-core Classic ESP32 compile-only candidate now exist; actual pairing/hardware verification remains pending; see [A1 results](docs/verification/PS4_A1_STABILIZATION.md).
 
-The hardware/firmware Phase 01 audit is documented in [the report](docs/PHASE01_AUDIT.md) and [progress tracker](docs/PROGRESS.md). Two supplied PDFs establish the board pinout; the supplied PS4Bluepad32 1.0.1 ZIP is an external candidate library, not integrated bridge firmware. No mainboard or PS4 bridge firmware target exists yet. Phase 02 has not started.
+The hardware/firmware Phase 01 audit is documented in [the report](docs/PHASE01_AUDIT.md) and [progress tracker](docs/PROGRESS.md). Two supplied PDFs establish the board pinout; the supplied PS4Bluepad32 1.0.1 ZIP is the selected external dependency for the isolated bridge candidate, without vendoring its source. V2 safe-startup firmware and independent V1 test sketches now exist; PS4 bridge has an isolated compile-only candidate with UART/LED unassigned by default; see [A2–A4 results](docs/verification/PS4_FAST_TRACK_A2_A4.md). See [multi-board profiles](docs/boards/BOARD_PROFILES.md), [V1 hardware test guide](docs/boards/V1_HARDWARE_TEST.md), and [fast-track results](docs/verification/NEWMANIA_V1_FAST_TRACK.md).
 
 See the [hardware baseline](docs/hardware/HARDWARE.md), [pinout](docs/hardware/PINOUT.md), [proposed firmware architecture](docs/architecture/ARCHITECTURE.md), [module gaps](docs/architecture/MODULES.md), [Phase 02-07 plan](docs/IMPLEMENTATION_PLAN.md), [web architecture](docs/ARCHITECTURE.md), [development setup](docs/DEVELOPMENT.md), [verification plan](docs/TESTING.md), and [legacy PS4 contract](docs/PS4-RECEIVER.md). The [historical web roadmap](docs/ROADMAP.md) uses a separate phase numbering scheme. Previously referenced `docs/EXAMPLES.md` and `docs/TROUBLESHOOTING.md` are absent; they remain planned deliverables.
 
+The physical Newmania unit under test reports16MB flash/8MB Octal PSRAM, differing from the documented N8R2. An explicitly authorized experimental LED47/USB Serial profile is available; the original profiles remain unchanged. Do not use N8R2 motor-startup examples on this Octal unit. See [actual hardware results and restrictions](docs/verification/V1_HARDWARE_INTEGRATION.md).
+
 ## Run locally
+
+Issue20 now supplies [D1/S3 I2C PS4 demo firmware](firmware/demos/newmania_ps4_i2c/README.md), both compile-tested: address0x30,13-byte sequence-aware freshness, USB control-state output and mock-only actuators. The guide includes wiring and manual upload commands; no hardware upload was performed.
+
+The [integrated Newmania PS4 demo](firmware/demos/newmania_ps4_mecanum/README.md) now has UART/USB diagnostics and compile-ready images for a proposed D1/S3 rewire. Actual onboard motor GPIO/servo power remain unresolved, so hardware actuators are locked; this is not yet a moving four-wheel robot. [Build evidence and blockers](docs/verification/WORKING_MECANUM_DEMO.md).
+
+PS4 mecanum logic is available as a portable C++ library with host mocks, latched faults and a disabled-by-default logical servo. It does not drive motors/servos on the experimental board. See [simulation/API/wiring gates](docs/robotics/PS4_MECANUM.md).
+
+Robotics blocks now use board capabilities and logical motor/servo channels. Digital/ADC/PWM/Serial generation and servo signal disable have software tests; motor motion and servo enable remain blocked. See [supported examples, compiler evidence and limitations](docs/verification/ROBOTICS_BLOCKS_INTEGRATION.md). Hardware acceptance remains pending.
 
 For editor development, use `npm install`, then run `npm run dev` and `npm run bridge` in separate terminals. The bridge requires Arduino CLI and the ESP32 core.
 

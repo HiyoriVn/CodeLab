@@ -88,3 +88,7 @@ USB DN/DP được ghi ở bảng bus. H2 nêu XT30/jack DC nhưng không cung c
 - Các net trùng ở đầu mở rộng là alias, không phải tài nguyên độc lập. Không mắc hai nguồn TX vào cùng RX.
 - UART TX/RX đấu chéo. Việc chọn UART1 cho PS4 và để nguồn +5V_Core chưa nối sang bridge là quyết định U1, được ghi riêng tại [HARDWARE.md](HARDWARE.md).
 - Các xung đột với mã hiện có được phân tích tại [báo cáo audit](../PHASE01_AUDIT.md), không thay đổi dữ liệu bảng nguồn này.
+
+## Firmware mapping Phase 02.2 — 2026-11-05
+
+Không thay đổi pinout. `firmware/mainboard/BoardConfig.h` hiện biểu diễn 39 net GPIO duy nhất, cả UART0 và các strapping pins. EN là reset phần cứng, không là số GPIO. Expansion TX6/RX7/CS10 và hai đầu I2C là các alias/shared nets, không tính là trùng quyền sở hữu độc lập. Startup chỉ thao tác 12 motor inputs, buzzer26 và sáu servo INPUT không pull; không chạm USB, UART/I2C/SPI, encoder hay strapping. Xem [báo cáo kiểm thử](../verification/PHASE02_2_TEST_REPORT.md). Chưa đo mức chân trên PCB.

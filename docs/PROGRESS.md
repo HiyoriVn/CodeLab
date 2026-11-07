@@ -1,6 +1,108 @@
 # Progress - hardware/firmware roadmap
 
+## Issue22 — Scratch-first UX — 2026-11-06 — SOFTWARE_ACCEPTED
+
+- New projects default Cơ bản; legacy missing editorMode keeps Nâng cao. Optional version1 metadata survives import/export/local save. Toolbox updates in place; board/GPIO/channel/block IDs unchanged on mode switching. Three one-click lessons open separate projects; importable JSON and deterministic C++ committed as source.
+- Added15 beginner block types: startup/forever/wait, onboard LED/blink, message/Serial readiness, profile UART PS4 setup plus explicit simulated state/readers, motor/stop/servo requests. Motor/servo remain compile-blocked with friendly diagnostics; no accepted actuator backend invented. New simulation is isolated from actual UART; mixing sources is rejected including old UART blocks. No raw pin/address/baud fields in Cơ bản.
+- Fixed generator nameDB initialization exposed by new variable regression; existing golden sketches remain byte-identical. All board profiles, PS4 firmware/protocols and robotics drivers preserved.
+- **npm test47/47 PASS**, exit0, including8 focused checks; **npm run build PASS**, exit0; **git diff --check PASS**. Existing Blockly deprecated-API and Vite chunk-size warnings remain. Restricted localhost HTTP attempt failed EACCES; local-permission rerun passed without test/source workaround.
+- Arduino CLI1.5.1 / Core3.3.7, experimental ESP32-S3 Flash16M/default_8MB/OPI, hwcdc+CDCOnBoot: **3/3 compile PASS, exit0**, nonempty binaries: Blink313744B, message314048B, PS4 simulation314096B. Raw ignored evidence: `docs/verification/beginner_compile.log` (`EXIT_CODE=0`). Only these three new lessons were compiled, no full firmware rebuild.
+- Chrome smoke PASS: default mode, all three lessons, actual drag/drop, mode switching, profile change preserving blocks and warning on missing LED, Advanced toolbox and reload persistence. [Screenshot](verification/SCRATCH_FIRST_UI.png), [usage/API/limits](SCRATCH_FIRST.md). New lessons remain **HARDWARE_UNTESTED**; PS4 simulation only changes LX/X, multiple forever stacks run sequentially and waits block. Physical sensors/motor/servo need separate accepted backends/wiring/power.
+- No COM detection/access, flash/upload, hardware test, dependency/toolchain changes, commit/push or automatic hardware resumption.
+
+## Issue20 physical I2C session — 2026-11-05 — STOPPED BY USER (quota)
+
+D1 COM5 and S3 COM4 identities individually confirmed; both approved I2C uploads PASS/exit0, EraseFlash=none, hashes verified, no MAC reset. PS4 connection PASS and actual I2C frames PASS after user replugged wiring; no firmware fix/reflash needed. S3 connected1/sequence/fresh and axes/buttons changed, errors40213 remained constant over8s. Structured joystick/buttons/mock-wheel and PS4 disconnect/reconnect tests deferred, not claimed PASS. Captures closed both ports; no further hardware actions after user stop, no motor/servo test or commit/push. [Checkpoint/raw logs](verification/PS4_I2C_HARDWARE.md). Resume only when user requests.
+
+## Issue20 — Fast I2C PS4 mecanum — 2026-11-05 — BUILD_PASS / HARDWARE_UNTESTED
+
+- Read actual owner sketch `ps4ble_newmania_firmware.ino`:0x55/ASCII, default Wire pins. Added dedicated D1 slave0x30 SDA22/SCL21 and S3 master SDA8/SCL9,13-byte binary with7-bit report sequence. Reuses A2 mapping/report gate and existing robot/mixer/servo; pairing/NVS/MAC library unchanged. Snapshot callback atomic; slave/receiver independent freshness, polling cannot revive stale data.
+- Sequence receiver baseline/quarantine/repeats/wrap/errors verified; >250ms neutral+FAULT even while DISARMED; reconnect requires explicit neutral recovery/re-arm. No physical motor/servo output; new BOM N16R8/RZ7899-MS retained,35–37 still unavailable; Flash16MB/OPI unchanged, no board profile changes.
+- Host tests **39/39 PASS**, web build **PASS**, exit0. CLI1.5.1: D1 Bluepad32 core4.1.0 compile **PASS exit0**, BIN732416 B; S3 core3.3.7 compile **PASS exit0**, BIN341808 B. Logs `docs/verification/ps4_i2c_*_compile.log` ignored. [Two firmware paths/wiring/user upload commands/expected Serial](../firmware/demos/newmania_ps4_i2c/README.md).
+- No COM open, actual I2C/PS4 observation, flash/upload, motor/servo test, commit/push or next phase. Both images prepared; hardware acceptance awaits user's separately chosen upload and observations. No auto-resumption of prior stopped load tests.
+
+## Integrated working-demo attempt — 2026-11-05 — UART_READY_FOR_REWIRE / ACTUATORS_BLOCKED
+
+- One mainboard demo `firmware/demos/newmania_ps4_mecanum/newmania_ps4_mecanum.ino` reuses canonical CSV parser, RobotController/MecanumMixer/ServoController; USB monitor/commands, explicit SIM mode,15% logical RZ7899 PWM cap. No real motor/servo output, no GPIO35–37 or profile change. No working four-motor hardware claim.
+- User identified onboard RZ7899 and supplied reference schematic/pin tables; manufacturer truth table10 forward/01 reverse/00 coast/11 brake verified. Old M1/M2 pins35–37 still conflict with observed16MB/OPI unit; actual PCB routing unresolved. Servo signal/power stability also not verified. Hardware backend and motor/servo tests remain BLOCKED.
+- User confirms former D1 connection was I2C and authorizes preparing rewire: D1 TX21 -> S3 reference RX21, D1 RX22 <- S3 reference TX18, commonGND, no power tie. Rewire not performed/observed. Default UART disabled; separate UART-enabled compile candidate provided. Stock ZIP SerialMonitor prints text, not CSV; exact running D1 image unknown. Reused unchanged A2–A4 bridge/pairing/MAC/library with proposed data pins.
+- Host tests **37/37 PASS**, web build **PASS**, exit0. CLI1.5.1: default S3 demo/Core3.3.7 compile PASS (BIN343152 B), UART-enabled S3 PASS (BIN352064 B), existing Classic bridge/Core4.1.0 TX21/RX22 PASS (BIN725632 B), all exit0/nonempty binaries. [Detailed evidence/blockers](verification/WORKING_MECANUM_DEMO.md), [short wiring/test instructions](../firmware/demos/newmania_ps4_mecanum/README.md).
+- No COM open/flash/upload, actual PS4/UART/load test, toolchain install/update, commit/push or further phase. Prior stopped hardware session remains stopped. Compile readiness does not establish a moving robot.
+
+## PS4 mecanum controller — 2026-11-05 — SOFTWARE_ACCEPTED (mock only)
+
+- Portable C++ MecanumMixer, RobotController DISARMED/ARMED/FAULT, deadzone/per-wheel acceleration and logical ServoController with motor/servo interfaces/mock implementations. Defaults/signs/button bindings are software proposals, not verified chassis settings. D-pad never auto-enables servo; explicit enable+confirmed power required. Reconnect never arms, FAULT remains latched until explicit neutral/fresh recovery.
+- Reused existing CSVv1 bridge publisher and canonical parser. Two read-only parser freshness getters added; parsing/normalization untouched, no poll-based timestamp refresh. Actual publisher -> parser -> controller tested with fake serial/clock; >250ms report timeout, wrap/stall, stop without ramp, bounds/backend failures covered. No real GPIO/PWM/servo backend or motor truth table inferred.
+- `npm test` **34/34 PASS**, `npm run build` **PASS**, exit0. CLI1.5.1/Core3.3.7 simulation sketch compile **PASS exit0** on unchanged experimental16MB/OPI profile: program341078 B, globals24220 B, BIN341232 B. First compile macro collision INPUT fixed and host guarded. Logs/binaries ignored. No COM access/flash/upload, bridge/profile/native firmware changes, commit/push or hardware session resumption.
+- **HARDWARE_ACTUATION_BLOCKED**:35–37 reserved for candidate Octal memory; all actuators mock, UART uninitialized in compile sketch, servo power/signal unverified. [API/tests/state policy/wiring gates/compile evidence](robotics/PS4_MECANUM.md). Stop after this software task; no automatic driver or hardware phase.
+
+## V1 hardware integration — 2026-11-05 — STOPPED BY USER (partial hardware acceptance)
+
+Board now available per user; COM4 explicitly identified. CLI detects COM4 VID303A/PID1001, Windows PnP OK. CLI1.5.1/Core3.3.7 verified directly; V1 FQBN unchanged (8MB/QSPI enabled/USB CDC). User confirms V1.0/N8R2 markings and motors/servos removed; USB-only/no external loads and Minimal COM4 upload explicitly approved. Minimal compile PASS exit0, BIN312,000 B; Minimal upload PASS exit0, hashes verified, RTS reset/COM4 reported. Serial/runtime/GPIO observation pending. **Hold further uploads:** esptool reports Embedded PSRAM8MB AP_3v3, conflicting with N8R2/QSPI2MB; user reports no abnormality but cannot clarify suffix; profile unchanged. Existing PSRAM runtime diagnostic compile/upload PASS exit0; Serial115200 captured repeated PRESENT0/PSRAM0/FLASH16777216: memory expectation FAIL, transport PASS. Separate no-GPIO16MB/OPI probe compile/upload PASS exit0 with individual approval; Serial reports initialized PSRAM8388608 B/Flash16777216 B,14 complete samples with increasing uptime12109..26109ms. No full RAM integrity test. GPIO35–37 memory conflict makes old V1 startup unsuitable for this variant. Owner approved separate experimental16MB/OPI8MB profile, LED47/Serial only, no board-GPIO startup. Original three profiles and their startup outputs unchanged (direct comparisons PASS). Host tests32/32 PASS and production build PASS/exit0. Experimental Blink compile/upload PASS exit0, user confirms correct blink/no abnormality. Experimental Serial Hello compile/upload PASS exit0; repeated Hello captured115200. H3 user reports Blink workspace/compile/upload success on8787; browser-control view remains stale, so manual results distinguished from agent-observed hardware logs. User confirms UI COM4 upload/LED blink and Serial Monitor115200 connected; H3 chain and both source/profile stale-upload guards PASS per user, browser RX on silent Blink untested; PWM compile PASS exit0/BIN321552 B only, upload deferred by explicit user stop; H4 digital/ADC BLOCKED: user lacks tools/reference/confirmed pinout, profile still blocks them. HTTP bridge stopped, no further hardware actions; last known firmware Blink. Resume only on new user request. Previous missing-board smoke is historical; HARDWARE_UNTESTED remains until individual tests complete. [Current matrix/logs/commands](verification/V1_HARDWARE_INTEGRATION.md). No source/profile/PS4 changes or commit/push.
+
 Cập nhật 2026-11-05 (Asia/Saigon). Baseline code trước preflight: `codex/integrate-bach-ui` @ `3a81e54aca414524bb949f3b24af6eb3b2e6b88f`. [Báo cáo Phase 01](PHASE01_AUDIT.md), [kế hoạch](IMPLEMENTATION_PLAN.md), [log build Phase 02.1](verification/phase02_1_compile.log).
+
+## Robotics Blocks & Generator Integration — 2026-11-05
+
+- Implemented profile-aware toolbox, motor/servo channel APIs, servo signal disable, digital input pull modes and Serial print/available/read. ADC/PWM follow capabilities; V2 keeps reserved pins. Motor motion/servo enable remain unsupported diagnostics, with no pulses/load commands generated.
+- Fixed shared generator dropping chained statements and missing semicolons for standalone expressions. Regenerated five derived V1 C++ examples and PS4 UART golden; native V1/V2, profile registry, PS4 Bridge/parser/protocol unchanged. Workspace version1/legacy block types retained; switching V2 M6 -> V1 preserves M6 and reports error instead of remapping.
+- `npm test`: **27/27 PASS, exit0**. `npm run build`: **PASS, exit0** (62 modules; existing chunk/deprecation warnings). Browser smoke PASS for toolbox/channels/profile switching; test workspace restored to initially empty Generic.
+- Arduino CLI1.5.1/Core3.3.7 directly checked. **10/10 generated-example compiles PASS, script exit0**, each with nonempty BIN, through HTTP -> CLI; V1 8MB/QSPI enabled, V2 8MB/PSRAM disabled, Generic unchanged defaults. **SOFTWARE_ACCEPTED** for supported blocks/diagnostics only. [Results/memory/commands](verification/ROBOTICS_BLOCKS_INTEGRATION.md); local raw log `docs/verification/robotics_blocks_compile.log` ignored.
+- **HARDWARE_UNTESTED / PENDING_HARDWARE_VALIDATION** remains. No truth-table/power assumption, hardware/A5, COM selection, upload, flash, commit/push or next-phase execution. Motor safety/servo power interlock and dedicated sensor drivers remain separate tasks.
+
+## PS4 Fast Track A2 + A3 + A4 — 2026-11-05
+
+- **A2 SOFTWARE_ACCEPTED**: PS4Bluepad321.0.1 axis/17-button mapping, Touchpad exclusion, CSV v1 publisher, report gate and timeout/disconnect/reset behavior. All201 percentage values round-trip through A1 to exact10*p; no second Y inversion, fake fresh heartbeat or cached reconnect control.
+- **A3 BRIDGE_CANDIDATE_BUILD_PASSED**, exit0: CLI1.5.1, Bluepad32 core4.1.0, Classic ESP32 `esp32-bluepad32:esp32:esp32`. External ZIP1.0.1 compiled from temporary directory outside repo, hash/version pinned, no vendoring/install. Final program719,069 B, globals87,108 B; BIN725,648 B. Final board/pins/power unknown; TX/RX/LED default-1 and data UART disabled.
+- **A4 SOFTWARE_IMPLEMENTED / host gate tests PASS; HARDWARE_UNTESTED**: library pairing/NVS/reconnect, explicit RESET_MAC debug command with disconnect epoch gate. Application MAC reset is not bond deletion. No AP/web server/Web Pairing; no robot-arm or motor/servo controls.
+- `npm test` **19/19 PASS**, `npm run build` PASS (existing bundle/deprecation warnings); mainboard UART sketch compile PASS/exit0 with unchanged A1/Core3.3.7/V2 profile, BIN313,296 B. No A1 regression or profile/project/mainboard changes.
+- Freshness uses pinned BP32.update boolean and library per-controller hasData, not cached getData success or value changes. SDK API contract verified in installed headers; radio behavior/timing still needs A5. CSVv1 cannot detect arbitrary replay from third-party publisher.
+- Review checks PASS: `git diff --check`, documentation links, ignored build/log outputs; no src/A1/profile/mainboard diff or tracked binaries. Earlier BRIDGE_COMPILE_PENDING is superseded for the candidate only, not final hardware.
+- **A5 execution BLOCKED**, hardware/COM/upload approval pending. Software ready for A5 planning only. No flash, controller test, COM selection, commit/push or other phase. [Report/build evidence/staging commands](verification/PS4_FAST_TRACK_A2_A4.md), [bridge setup/pairing](../firmware/ps4_bridge/README.md).
+
+## PS4 A1 — Generator Stabilization — 2026-11-05 — PASS
+
+**A1 SOFTWARE_ACCEPTED / HARDWARE_UNTESTED. READY_FOR_A2 software contract/mapping tests; BRIDGE_COMPILE_PENDING.** Issue18 A2 and bridge hardware remain open, not implemented in this task.
+
+- Reproduced/fixed includes_/ps4_stdio and LF/CR/NUL escaping; UART CSV v1 strict bounds/complete-line parsing, neutral disconnect and250ms timeout verified with generated C++/fake UART/clock. Profile-correct UART1 allowed without changing unrelated GPIO rules, workspace format or saved pins.
+- `npm test` **18/18 PASS**, `npm run build` PASS. Real generated Blockly UART sketch compiled via CodeLab HTTP bridge with CLI1.5.1/Core3.3.7, V2 Flash8MB/default_8MB/PSRAMdisabled, script exit0. BIN313,296 B, program313,155 B, globals22,988 B.
+- PS4Bluepad321.0.1/Bluepad32 on separate ESP32 remains selected; ZIP metadata rechecked, no vendoring/install. No WebPair sketch found in workspace. No direct PS4 Bluetooth on S3, no bridge/mapping implementation, upload or hardware tests.
+- CSV v1 cannot detect stale valid CSV replay; A2 publisher must gate freshness on real controller reports, not heartbeat. Hardware V1 smoke remains BLOCKED per prior user confirmation; no new hardware claim.
+- [Focused report, evidence, files and commit commands](verification/PS4_A1_STABILIZATION.md). Local raw log `docs/verification/ps4_a1_compile.log` ignored. Historical defects below describe earlier phases; A1 supersedes includes_/escaping/strict UART parser status only.
+
+## V1 Hardware Smoke Test — 2026-11-05 — BLOCKED hardware
+
+- Người dùng xác nhận **chưa có board**. `board list --format json` trả `detected_ports: []`, exit0 cả trong/ngoài sandbox. Không chọn COM, upload hay mở Serial.
+- Preflight PASS trực tiếp: CLI1.5.1, Core esp32:esp32 3.3.7, profile Newmania V1 Flash8MB/QSPI PSRAM2MB, PSRAM=enabled, USB hardwareCDC/CDCOnBoot. Biến Arduino data/downloads chỉ trong process. Git ban đầu sạch, HEAD `642354fb551ca0f21ee2976271c92e11dd6ce740`; giữ nguyên công việc trước đó.
+- Thêm native PSRAM/flash diagnostic an toàn. Compile **PASS/exit0**: program312,238 B, globals22,172 B; binary312,384 B đã tạo trong build-output ignored. Chưa đọc `psramFound()`/sizes từ thiết bị thật, không đánh dấu runtime PASS.
+- Minimal upload/Blink47/Serial115200/PSRAM runtime/Digital input/ADC/PWM LED: **7/7 BLOCKED hardware**, không FAIL và không PASS. Sáu ví dụ trước đó có historical compile PASS; không compile lại hoặc claim hardware integration từ các record này.
+- Giữ **SOFTWARE_ACCEPTED** và **HARDWARE_UNTESTED / PENDING_HARDWARE_VALIDATION**. Luồng CLI -> USB -> board, real upload/Serial/source-profile switching còn BLOCKED. Không sửa app, V2 hoặc PS4, không flash/commit/push.
+- [Biên bản đầy đủ, từng test, command, blockers và Git commands](verification/NEWMANIA_V1_HARDWARE_SMOKE.md). Raw preflight/compile logs `docs/verification/newmania_v1_smoke_*.log` ignored.
+- Kiểm tra tài liệu PASS: `git diff --check`, relative links; đúng5 file trong phạm vi, build/logs ignored, không binary tracked hoặc app/V2 diff.
+- Tiếp tục khi có board: nối USB/rút tải, liệt kê cổng, xin xác nhận đúng COM và phê duyệt Minimal trước; không tự chuyển phase khác.
+
+## Fast track Newmania Starter V1.0 — 2026-11-05
+
+**SOFTWARE_ACCEPTED** cho registry ba profiles, GPIO validation/generation, safe examples và compile pipeline. **HARDWARE_UNTESTED** / **PENDING_HARDWARE_VALIDATION** giữ nguyên. V1 là board kiểm thử, V2 là board mục tiêu; native V2 không sửa. Baseline trước task `3106a9eee15e5057669249ad9f46eb83d22279d6`.
+
+- Profile V1 N8R2: Flash8MB/QSPI PSRAM2MB, `PSRAM=enabled`, core3.3.7; V2 vẫn disabled, Generic giữ dự án cũ. Pinout đã đối chiếu DOCX người dùng cung cấp. USB CDC là cấu hình candidate chưa xác minh trên PCB.
+- PASS `npm test`: 15/15, bao gồm native fakeGPIO/HTTP compile-upload guard, deterministic generation/round-trip, conflict và backwards compatibility. PASS `npm run build`: 61 modules, chunk warning >500kB.
+- PASS sáu ví dụ V1 qua workspace -> generator -> HTTP -> CLI -> binary, script exit0. Không upload hoặc chọn COM. Program bytes từ311,846 đến322,174; raw log local `docs/verification/newmania_v1_build.log` ignored. [Báo cáo đầy đủ/build table/commit commands](verification/NEWMANIA_V1_FAST_TRACK.md).
+- Chrome smoke PASS chọn V1/preview, block không rỗng qua đổi profile và reload, target FQBN trong device dialog và disabled state khi bridge unavailable. Chưa kiểm tra upload/Serial thật hoặc file-picker round-trip; test block đã dọn.
+- Ví dụ minimal/Blink47/Serial/DI1/ADC1/PWM LED47 và [checklist hardware](boards/V1_HARDWARE_TEST.md) sẵn sàng. Motor/servo pins reserved, không tự enable. Không suy ra nguồn DC3–15V là an toàn cho motor kit3–6V; chưa có điều kiện servo power-ready/POWER_GOOD.
+- Known issues: PS4 generator includes_/escaping chưa sửa; Blockly deprecation, bundle lớn và origin-port giới hạn giữ nguyên. Không có driver V2/PS4Bridge mới. Không commit/push. Dừng tại chuẩn bị V1 hardware testing.
+
+Các record Phase 01/02.1/02.2 bên dưới giữ làm bằng chứng lịch sử, không thay thế kết quả fast track hiện tại.
+
+## Phase 02.2 — BoardConfig & Safe Startup — PASS (2026-11-05)
+
+**VERIFIED_BUILD / READY_FOR_PHASE02_3** cho acceptance phần mềm của [Issue #17](https://github.com/HiyoriVn/CodeLab/issues/17). **PENDING_HARDWARE_VALIDATION** vẫn giữ. Phase 02.3 chưa bắt đầu và không được tự chuyển tiếp.
+
+- BoardConfig biểu diễn đúng 39 GPIO độc lập + các alias, motor6x2/servo6/encoder2, buses và strapping. Static assertions + host test đối chiếu map: PASS.
+- SafeStartup: sáu servo Hi-Z/no pull; preload 12 motor + buzzer LOW trước output; không PWM, bus init hay enable API. Init/repeated call/failure paths test PASS, compile host exit 0, test exit 0. Trạng thái luôn không armed và servo DISABLED. `loop()` chỉ delay nhường scheduler.
+- Arduino CLI 1.5.1, Core 3.3.7; compile FQBN `esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled`: **PASS, exit 0**. Flash accounting 273,391 / 3,342,336 B (8%); RAM globals 21,428 / 327,680 B (6%), còn 306,252 B. BIN 273,536 B được tạo trong build-output ignored.
+- Log local: `docs/verification/phase02_2_compile.log`; [báo cáo/commands/test results](verification/PHASE02_2_TEST_REPORT.md). `git diff --check` PASS, build artifacts ignored, không đổi `src/` hoặc `tools/`.
+- Chưa đo GPIO/reset/USB-only trên board; không có khả năng xác nhận nguồn servo; không giả định POWER_GOOD. Firmware chỉ thiết lập trạng thái sau boot, không thay bảo vệ điện trước khi GPIO được init. PS4 CSV v1 và các lỗi generator đã ghi từ Phase 01 vẫn nguyên trạng.
 
 ## Phase 02.1 — Minimal firmware/toolchain preflight
 
@@ -30,7 +132,8 @@ PS4 transport remains CodeLab UART ASCII CSV v1 compatibility baseline: `connect
 | Phase | Trạng thái | Gate chính |
 |---|---|---|
 | 02.1 Minimal build preflight | Hoàn thành | CLI/core/FQBN, options và empty sketch verified; PENDING_HARDWARE_VALIDATION |
-| 02.2 BoardConfig & Safe Startup | READY_FOR_PHASE02_2 (chưa bắt đầu) | Profile build baseline và servo DISABLED policy chốt; triển khai chỉ sau chỉ thị |
+| 02.2 BoardConfig & Safe Startup | Hoàn thành software acceptance | Host tests + compile exit 0; PENDING_HARDWARE_VALIDATION |
+| 02.3 | READY_FOR_PHASE02_3 (chưa bắt đầu) | Chỉ triển khai sau yêu cầu mới; hardware validation vẫn pending |
 | 03 Sensor & Peripheral Drivers | Chưa bắt đầu | HAL, datasheet/tải, PWM resources, power-stable policy |
 | 04 PS4 Bridge & UART Protocol | Chưa bắt đầu | Chip bridge Classic, nguồn/pins/package, protocol/bit/axis/freshness mapping |
 | 05 Robot Control & Safety | Chưa bắt đầu | Drivers, cơ khí, safety/fault/re-arm requirements |

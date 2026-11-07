@@ -1,0 +1,89 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "blink",
+    "boardId": "newmania-starter-v1",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "codelab_gpio_write",
+            "id": "blink-0",
+            "x": 0,
+            "y": 0,
+            "fields": {
+              "STATE": "HIGH"
+            },
+            "inputs": {
+              "PIN": {
+                "block": {
+                  "type": "math_number",
+                  "id": "blink-1",
+                  "fields": {
+                    "NUM": 47
+                  }
+                }
+              }
+            },
+            "next": {
+              "block": {
+                "type": "codelab_delay_ms",
+                "id": "blink-2",
+                "inputs": {
+                  "DURATION": {
+                    "block": {
+                      "type": "math_number",
+                      "id": "blink-3",
+                      "fields": {
+                        "NUM": 500
+                      }
+                    }
+                  }
+                },
+                "next": {
+                  "block": {
+                    "type": "codelab_gpio_write",
+                    "id": "blink-4",
+                    "fields": {
+                      "STATE": "LOW"
+                    },
+                    "inputs": {
+                      "PIN": {
+                        "block": {
+                          "type": "math_number",
+                          "id": "blink-5",
+                          "fields": {
+                            "NUM": 47
+                          }
+                        }
+                      }
+                    },
+                    "next": {
+                      "block": {
+                        "type": "codelab_delay_ms",
+                        "id": "blink-6",
+                        "inputs": {
+                          "DURATION": {
+                            "block": {
+                              "type": "math_number",
+                              "id": "blink-7",
+                              "fields": {
+                                "NUM": 500
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -5,3 +5,27 @@ package-lock.json
 # Arduino verification build artifacts
 /firmware/verification/**/build-output/
 /firmware/verification/**/esp32.esp32.esp32s3/
+# Mainboard firmware and host-test build products
+/firmware/**/build-output/
+/firmware/**/build/
+/firmware/**/*.bin
+/firmware/**/*.elf
+/firmware/**/*.map
+/firmware/**/*.exe
+/docs/verification/phase02_2_*.log
+
+# V1 verification logs are local evidence; review the short Markdown report
+/docs/verification/newmania_v1_*.log
+
+# PS4 A1 raw CLI verification evidence
+/docs/verification/ps4_a1_*.log
+
+# PS4 A2-A4 local compile evidence
+/docs/verification/ps4_fast_track_*.log
+
+# Robotics CLI verification logs; results summarized in the Markdown report
+/docs/verification/robotics_blocks_*.log
+/docs/verification/mecanum_*.log
+/docs/verification/ps4_i2c_*.log
+/docs/verification/beginner_*.log
+/docs/verification/ps4_motor_*.log

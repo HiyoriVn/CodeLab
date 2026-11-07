@@ -1,0 +1,9 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Experimental OPI minimal",
+    "boardId": "newmania-v1-16m-opi-experimental",
+    "workspace": {}
+  }
+}

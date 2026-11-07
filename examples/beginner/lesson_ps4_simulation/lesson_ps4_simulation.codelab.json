@@ -1,0 +1,109 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "lesson_ps4_simulation",
+    "boardId": "newmania-v1-16m-opi-experimental",
+    "editorMode": "beginner",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "beginner_forever",
+            "id": "lesson_ps4_simulation-0",
+            "x": 45,
+            "y": 35,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "beginner_ps4_sim",
+                  "id": "lesson_ps4_simulation-1",
+                  "fields": {
+                    "CONNECTED": true,
+                    "LX": 500,
+                    "PRESSED": true
+                  },
+                  "next": {
+                    "block": {
+                      "type": "controls_if",
+                      "id": "lesson_ps4_simulation-2",
+                      "inputs": {
+                        "IF0": {
+                          "block": {
+                            "type": "beginner_ps4_connected",
+                            "id": "lesson_ps4_simulation-3"
+                          }
+                        },
+                        "DO0": {
+                          "block": {
+                            "type": "beginner_message",
+                            "id": "lesson_ps4_simulation-5",
+                            "inputs": {
+                              "VALUE": {
+                                "block": {
+                                  "type": "text",
+                                  "id": "lesson_ps4_simulation-4",
+                                  "fields": {
+                                    "TEXT": "MO PHONG PS4: connected, LX, X:"
+                                  }
+                                }
+                              }
+                            },
+                            "next": {
+                              "block": {
+                                "type": "beginner_message",
+                                "id": "lesson_ps4_simulation-7",
+                                "inputs": {
+                                  "VALUE": {
+                                    "block": {
+                                      "type": "beginner_ps4_axis",
+                                      "id": "lesson_ps4_simulation-6",
+                                      "fields": {
+                                        "AXIS": "LX"
+                                      }
+                                    }
+                                  }
+                                },
+                                "next": {
+                                  "block": {
+                                    "type": "beginner_message",
+                                    "id": "lesson_ps4_simulation-9",
+                                    "inputs": {
+                                      "VALUE": {
+                                        "block": {
+                                          "type": "beginner_ps4_button",
+                                          "id": "lesson_ps4_simulation-8",
+                                          "fields": {
+                                            "BUTTON": "CROSS"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "next": {
+                        "block": {
+                          "type": "beginner_wait",
+                          "id": "lesson_ps4_simulation-10",
+                          "fields": {
+                            "SECONDS": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

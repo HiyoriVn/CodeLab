@@ -1,5 +1,9 @@
 # Development setup
 
+## Multi-board V1 fast track — 2026-11-05
+
+Select a board per project using the Board selector. Newmania Starter V1 uses Core 3.3.7 with 8 MB flash and QSPI PSRAM enabled; V2 keeps its accepted native firmware/profile. Legacy projects default to Generic. See [profile rules](boards/BOARD_PROFILES.md) and [Windows launch/test instructions](boards/V1_HARDWARE_TEST.md) for process-local CLI/data/download paths. `CODELAB_FQBN` overrides only Generic; concrete profiles use their registry configuration. `npm test` runs host/generator/HTTP tests (fake upload only); `npm run examples:v1` regenerates safe examples; `node tools/verify-v1-build.mjs` performs compile-only verification via the real CLI. No new dependency was added. Hardware remains untested.
+
 ## Firmware toolchain preflight - 2026-11-05
 
 Verified on Windows with Arduino CLI 1.5.1 and installed ESP32 Arduino Core 3.3.7. Set `ARDUINO_DIRECTORIES_DATA` to `C:\Users\Admin\AppData\Local\Arduino15` and `ARDUINO_DIRECTORIES_DOWNLOADS` to its `staging` subdirectory in the current PowerShell process. Do not change IDE/OpenBlockDesktop settings.

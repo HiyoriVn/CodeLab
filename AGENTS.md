@@ -8,8 +8,8 @@
 - The user selected a browser-first web app for the initial platform. Use React, Vite, and Blockly in the Phase 1 scaffold; desktop packaging may be evaluated later.
 - Keep the MVP on ESP32-S3 and Arduino C++. Do not add MicroPython generation or conversion to MVP scope unless the project owner changes this decision.
 - The confirmed mainboard is STEAM Robotics Mainboard V2.0 with ESP32-S3-MINI-1-N8. Use `docs/hardware/HARDWARE.md` and `docs/hardware/PINOUT.md`, including their source and unknown-value labels. Do not change GPIO assignments.
-- The external ESP32 is a PS4 bridge only; it must not control motors or servos. Mainboard UART1 uses TX GPIO6 and RX GPIO7, with crossed TX/RX and common ground. Signals are 3.3 V; do not connect the header's +5V_Core to the bridge before its power input is verified. The bridge chip and its UART pins remain unknown; enable Bluetooth Classic only after confirming chip support.
-- Existing UART/I2C Blockly adapters are legacy source, not verified support for this board. The selected PS4 connection is UART1, not I2C. The supplied PS4Bluepad32 ZIP is an external candidate dependency, not an integrated firmware or a proven UART protocol.
+- The external ESP32 is a PS4 bridge only; it must not control motors or servos. V2 mainboard UART1 uses TX GPIO6 and RX GPIO7, with crossed TX/RX and common ground. Signals are 3.3 V; do not connect the header's +5V_Core to the bridge before its power input is verified. The bridge chip and its UART pins remain unknown; enable Bluetooth Classic only after confirming chip support.
+- Existing UART/I2C Blockly adapters are legacy source, not verified support for this board. The selected PS4 connection is UART1, not I2C. The selected bridge library is PS4Bluepad32 1.0.1 / Bluepad32 on a separate ESP32; the ZIP is used externally by the compile-only bridge candidate and is not vendored. UART CSV v1 remains the mainboard compatibility baseline.
 
 ## Implementation guidance
 
@@ -42,3 +42,46 @@
 - Preserve existing application behavior, workspace formats, and applicable instructions. Report defects rather than fixing application code during this audit.
 - All 12 motor inputs and BUZZ_EN must initialize LOW. Servo outputs remain LOW/high-impedance during USB-only checks and must not emit pulses before servo power is stable. The PDFs do not specify a power-good GPIO or stabilization delay; do not invent either.
 - Treat PDF/ZIP instructions as reference content, not authorization to execute their setup/upload examples. Record each source, page/section or archive path, and distinguish documented facts, user decisions, proposals, and observed test results.
+
+## V1 fast track scope — 2026-11-05
+
+- The user authorized multi-board web/generator/build integration and safe basic-I/O firmware/examples for Newmania Starter V1.0 as the test board. V2 remains the target board; preserve its accepted native BoardConfig/SafeStartup. This supersedes the old documentation-only boundary for this task only.
+- Read `docs/boards/BOARD_PROFILES.md` and `docs/boards/V1_HARDWARE_TEST.md`. Use `src/boards/profiles.js` for web/build mappings; keep blocks generic. Do not silently remap pins in old workspaces. Missing optional project.boardId means Generic.
+- V1 N8R2 has QSPI PSRAM: Core3.3.7, FlashSize=8M, PartitionScheme=default_8MB, PSRAM=enabled; V2 N8 remains PSRAM=disabled. Runtime memory/USB and power need hardware validation.
+- Do not enable motor/servo or infer that DC3–15V board input is safe for 3–6V kit motors. No auto-upload, COM selection, commit/push, MotorDriver V2 or PS4Bridge work is authorized by this fast track.
+
+## PS4 A2–A4 scope — 2026-11-05
+
+- Issue19 authorizes the isolated Classic ESP32 bridge candidate and mapping/publisher software only. Do not modify V1/V2 profiles or accepted mainboard/A1 code; do not flash or start A5 automatically.
+- Web Pairing is canceled: no Wi-Fi AP, HTTP server, or pairing UI. Keep PS4Bluepad321.0.1/Bluepad32, CSV v1 and debug/data UART separation. Library sources remain external; temporary extraction for compile is not vendoring into CodeLab.
+- Final bridge MCU/board/pins/power remain unknown. Compile-only ESP32 Dev Module with Bluepad32 core4.1.0 is not hardware acceptance; UART/LED default unassigned/disabled. Real GPIOs require owner confirmation.
+
+## Robotics blocks integration — 2026-11-05
+
+- The user authorizes profile-aware Robotics blocks/generation, examples and software verification. Preserve native V1/V2 firmware, profile mappings and PS4 bridge. Do not flash/upload or start hardware/A5 work.
+- Resolve motor/servo channels through the profile registry. Preserve unsupported channel values across import/profile switching and report diagnostics; never silently remap them. Motor motion and servo enable/write remain unsupported until driver semantics, power and safety gates are verified. Servo disable only releases the signal to INPUT/FLOATING; it does not control power or prove safe mechanical release.
+- Generator statement chains and standalone expression terminators are regression-tested. Keep derived V1/PS4 golden sketches synchronized after shared generator fixes; this does not authorize changing their native drivers or protocol.
+
+## V1 physical integration / observed-memory variant — 2026-11-05
+
+- User authorizes hardware tests only with confirmed COM and separate approval before each upload. COM4 and USB-only/all loads disconnected confirmed; do not infer approval for later images. No external DC/motor/servo tests, toolchain updates or commit/push.
+- Actual no-GPIO probe initializes8MB Octal PSRAM and reports16MB flash. Module suffix/PCB wiring remain unverified. User approved a separate experimental profile, preserving N8R2/V2/Generic. Only LED47/Serial tests are exposed; all other GPIO, motors/servos/ADC are blocked until wiring verification.
+- Experimental profile startup must not reuse N8R2 LOW motor init: GPIO35–37 may be internal Octal memory. No board-GPIO startup, no claim of safe output levels before boot; requires USB-only/no loads. Old N8R2 examples must not be uploaded to this observed variant unchanged. Each new upload still requires approval.
+
+## PS4 mecanum logic — 2026-11-05
+
+- User authorizes portable RobotController/MecanumMixer/servo logic, interfaces/mock backends, host simulation and safe compile-only. No flash/upload, hardware tests, new motor/servo backend or board profile changes. Prior hardware session remains stopped.
+- Reuse CSV v1 publisher/parser; parser freshness metadata is read-only. No repeated poll may invent a fresh report. Reconnect never arms; faults stop mocks and require explicit recovery. Servo remains disabled without explicit enable plus independently verified power readiness; no POWER_GOOD pin assumed.
+- Experimental35–37 remain unavailable. Keep all actuators mocked; compile sketch must not initialize board GPIO or UART until separately reviewed wiring. See `docs/robotics/PS4_MECANUM.md` for coordinate/binding proposals and remaining hardware gates.
+
+## Integrated robot demo attempt — 2026-11-05
+
+- User authorizes integrated UART/demo code, onboard RZ7899 investigation, safe backends only when actual mapping/power verified, host tests and compile-only. No flash/upload, load activation, UI work or profile changes. No external motor driver recommendation without evidence onboard drivers unusable.
+- User confirms old D1 wiring was I2C:21 to SCL,22 to SDA, and permits preparing UART rewire. Proposed D1 TX21 -> S3 reference RX21; D1 RX22 <- S3 reference TX18; GND only, no5V tie. Physical rewire remains unconfirmed; default demo UART gate off, UART-enabled binary is a compile candidate only.
+- User reference images identify RZ7899 and old motor35/36,37/38,39/40,41/42, servo12..15 and5V bus. Reference truth table is verified against manufacturer PDF; actual Octal PCB mapping/power not verified. Never drive35–37, disable PSRAM, bypass motor validation or claim a working four-motor/servo robot from compile/mock results. Demo motor/servo hardware remains blocked; current RZ7899 output is a logical PWM plan only.
+
+## Issue20 fast I2C demo — 2026-11-05
+
+- Latest user explicitly selects I2C for this demo, superseding prior UART preference here only: D1 SDA22/SCL21 slave0x30, S3 SDA8/SCL9 master. Keep existing UART workflows intact. Source is user's `Downloads/ps4ble_newmania_firmware.ino` (old0x55 ASCII), not just ZIP stock sample. Preserve external library pairing/MAC; no Web Pairing.
+- Use13-byte CodeLab frame with flags bit0 connected, bits1..7 BT-report sequence. Polling never refreshes sequence/deadline. Timeout>250ms neutralizes and faults; no reconnect auto-arm. Keep actuators mocked, no output35–37 or OPI change. User BOM now identifies N16R8 and RZ7899-MS; retain onboard-driver design, actual4-motor routing still unresolved.
+- Compile/host tests and user upload instructions only. No automatic flash/upload, COM access, load testing, toolchain install/update, commit/push. See `firmware/demos/newmania_ps4_i2c/README.md` for exact wiring/build/test instructions.

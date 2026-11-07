@@ -1,5 +1,35 @@
 # Testing and verification strategy
 
+## Issue22 Scratch-first editor — 2026-11-06
+
+`npm test`: **47/47 PASS**, exit0 (8 focused beginner checks plus existing regressions). `npm run build`: **PASS**, exit0. Initial restricted run had localhost EACCES in five HTTP tests; rerun with local execution permission passed, with no source workaround or hardware access. Existing Blockly deprecation and Vite large-chunk warnings remain. Browser smoke verified default Beginner, all three lessons, drag/drop, Advanced toolbox, mode/profile switching, unsupported LED warning and reload preserving blocks/profile/mode. [Usage, fixtures, compile-only command and evidence](SCRATCH_FIRST.md); final compiler results recorded in PROGRESS.
+
+## Issue20 I2C sequence demo — 2026-11-05
+
+`npm test`39/39 PASS; web build PASS, exit0. New native frame tests cover13-byte LE/flags, unchanged polling and fresh-identical reports, sequence127→0, invalid/partial/torn frames, timeout/bus recovery quarantine,250/251ms/clock wrap, actual A2 mapping201 axis values and mecanum/servo mock/latched FAULT/re-arm. Header copies must match canonical A2 byte-for-byte. D1 core4.1.0 and S3 core3.3.7 compiles PASS/exit0, OPI preserved. [Short test/upload guide](../firmware/demos/newmania_ps4_i2c/README.md). No device access, upload, I2C radio/physical observations or load tests in this task.
+
+## Integrated PS4 robot demo attempt — 2026-11-05
+
+`npm test`37/37 PASS and `npm run build` PASS/exit0. New demo runtime tests cover monitor preventing arm, explicit SIM, blocked hardware commands, low capped RZ7899 plans, Share/Options/PS, servo mock, timeout/reconnect, canonical header reuse; negative compiler cases reject35–37 even with UART confirmation flag. Default S3, proposed-rewire UART S3 and D1 bridge all compile PASS/exit0; all nonempty binaries. [Commands/results](verification/WORKING_MECANUM_DEMO.md), [wiring and deferred load tests](../firmware/demos/newmania_ps4_mecanum/README.md). No hardware test/upload in this task; actuator backend blocked by unresolved actual GPIO/power.
+
+## PS4 mecanum simulation — 2026-11-05
+
+`npm test`34/34 PASS, `npm run build` PASS/exit0. New native C++ host scenarios test4913 mixer vectors, mapping/permutation/inversion/saturation, arming/neutral/deadzone/acceleration, disconnect/reconnect/held buttons,250/251ms/wrap/stall, servo bounds/power/backend failures; actual existing CSV publisher and parser are included. Standalone parser header must match generator byte-for-byte; regeneration: `node tools/robot-parser-header.mjs`. Arduino INPUT macro collision guarded in native compile. `pwsh -NoProfile -File tools/verify-mecanum.ps1` compile-only PASS/exit0 with unchanged experimental16MB/OPI/Core3.3.7; no UART/GPIO or actuator initialization in sketch. [Full results/API/hardware gates](robotics/PS4_MECANUM.md). Pure logic/mock acceptance only; no hardware actuation tests.
+
+## Experimental Newmania OPI profile — 2026-11-05
+
+`npm test`32/32 PASS, `npm run build` PASS, exit0. Five added checks cover LED-only allowlist, absence of board/memory GPIO startup, serialization/goldens, invalid old pins/channels retained with diagnostics, HTTP compile target and stale-profile upload rejection. Existing profile/PS4/native checks retained. Rebuild experimental examples with `node tools/v1-opi-examples.mjs`; this never uploads. Only actual CLI/Blink result and individually approved hardware results recorded in [integration report](verification/V1_HARDWARE_INTEGRATION.md).
+
+## Robotics blocks — 2026-11-05
+
+Run `npm test`, `npm run build`, `npm run examples:robotics` (deterministic fixture regeneration), then `node tools/verify-robotics-build.mjs` with the existing CLI/data/downloads environment configured as in [development setup](DEVELOPMENT.md). The last command performs compile-only HTTP/CLI verification, never port selection/upload. Examples include supported basic I/O/Serial, servo signal disable and intentionally unsupported motor/servo workspaces. Keep unsupported workspaces as JSON only, with warnings that block compile.
+
+27/27 host tests and production build PASS. Tests cover next-block/nested chains, floating C++ expression terminators, serialization, legacy profiles, pin/mode conflicts, channel retention, no motor/servo pulses, parser/publisher and stale upload guards. Browser smoke verified V2 M6 -> V1 preserves the block and reports invalid channel. Hardware remains untested. Final compiler results and limitations: [Robotics report](verification/ROBOTICS_BLOCKS_INTEGRATION.md).
+
+## Newmania V1 fast track — 2026-11-05
+
+`npm test`: 15/15 host/generator/native fake-GPIO/HTTP tests PASS; `npm run build` PASS; six V1 examples compiled through the real CLI bridge with Core3.3.7/QSPI PSRAM and nonempty binaries. Chrome profile/persistence/device-dialog smoke checks passed. No actual upload, Serial I/O, GPIO waveform or hardware test. Detailed evidence/limits: [fast-track report](verification/NEWMANIA_V1_FAST_TRACK.md); future board checks: [V1 checklist](boards/V1_HARDWARE_TEST.md). SOFTWARE_ACCEPTED applies to this software scope; HARDWARE_UNTESTED remains.
+
 ## Hardware/firmware Phase 01 audit - 2026-11-04
 
 Audited local branch `codex/integrate-bach-ui` at `f3a839825ca2e83fcb82337cbfe4f8dd2afc3efc`; Windows, Node 26.12.1, npm 11.20.0. Detailed commands/outcomes and limits are in [PHASE01_AUDIT.md, section 7](PHASE01_AUDIT.md#7-verification-results); final documentation checks are in [PROGRESS.md](PROGRESS.md).

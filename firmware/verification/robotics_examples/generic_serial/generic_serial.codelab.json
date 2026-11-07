@@ -1,0 +1,92 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "generic_serial",
+    "boardId": "generic-esp32-s3",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "codelab_serial_print",
+            "id": "generic_serial-1",
+            "x": 0,
+            "y": 0,
+            "fields": {
+              "ENDING": "LN"
+            },
+            "inputs": {
+              "VALUE": {
+                "block": {
+                  "type": "codelab_serial_available",
+                  "id": "generic_serial-0"
+                }
+              }
+            },
+            "next": {
+              "block": {
+                "type": "codelab_serial_print",
+                "id": "generic_serial-3",
+                "fields": {
+                  "ENDING": "LN"
+                },
+                "inputs": {
+                  "VALUE": {
+                    "block": {
+                      "type": "codelab_serial_read",
+                      "id": "generic_serial-2"
+                    }
+                  }
+                },
+                "next": {
+                  "block": {
+                    "type": "codelab_serial_print",
+                    "id": "generic_serial-6",
+                    "fields": {
+                      "ENDING": "LN"
+                    },
+                    "inputs": {
+                      "VALUE": {
+                        "block": {
+                          "type": "text",
+                          "id": "generic_serial-5",
+                          "fields": {
+                            "TEXT": "Robotics \"software\" test\n"
+                          }
+                        }
+                      }
+                    },
+                    "next": {
+                      "block": {
+                        "type": "codelab_delay_ms",
+                        "id": "generic_serial-7",
+                        "inputs": {
+                          "DURATION": {
+                            "block": {
+                              "type": "math_number",
+                              "id": "generic_serial-8",
+                              "fields": {
+                                "NUM": 250
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "codelab_serial_available",
+            "id": "generic_serial-4",
+            "x": 0,
+            "y": 0
+          }
+        ]
+      }
+    }
+  }
+}

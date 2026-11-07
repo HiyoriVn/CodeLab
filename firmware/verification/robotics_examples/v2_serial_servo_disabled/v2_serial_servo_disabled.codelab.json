@@ -1,0 +1,140 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "v2_serial_servo_disabled",
+    "boardId": "steam-mainboard-v2",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "codelab_servo_disable",
+            "id": "v2_serial_servo_disabled-0",
+            "x": 0,
+            "y": 0,
+            "fields": {
+              "CHANNEL": "1"
+            },
+            "next": {
+              "block": {
+                "type": "codelab_servo_disable",
+                "id": "v2_serial_servo_disabled-1",
+                "fields": {
+                  "CHANNEL": "2"
+                },
+                "next": {
+                  "block": {
+                    "type": "codelab_servo_disable",
+                    "id": "v2_serial_servo_disabled-2",
+                    "fields": {
+                      "CHANNEL": "3"
+                    },
+                    "next": {
+                      "block": {
+                        "type": "codelab_servo_disable",
+                        "id": "v2_serial_servo_disabled-3",
+                        "fields": {
+                          "CHANNEL": "4"
+                        },
+                        "next": {
+                          "block": {
+                            "type": "codelab_servo_disable",
+                            "id": "v2_serial_servo_disabled-4",
+                            "fields": {
+                              "CHANNEL": "5"
+                            },
+                            "next": {
+                              "block": {
+                                "type": "codelab_servo_disable",
+                                "id": "v2_serial_servo_disabled-5",
+                                "fields": {
+                                  "CHANNEL": "6"
+                                },
+                                "next": {
+                                  "block": {
+                                    "type": "codelab_serial_print",
+                                    "id": "v2_serial_servo_disabled-7",
+                                    "fields": {
+                                      "ENDING": "LN"
+                                    },
+                                    "inputs": {
+                                      "VALUE": {
+                                        "block": {
+                                          "type": "codelab_serial_available",
+                                          "id": "v2_serial_servo_disabled-6"
+                                        }
+                                      }
+                                    },
+                                    "next": {
+                                      "block": {
+                                        "type": "codelab_serial_print",
+                                        "id": "v2_serial_servo_disabled-9",
+                                        "fields": {
+                                          "ENDING": "LN"
+                                        },
+                                        "inputs": {
+                                          "VALUE": {
+                                            "block": {
+                                              "type": "codelab_serial_read",
+                                              "id": "v2_serial_servo_disabled-8"
+                                            }
+                                          }
+                                        },
+                                        "next": {
+                                          "block": {
+                                            "type": "codelab_serial_print",
+                                            "id": "v2_serial_servo_disabled-11",
+                                            "fields": {
+                                              "ENDING": "LN"
+                                            },
+                                            "inputs": {
+                                              "VALUE": {
+                                                "block": {
+                                                  "type": "text",
+                                                  "id": "v2_serial_servo_disabled-10",
+                                                  "fields": {
+                                                    "TEXT": "Robotics \"software\" test\n"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "next": {
+                                              "block": {
+                                                "type": "codelab_delay_ms",
+                                                "id": "v2_serial_servo_disabled-12",
+                                                "inputs": {
+                                                  "DURATION": {
+                                                    "block": {
+                                                      "type": "math_number",
+                                                      "id": "v2_serial_servo_disabled-13",
+                                                      "fields": {
+                                                        "NUM": 250
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

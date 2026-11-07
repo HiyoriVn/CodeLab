@@ -1,0 +1,35 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "v1_servo_request_unsupported",
+    "boardId": "newmania-starter-v1",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "codelab_servo_write",
+            "id": "v1_servo_request_unsupported-0",
+            "x": 0,
+            "y": 0,
+            "fields": {
+              "CHANNEL": "1"
+            },
+            "inputs": {
+              "ANGLE": {
+                "block": {
+                  "type": "math_number",
+                  "id": "v1_servo_request_unsupported-1",
+                  "fields": {
+                    "NUM": 90
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

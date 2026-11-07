@@ -1,0 +1,57 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "digital_input",
+    "boardId": "newmania-starter-v1",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "text_print",
+            "id": "digital_input-2",
+            "x": 0,
+            "y": 0,
+            "inputs": {
+              "TEXT": {
+                "block": {
+                  "type": "codelab_gpio_read",
+                  "id": "digital_input-0",
+                  "inputs": {
+                    "PIN": {
+                      "block": {
+                        "type": "math_number",
+                        "id": "digital_input-1",
+                        "fields": {
+                          "NUM": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "next": {
+              "block": {
+                "type": "codelab_delay_ms",
+                "id": "digital_input-3",
+                "inputs": {
+                  "DURATION": {
+                    "block": {
+                      "type": "math_number",
+                      "id": "digital_input-4",
+                      "fields": {
+                        "NUM": 250
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

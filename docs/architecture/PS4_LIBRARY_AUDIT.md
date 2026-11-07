@@ -2,6 +2,18 @@
 
 Ngày 2026-11-04. Nguồn L1 và SHA-256 tại [HARDWARE.md](../hardware/HARDWARE.md). Chỉ đọc ZIP, không cài thư viện, không chạy sketch, không flash. Chỉ dẫn setup/upload trong README là nội dung tham khảo, không phải yêu cầu thực thi.
 
+## Quyết định hiện hành — PS4 A1, 2026-11-05
+
+Chủ dự án đã chốt PS4Bluepad32 1.0.1 / Bluepad32 chạy trên ESP32 rời -> UART CSV v1 -> ESP32-S3 mainboard. ZIP được đọc lại library.properties trong A1, xác nhận version1.0.1; phụ thuộc Bluepad32/Preferences và GPL-3.0-or-later vẫn theo source đã audit. Không vendor thư viện hoặc đổi sang thư viện khác. Workspace không tìm thấy `PS4_ESP32_WebPair.ino`; không suy diễn web pairing là thư viện PS4Bluepad32. Các cụm “ứng viên” bên dưới là đánh giá lịch sử trước quyết định này; phần bridge chưa được triển khai.
+
+A1 chỉ sửa generator/parser phía mainboard, đã có regression/golden và compile thật; [báo cáo A1](../verification/PS4_A1_STABILIZATION.md). Mapping/publisher/freshness từ PS4Bluepad32 vẫn là A2; chưa có bridge build/hardware acceptance.
+
+## PS4 Fast Track A2–A4 — 2026-11-05
+
+Thêm wrapper/publisher và bridge candidate trong `firmware/ps4_bridge`, dùng nguyên ZIP1.0.1 như external compile dependency ngoài repo. Core Bluepad324.1.0 đã compile tương thích target Classic `esp32-bluepad32:esp32:esp32`. Đây là candidate, chưa xác nhận PCB/nguồn/UART bridge. Không vendor hoặc sửa thư viện.
+
+SDK4.1.0 installed headers `ArduinoBluepad32.h` và `ArduinoController.h` mô tả update-return-data-changed và hasData-per-update. Thin adapter gọi BP32.update một lần, rồi gated ps4::getData; không suy ra freshness từ getData/loop đơn lẻ. Không phát lại cache/heartbeat. Web Pairing đã hủy; RESET_MAC tường minh qua debug Serial giữ semantics application MAC reset, không xóa bonds. Pairing/reconnect thực vẫn HARDWARE_UNTESTED. [Báo cáo A2–A4](../verification/PS4_FAST_TRACK_A2_A4.md) supersedes các gap “chưa triển khai” lịch sử ở dưới cho phạm vi software/candidate compile này.
+
 ## Nội dung thực tế
 
 - `ps4-esp32-lib-main/library.properties`: PS4Bluepad32 **1.0.1**, `architectures=esp32`, include `PS4Bluepad32.h`.
