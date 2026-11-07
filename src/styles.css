@@ -261,3 +261,8 @@ body,.code-side,.set,.blockly-host .blocklyToolboxDiv,.ws{transition:background-
 .local-projects strong{display:block;padding:6px 12px;font-size:12px}
 .local-projects .mi{white-space:normal;overflow-wrap:anywhere}
 .local-projects [aria-current="true"]{font-weight:700}
+
+.blocklyWidgetDiv .blocklyHtmlInput,.blocklyWidgetDiv .blocklyHtmlInput:focus,.blocklyWidgetDiv .blocklyHtmlInput:focus-visible{background:#fff;color:#1F2340;-webkit-text-fill-color:#1F2340;caret-color:#1F2340;color-scheme:light;outline:none!important;box-shadow:none}
+.blocklyWidgetDiv .blocklyHtmlInput::selection{background:#BBD6FF;color:#1F2340}
+.blockly-host .blocklyOutlinePath{fill:rgba(0,0,0,.16)!important;stroke:none}
+input.blocklyHtmlInput{background:#fff!important;color:#1F2340!important;-webkit-text-fill-color:#1F2340!important;color-scheme:light!important;outline:none!important}
