@@ -1,5 +1,5 @@
-.blockly-host .blocklyBlockCanvas .blocklyDraggable>.blocklyPath{filter:drop-shadow(3px 4px 0 rgba(24,40,100,.30))}
-:root[data-theme="dark"] .blockly-host .blocklyBlockCanvas .blocklyDraggable>.blocklyPath{filter:drop-shadow(3px 4px 0 rgba(0,0,10,.55))}
+.blockly-host .blocklyFlyout .blocklyBlockCanvas .blocklyDraggable>.blocklyPath{filter:drop-shadow(3px 4px 0 rgba(24,40,100,.30))}
+:root[data-theme="dark"] .blockly-host .blocklyFlyout .blocklyBlockCanvas .blocklyDraggable>.blocklyPath{filter:drop-shadow(3px 4px 0 rgba(0,0,10,.55))}
 
 .blockly-host .blocklyBlockCanvas .blocklyDraggable.has-next>.blocklyPath,
 .blockly-host .blocklyBlockCanvas .blocklyDraggable.is-nested>.blocklyPath{filter:none}
@@ -8,8 +8,7 @@
 .blockly-host .blocklyFlyout .blocklyBlockCanvas>.blocklyDraggable>.blocklyPath{transition:filter .18s ease}
 .blockly-host .blocklyFlyout .blocklyBlockCanvas>.blocklyDraggable:hover>.blocklyPath{filter:drop-shadow(4px 7px 0 rgba(24,40,100,.28)) drop-shadow(0 8px 10px rgba(10,15,40,.2))}
 
-.blockly-host .blocklyDragging>.blocklyPath{filter:drop-shadow(0 8px 12px rgba(20,25,60,.22))}
-.blockly-host .blocklyDragging{filter:drop-shadow(4px 8px 0 rgba(24,40,100,.22)) drop-shadow(0 10px 12px rgba(10,15,40,.28))}
+.blockly-host .blocklyDragging,.blockly-host .blocklyDragging>.blocklyPath{filter:none!important}
 .blockly-host .blocklyDragging .blocklyPath{filter:none!important}
 
 .blockly-host .blocklyText,.blockly-host .blocklyEditableField>text,.blockly-host .blocklyNonEditableField>text,.blockly-host .blocklyDropdownText{fill:#1F2340!important}
