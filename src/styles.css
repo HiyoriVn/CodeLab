@@ -213,7 +213,7 @@ dialog{box-shadow:0 24px 60px rgba(10,14,40,.35)}
 body,.code-side,.set,.blockly-host .blocklyToolboxDiv,.ws{transition:background-color .35s ease,color .35s ease,border-color .35s ease}
 .pop{transition:background-color .3s ease}
 
-.blockly-host .blocklyDragging>.blocklyPath{filter:drop-shadow(0 8px 12px rgba(20,25,60,.22))}
+.blockly-host .blocklyDragging,.blockly-host .blocklyDragging>.blocklyPath{filter:none!important}
 
 .console-grip::before{transition:width .2s ease,background-color .2s}
 .console-grip:hover::before,.console-grip:focus-visible::before{width:72px}
@@ -237,15 +237,14 @@ body,.code-side,.set,.blockly-host .blocklyToolboxDiv,.ws{transition:background-
 .zoom-btn:hover{transform:scale(1.07);border-color:var(--bar);box-shadow:0 6px 16px rgba(20,25,60,.18)}
 .zoom-btn:active{transform:scale(.93);box-shadow:none}
 
-.blockly-host .blocklyBlockCanvas .blocklyDraggable>.blocklyPath{filter:drop-shadow(3px 4px 0 rgba(24,40,100,.30))}
-:root[data-theme="dark"] .blockly-host .blocklyBlockCanvas .blocklyDraggable>.blocklyPath{filter:drop-shadow(3px 4px 0 rgba(0,0,10,.55))}
+.blockly-host .blocklyFlyout .blocklyBlockCanvas .blocklyDraggable>.blocklyPath{filter:drop-shadow(3px 4px 0 rgba(24,40,100,.30))}
+:root[data-theme="dark"] .blockly-host .blocklyFlyout .blocklyBlockCanvas .blocklyDraggable>.blocklyPath{filter:drop-shadow(3px 4px 0 rgba(0,0,10,.55))}
 .blockly-host .blocklyBlockCanvas .blocklyDraggable.has-next>.blocklyPath,
 .blockly-host .blocklyBlockCanvas .blocklyDraggable.is-nested>.blocklyPath{filter:none}
 .blockly-host .blocklyFlyout .blocklyBlockCanvas>.blocklyDraggable{cursor:grab}
 .blockly-host .blocklyFlyout .blocklyBlockCanvas>.blocklyDraggable>.blocklyPath{transition:filter .18s ease}
 .blockly-host .blocklyFlyout .blocklyBlockCanvas>.blocklyDraggable:hover>.blocklyPath{filter:drop-shadow(4px 7px 0 rgba(24,40,100,.28)) drop-shadow(0 8px 10px rgba(10,15,40,.2))}
 
-.blockly-host .blocklyDragging{filter:drop-shadow(4px 8px 0 rgba(24,40,100,.22)) drop-shadow(0 10px 12px rgba(10,15,40,.28))}
 .blockly-host .blocklyDragging .blocklyPath{filter:none!important}
 .blockly-host .blocklyText,.blockly-host .blocklyEditableField>text,.blockly-host .blocklyNonEditableField>text,.blockly-host .blocklyDropdownText{fill:#1F2340!important}
 
@@ -262,10 +261,3 @@ body,.code-side,.set,.blockly-host .blocklyToolboxDiv,.ws{transition:background-
 .local-projects strong{display:block;padding:6px 12px;font-size:12px}
 .local-projects .mi{white-space:normal;overflow-wrap:anywhere}
 .local-projects [aria-current="true"]{font-weight:700}
-
-.board-profile-toolbar{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:5px 12px;background:var(--pan);border-bottom:1px solid var(--line)}
-.board-profile-toolbar select{max-width:70vw;height:32px;margin-left:8px}
-.board-profile-toolbar label{font-weight:600;font-size:13px}
-.board-profile-toolbar select:focus-visible{outline:3px solid #4c97ff;outline-offset:2px}
-.beginner-help{padding:12px 16px;border-radius:12px;background:var(--pan);line-height:1.6}
-.beginner-help ul{margin:6px 0;padding-left:20px}
