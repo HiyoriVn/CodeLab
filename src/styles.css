@@ -246,7 +246,9 @@ body,.code-side,.set,.blockly-host .blocklyToolboxDiv,.ws{transition:background-
 .blockly-host .blocklyFlyout .blocklyBlockCanvas>.blocklyDraggable:hover>.blocklyPath{filter:drop-shadow(4px 7px 0 rgba(24,40,100,.28)) drop-shadow(0 8px 10px rgba(10,15,40,.2))}
 
 .blockly-host .blocklyDragging .blocklyPath{filter:none!important}
-.blockly-host .blocklyText,.blockly-host .blocklyEditableField>text,.blockly-host .blocklyNonEditableField>text,.blockly-host .blocklyDropdownText{fill:#1F2340!important}
+.blockly-host .injectionDiv .blocklyText,.blockly-host .injectionDiv .blocklyEditableField>text,.blockly-host .injectionDiv .blocklyNonEditableField>text,.blockly-host .injectionDiv .blocklyDropdownText,.blockly-host .injectionDiv .blocklyText.blocklyDropdownText{fill:#1F2340!important}
+.blockly-host .injectionDiv .blocklyDraggable.math_number:not(.blocklyShadow)>.blocklyPath{fill:#9ECB8E}
+.blockly-host .blocklyBlockCanvas .blocklyDraggable:not(.blocklyShadow)>.blocklyPath{stroke-width:1.25px}
 
 .blockly-host .blocklyToolboxDiv,.blockly-host .blocklyToolboxDiv *,
 .blockly-host .blocklyToolboxCategory,.blockly-host .blocklyToolboxCategoryContainer,

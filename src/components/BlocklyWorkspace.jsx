@@ -7,6 +7,7 @@ import '../blocks/robotics.js';
 import { editorToolbox } from '../blocks/beginner-toolbox.js';
 import '../blocks/beginner.js';
 import '../blocks/controller.js';
+import '../blocks/palette-apply.js';
 import { RENDERER, FALLBACK_RENDERER } from '../blocks/renderer.js';
 import { themes } from '../blocks/theme.js';
 
