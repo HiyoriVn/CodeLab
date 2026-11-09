@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, extname, sep } from 'node:path';
 import { getBoardProfile, DEFAULT_BOARD_ID } from '../src/boards/profiles.js';
 import { randomUUID } from 'node:crypto';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.CODELAB_BRIDGE_PORT || 8787);
@@ -13,6 +13,7 @@ const FQBN = process.env.CODELAB_FQBN || 'esp32:esp32:esp32s3';
 const CLI = process.env.ARDUINO_CLI_PATH || 'arduino-cli';
 const MAX_BODY = 1_000_000;
 const DIST = resolve('dist');
+const FIRMWARE_LIBRARIES = fileURLToPath(new URL('../firmware/libraries', import.meta.url));
 
 
 function run(args, timeout = 180_000) {
@@ -57,8 +58,13 @@ function getPorts(result) {
     const data = JSON.parse(result.output);
     const rows = data.detected_ports || data.ports || [];
     return rows.map((row) => {
-      const address = row.port?.address || row.address;
-      return address ? { address, label: row.port?.label || row.label || address } : null;
+      const { address, label, protocol, properties } = row.port || row;
+      const usbId = (value) => String(value ?? '').replace(/^0x/i, '').toLowerCase();
+      // Native USB Serial/JTAG excludes the Classic D1 USB-to-UART adapter.
+      // This USB ID is shared by several ESP chips and cannot identify the PCB.
+      const fast4wdCompatible = /^COM[1-9]\d*$/i.test(address) && protocol === 'serial' &&
+        usbId(properties?.vid) === '303a' && usbId(properties?.pid) === '1001';
+      return address ? { address, label: label || address, fast4wdCompatible } : null;
     }).filter(Boolean);
   } catch {
     return [];
@@ -100,7 +106,9 @@ const server = createServer(async (req, res) => {
       await mkdir(sketch);
       await mkdir(outputDir);
       await writeFile(join(sketch, 'CodeLabSketch.ino'), payload.code, 'utf8');
-      const result = await execute(['compile', '--fqbn', fqbn, '--output-dir', outputDir, sketch]);
+      const libraries = profile.capabilities.fast4wd ? ['--libraries', FIRMWARE_LIBRARIES] : [];
+      const result = await execute(['compile', '--fqbn', fqbn, '--output-dir', outputDir, ...libraries, sketch],
+        profile.capabilities.fast4wd ? 360_000 : undefined);
       if (!result.ok) {
         await rm(directory, { recursive: true, force: true });
         return send(res, 422, { ok: false, output: result.output, error: result.error });
@@ -121,12 +129,20 @@ const server = createServer(async (req, res) => {
       const build = builds.get(payload.buildId);
       if (!build) return send(res, 410, { error: 'Bản biên dịch đã hết hạn; hãy biên dịch lại.' });
       if ((payload.boardId ?? DEFAULT_BOARD_ID) !== build.boardId || payload.code !== build.code) return send(res, 409, { error: 'Code/board đã đổi. Hãy biên dịch lại trước khi nạp.' });
+      const fast4wd = getBoardProfile(build.boardId).capabilities.fast4wd;
+      if (fast4wd && payload.hardwareConfirmed !== true) {
+        return send(res, 400, { error: 'Xác nhận đúng bo fast100, chân GPIO35–37 không dùng cho bộ nhớ và đã ngắt nguồn motor.' });
+      }
       const list = await execute(['board', 'list', '--format', 'json'], 20_000);
-      const ports = getPorts(list);
-      if (!ports.some((port) => port.address === payload.port)) {
+      if (!list.ok) return send(res, 503, { error: 'Không thể kiểm tra lại cổng trước khi nạp.', detail: list.error });
+      const port = getPorts(list).find((item) => item.address === payload.port);
+      if (!port) {
         return send(res, 400, { error: 'Cổng đã chọn không còn được Arduino CLI nhận diện.' });
       }
-      const result = await execute(['upload', '--fqbn', build.fqbn, '--port', payload.port, '--input-dir', build.outputDir, build.sketch], 240_000);
+      if (fast4wd && !port.fast4wdCompatible) {
+        return send(res, 400, { error: 'Profile 4WD yêu cầu cổng USB gốc (303A:1001) của ESP32-S3, không chọn cổng cầu ESP32 D1.' });
+      }
+      const result = await execute(['upload', '--fqbn', build.fqbn, '--port', port.address, '--input-dir', build.outputDir, build.sketch], 240_000);
       return send(res, result.ok ? 200 : 422, { ok: result.ok, output: result.output, error: result.error });
     }
     if (req.method === 'GET' && !url.pathname.startsWith('/api/')) {
