@@ -1,0 +1,131 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "PS4 điều khiển từng motor",
+    "boardId": "newmania-fast100-4wd",
+    "editorMode": "beginner",
+    "deviceConfigs": {
+      "newmania-fast100-4wd": {
+        "version": 1,
+        "motors": [
+          {
+            "id": "motor-1",
+            "name": "Bánh trước trái",
+            "port": 1,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-2",
+            "name": "Bánh trước phải",
+            "port": 2,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-3",
+            "name": "Bánh sau trái",
+            "port": 3,
+            "reversed": false,
+            "enabled": true
+          },
+          {
+            "id": "motor-4",
+            "name": "Bánh sau phải",
+            "port": 4,
+            "reversed": false,
+            "enabled": true
+          }
+        ],
+        "drivetrain": {
+          "wheels": [],
+          "limit": 25
+        },
+        "controller": {
+          "enabled": true,
+          "blink": true
+        }
+      }
+    },
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "robot_ps4_event",
+            "x": 45,
+            "y": 35,
+            "fields": {
+              "EDGE": "PRESS",
+              "BUTTON": "0"
+            },
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "robot_motor_for",
+                  "fields": {
+                    "MOTOR": "motor-1",
+                    "DIRECTION": "FORWARD",
+                    "WAIT": "NO",
+                    "MS": 500
+                  },
+                  "inputs": {
+                    "POWER": {
+                      "shadow": {
+                        "type": "math_number",
+                        "fields": {
+                          "NUM": 25
+                        }
+                      }
+                    }
+                  },
+                  "next": {
+                    "block": {
+                      "type": "robot_motor_for",
+                      "fields": {
+                        "MOTOR": "motor-2",
+                        "DIRECTION": "FORWARD",
+                        "WAIT": "YES",
+                        "MS": 300
+                      },
+                      "inputs": {
+                        "POWER": {
+                          "shadow": {
+                            "type": "math_number",
+                            "fields": {
+                              "NUM": 20
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "robot_ps4_event",
+            "x": 45,
+            "y": 250,
+            "fields": {
+              "EDGE": "RELEASE",
+              "BUTTON": "0"
+            },
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "robot_motor_stop",
+                  "fields": {
+                    "MOTOR": "motor-1"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

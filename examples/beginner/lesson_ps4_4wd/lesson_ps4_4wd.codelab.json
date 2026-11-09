@@ -1,0 +1,57 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Robot mecanum 4 bánh bằng PS4",
+    "boardId": "newmania-fast100-4wd",
+    "editorMode": "beginner",
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "beginner_start",
+            "id": "fast4wd-start",
+            "x": 45,
+            "y": 35,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "fast4wd_init",
+                  "id": "fast4wd-init",
+                  "next": {
+                    "block": {
+                      "type": "fast4wd_connect",
+                      "id": "fast4wd-connect",
+                      "next": {
+                        "block": {
+                          "type": "fast4wd_speed",
+                          "id": "fast4wd-speed",
+                          "fields": { "PERCENT": 100 },
+                          "next": {
+                            "block": { "type": "fast4wd_led", "id": "fast4wd-led" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "beginner_forever",
+            "id": "fast4wd-loop",
+            "x": 45,
+            "y": 330,
+            "inputs": {
+              "DO": {
+                "block": { "type": "fast4wd_drive", "id": "fast4wd-drive" }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

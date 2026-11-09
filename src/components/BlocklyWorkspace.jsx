@@ -5,6 +5,7 @@ import * as Vietnamese from 'blockly/msg/vi';
 import { generateArduino } from '../generators/arduino.js';
 import '../blocks/robotics.js';
 import { editorToolbox } from '../blocks/beginner-toolbox.js';
+import { refreshRobotMotorLabels } from '../blocks/robot-devices.js';
 import '../blocks/beginner.js';
 import '../blocks/controller.js';
 import { RENDERER, FALLBACK_RENDERER } from '../blocks/renderer.js';
@@ -12,7 +13,7 @@ import { themes } from '../blocks/theme.js';
 
 Blockly.setLocale(Vietnamese);
 
-function BlocklyWorkspace({ boardId, editorMode, initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
+function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
   const hostRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const onCodeChangeRef = useRef(onCodeChange);
@@ -20,6 +21,8 @@ function BlocklyWorkspace({ boardId, editorMode, initialState, dark = false, onC
   const darkRef = useRef(dark);
   const boardIdRef = useRef(boardId);
   boardIdRef.current = boardId;
+  const robotDevicesRef = useRef(robotDevices);
+  robotDevicesRef.current = robotDevices;
   const modeRef = useRef(editorMode);
   modeRef.current = editorMode;
 
@@ -31,7 +34,7 @@ function BlocklyWorkspace({ boardId, editorMode, initialState, dark = false, onC
   useEffect(() => {
     if (!hostRef.current) return undefined;
     const options = {
-      toolbox: editorToolbox(boardIdRef.current, modeRef.current),
+      toolbox: editorToolbox(boardIdRef.current, modeRef.current, robotDevicesRef.current),
       sounds: false,
       trashcan: false,
       move: { scrollbars: true, drag: true, wheel: true },
@@ -48,6 +51,7 @@ function BlocklyWorkspace({ boardId, editorMode, initialState, dark = false, onC
       workspace = Blockly.inject(hostRef.current, { ...options, renderer: FALLBACK_RENDERER });
     }
     workspace.codelabBoardId=boardIdRef.current;
+    workspace.codelabRobotDevices = robotDevicesRef.current;
     if(workspace.getFlyout()) workspace.getFlyout().getWorkspace().codelabBoardId=boardIdRef.current;
     workspaceRef.current = workspace;
 
@@ -72,7 +76,7 @@ function BlocklyWorkspace({ boardId, editorMode, initialState, dark = false, onC
       saveTimer = window.setTimeout(() => {
         if (workspace.isDragging()) return;
         onChangeRef.current(Blockly.serialization.workspaces.save(workspace));
-        onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current));
+        onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current, robotDevicesRef.current));
       }, 250);
     };
     workspace.addChangeListener(save);
@@ -93,7 +97,7 @@ function BlocklyWorkspace({ boardId, editorMode, initialState, dark = false, onC
     };
     workspace.addChangeListener(scheduleTag);
     tagStacks();
-    onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current));
+    onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current, robotDevicesRef.current));
 
     const tagCategories = () => {
       hostRef.current?.querySelectorAll('.blocklyToolboxCategory').forEach((row, index) => {
@@ -124,11 +128,17 @@ function BlocklyWorkspace({ boardId, editorMode, initialState, dark = false, onC
     const workspace=workspaceRef.current;
     if(workspace) {
       workspace.codelabBoardId=boardId;
-      if(workspace.getFlyout()) workspace.getFlyout().getWorkspace().codelabBoardId=boardId;
-      workspace.updateToolbox(editorToolbox(boardId, editorMode));
-      onCodeChangeRef.current?.(generateArduino(workspace, boardId));
+      workspace.codelabRobotDevices = robotDevices;
+      const flyout = workspace.getFlyout()?.getWorkspace();
+      if (flyout) {
+        flyout.codelabBoardId = boardId;
+        flyout.codelabRobotDevices = robotDevices;
+      }
+      workspace.updateToolbox(editorToolbox(boardId, editorMode, robotDevices));
+      refreshRobotMotorLabels(workspace);
+      onCodeChangeRef.current?.(generateArduino(workspace, boardId, robotDevices));
     }
-  }, [boardId, editorMode, workspaceRef]);
+  }, [boardId, editorMode, robotDevices, workspaceRef]);
 
   useEffect(() => {
     darkRef.current = dark;
