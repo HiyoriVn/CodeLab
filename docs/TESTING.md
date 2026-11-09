@@ -1,5 +1,15 @@
 # Testing and verification strategy
 
+## Device Configuration — 2026-11-09
+
+`npm test` đạt 67/67 và `npm run build` thành công. Test host kiểm tra cổng, cấu hình bốn bánh, chiều đảo, PWM từng motor, lệnh hẹn giờ và watchdog/Share trong lúc chờ. Chrome xác nhận đổi tên motor cập nhật nhãn và giữ sau khi tải lại, đồng thời tháo/nối lại trục trong bài mecanum cập nhật C++. Sketch và các header trong demo fast100 gốc giữ nguyên SHA-256. [Thiết kế và nguồn VEX](robotics/DEVICE_CONFIGURATION_DESIGN.md) · [Hướng dẫn và bài mẫu](robotics/PS4_FAST100_4WD.md)
+
+Arduino CLI 1.5.1 và ESP32 core 3.3.7 biên dịch cả hai bài mới qua `/api/compile` của bridge. Bài mecanum tạo binary 347.504 byte, bài motor theo sự kiện tạo binary 347.856 byte. Đối chiếu bài motor trực tiếp bằng CLI cũng cho binary 347.856 byte. Chưa nạp hoặc thử tải trên bo.
+
+## PS4 fast100 4WD Blockly — 2026-11-08
+
+`npm test` 65/65, `npm run build` passed, and the generated lesson compiled through the local bridge using Arduino CLI 1.5.1 and ESP32 core 3.3.7. HTTP upload tests used a simulated CLI. See [4WD verification and hardware requirements](robotics/PS4_FAST100_4WD.md).
+
 ## Issue22 Scratch-first editor — 2026-11-06
 
 `npm test`: **47/47 PASS**, exit0 (8 focused beginner checks plus existing regressions). `npm run build`: **PASS**, exit0. Initial restricted run had localhost EACCES in five HTTP tests; rerun with local execution permission passed, with no source workaround or hardware access. Existing Blockly deprecation and Vite large-chunk warnings remain. Browser smoke verified default Beginner, all three lessons, drag/drop, Advanced toolbox, mode/profile switching, unsupported LED warning and reload preserving blocks/profile/mode. [Usage, fixtures, compile-only command and evidence](SCRATCH_FIRST.md); final compiler results recorded in PROGRESS.

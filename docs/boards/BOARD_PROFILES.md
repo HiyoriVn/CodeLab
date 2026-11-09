@@ -68,3 +68,9 @@ Giữ `codelab.projects.v1`, định dạng `codelab-project` version1 và nguy�
 Compile request thêm `boardId` (thiếu -> Generic). Backend chỉ chấp nhận profile trong registry; không lấy arbitrary FQBN từ request. Successful build lưu FQBN, boardId và source. UI/backend đều từ chối upload khi source/profile không khớp build; upload dùng FQBN đã compile và cổng được người dùng chọn. `/api/upload` cần `confirmed:true`, `code`, `boardId` cùng buildId/port. Đây là bổ sung kiểm tra cho API cũ; client ngoài UI cần gửi các trường này.
 
 Compile không upload. Port luôn mặc định chưa chọn; không tự chọn COM đầu tiên. Lỗi compile/upload hiển thị cả stderr/stdout. Mở Device dialog đóng/unmount Serial Monitor để trả cổng; đóng serial panel cũng ngắt cổng và xóa log panel, cần sao chép log trước khi đóng. Serial I/O và upload thực vẫn HARDWARE_UNTESTED.
+
+## Newmania 4WD fast100 — 2026-11-08
+
+Profile riêng `newmania-fast100-4wd` dùng MCPWM 4 kênh và PS4 I2C 13 byte. Profile dùng flash 16 MB, PSRAM tắt, USB CDC gốc và có xác nhận phần cứng riêng khi nạp. Chỉ sử dụng trên bo fast100 đã xác minh GPIO35–37 rảnh. Xem [cấu hình, kiểm tra PSRAM và hướng dẫn sử dụng](../robotics/PS4_FAST100_4WD.md).
+
+Từ 2026-11-09, **Cấu hình robot** lưu metadata tùy chọn `project.deviceConfigs[boardId]` phiên bản 1 trong tệp project hiện có. V1 N8R2 hiển thị 4 cổng và V2 hiển thị 6 cổng theo sơ đồ; các khối motor mới vẫn chặn sinh firmware trên hai profile này. Chỉ fast100 có runtime MCPWM cho khối cấu hình mới. [Thiết kế, trạng thái và bài mẫu](../robotics/DEVICE_CONFIGURATION_DESIGN.md)
