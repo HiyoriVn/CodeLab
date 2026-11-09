@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly';
 import { getBoardProfile, DEFAULT_BOARD_ID, validatePin } from '../boards/profiles.js';
 import { startupCode } from '../boards/startup.js';
+import { fast4wdConfig, fast4wdConstructor, registerFast4wdBlocks } from './fast4wd.js';
 
 const ATOMIC = 0;
 
@@ -198,9 +199,11 @@ function initializeVariables(generator, workspace) {
 }
 
 class ArduinoGenerator extends Blockly.CodeGenerator {
-  constructor(profile) {
+  constructor(profile, fast4wd) {
     super('Arduino');
     this.profile_ = profile;
+    this.fast4wd_ = fast4wd;
+    if (fast4wd) this.addReservedWords('robot4wd,codelabRobotBlocks');
     this.ORDER_ATOMIC = ATOMIC;
     this.addReservedWords('codelabRandom,codelabClamp,codelabRepeatCount,codelabModulo,setup,loop,Serial,boolean,bool,char,int,long,float,double,void,const,if,else,for,while,break,continue,return,true,false');
   }
@@ -220,6 +223,13 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     if (simulations.length > 1) this.diagnostics_.add('Chỉ dùng một khối Mô phỏng PS4 để tránh dữ liệu chồng nhau.');
     if (this.beginnerSimulation_) this.addReservedWords('lessonConnected,lessonLX,lessonCross');
     this.loopPreamble_ = '';
+    if (this.fast4wd_) {
+      const { blink } = this.fast4wd_;
+      this.includes_.fast4wd = '#include <CodeLabFast4wd.h>';
+      this.definitions_.fast4wd = `static codelab::fast4wd::Robot robot4wd(${fast4wdConstructor(this.fast4wd_)});`;
+      this.setupStatements_.set('fast4wd', `robot4wd.begin(${blink});`);
+      this.loopPreamble_ = 'robot4wd.beginLoop();';
+    }
     this.controllerRequested_ = false;
     this.controllerConfigured_ = false;
     this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
@@ -239,6 +249,7 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     const startup = startupCode(this.profile_);
     const definitions = [startup.definitions, ...Object.values(this.definitions_ || {})].filter(Boolean).join('\n');
     const includes = [...new Set(['#include <Arduino.h>', ...startup.includes, ...Object.values(this.includes_ || {})])].join('\n');
+    const configuredRobot = Boolean(this.fast4wd_?.devices);
     return [
       includes,
       definitions,
@@ -249,9 +260,11 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
       ...this.beginnerStartup_,
       '}',
       '',
+      ...(configuredRobot ? ['static void codelabRobotBlocks() {', code.trimEnd(), '}', ''] : []),
       'void loop() {',
       this.loopPreamble_ ? '  ' + this.loopPreamble_ : '',
-      code.trimEnd(),
+      configuredRobot ? '  codelabRobotBlocks();' : code.trimEnd(),
+      ...(this.fast4wd_ ? ['  robot4wd.endLoop();'] : []),
       '}',
       '',
     ].filter((line, index, lines) => line !== '' || (index > 0 && lines[index - 1] !== '')).join('\n');
@@ -737,9 +750,13 @@ function registerBlocks(generator) {
   );
 }
 
-export function generateArduino(workspace, boardId = DEFAULT_BOARD_ID) {
-  const generator = new ArduinoGenerator(getBoardProfile(boardId));
+export function generateArduino(workspace, boardId = DEFAULT_BOARD_ID, devices) {
+  const profile = getBoardProfile(boardId);
+  const fast4wd = fast4wdConfig(workspace, profile, devices);
+  if (fast4wd?.warnings.length) return { code: '', warnings: fast4wd.warnings, boardId };
+  const generator = new ArduinoGenerator(profile, fast4wd);
   registerBlocks(generator);
+  if (fast4wd) registerFast4wdBlocks(generator);
 
   const unsupported = new Set();
   for (const block of workspace.getAllBlocks(false)) {

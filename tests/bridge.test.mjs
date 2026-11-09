@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createBridge } from '../tools/arduino-bridge.mjs';
-import { getBoardProfile } from '../src/boards/profiles.js';
+import { FAST4WD_BOARD_ID, getBoardProfile } from '../src/boards/profiles.js';
 import { writeFile, rm } from 'node:fs/promises';
 const v1=getBoardProfile('newmania-starter-v1');
 
@@ -22,7 +22,11 @@ async function withServer(action,{compileFail=false,installed='3.3.7'}={}) {
   const server=createBridge({execute:async args=>{
     calls.push(args);
     if(args[0]==='core') return {ok:true,output:JSON.stringify({platforms:[{id:'esp32:esp32',installed_version:installed}]}),error:''};
-    if(args[0]==='board') return {ok:true,output:JSON.stringify({detected_ports:[{port:{address:'MOCK_PORT',label:'Mock only'}}]}),error:''};
+    if(args[0]==='board') return {ok:true,output:JSON.stringify({detected_ports:[
+      {port:{address:'MOCK_PORT',label:'Mock only'}},
+      {port:{address:'COM4',protocol:'serial',properties:{vid:'0x303A',pid:'0x1001'}}},
+      {port:{address:'COM8',protocol:'serial',properties:{vid:'10C4',pid:'EA60'}}},
+    ]}),error:''};
     if(args[0]==='compile') {if(!compileFail) await writeFile(args[4]+'/CodeLabSketch.ino.bin','mock binary'); dirs.push(args.at(-1).replace(/[\\/]CodeLabSketch$/,''));return {ok:!compileFail,output:compileFail?'compiler detail':'compiled by test double',error:compileFail?'test error':''};}
     return {ok:true,output:'mock '+args[0],error:''};
   }});
@@ -71,4 +75,26 @@ test('legacy compile without boardId still selects generic',async()=>{
   assert.equal(r.status,200);assert.equal(r.body.boardId,'generic-esp32-s3');
   assert.equal(calls.find(a=>a[0]==='compile')[2],process.env.CODELAB_FQBN||'esp32:esp32:esp32s3');
  });
+});
+test('fast4wd uses repository libraries and refuses D1 or unconfirmed hardware before upload', async () => {
+  await withServer(async (post, calls) => {
+    const board = getBoardProfile(FAST4WD_BOARD_ID);
+    const code = '#include <CodeLabFast4wd.h>\nvoid setup() {} void loop() {}';
+    const result = await post('/api/compile', { code, boardId: board.id, libraries: ['untrusted-browser-path'] });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.fqbn, board.build.fqbn);
+    const compile = calls.find(args => args[0] === 'compile');
+    assert.equal(compile[5], '--libraries');
+    assert.match(compile[6], /firmware[\\/]libraries[\\/]?$/);
+    assert.ok(!compile.includes('untrusted-browser-path'));
+    const upload = { code, boardId: board.id, buildId: result.body.buildId, port: 'COM4', confirmed: true, hardwareConfirmed: true };
+    for (const fields of [{ confirmed: false }, { hardwareConfirmed: false }, { port: 'COM8' }, { port: 'COM12' }]) {
+      assert.equal((await post('/api/upload', { ...upload, ...fields })).status, 400);
+    }
+    assert.equal((await post('/api/upload', { ...upload, boardId: v1.id })).status, 409);
+    assert.ok(!calls.some(args => args[0] === 'upload'));
+    assert.equal((await post('/api/upload', upload)).status, 200);
+    assert.deepEqual(calls.find(args => args[0] === 'upload').slice(0, 5),
+      ['upload', '--fqbn', board.build.fqbn, '--port', 'COM4']);
+  });
 });

@@ -1,13 +1,29 @@
 import { getBoardProfile, DEFAULT_BOARD_ID } from '../boards/profiles.js';
 import { roboticsToolbox } from './robotics-toolbox.js';
+import { fast4wdToolbox } from './fast4wd.js';
+import { robotDeviceToolbox } from './robot-devices.js';
 
 // Missing metadata is a legacy project, which retains the advanced toolbox.
 export const projectEditorMode = project => project?.editorMode === 'beginner' ? 'beginner' : 'advanced';
 const block = (type, extra = {}) => ({kind:'block',type,...extra});
 const category = (name, colour, contents) => ({kind:'category',name,colour,contents});
 const shadow = (type, fields) => ({shadow:{type,fields}});
-export function editorToolbox(boardId, mode = 'beginner') {
+export function editorToolbox(boardId, mode = 'beginner', devices) {
   const p = getBoardProfile(boardId);
+  if (p.capabilities.fast4wd) return {
+    kind: 'categoryToolbox',
+    contents: [
+      category('Bắt đầu & Điều khiển', '#e79b23', [
+        ...(devices ? [] : [block('beginner_start')]), block('beginner_forever'), block('controls_if'),
+      ]),
+      category('Logic', '#5c81a6', ['logic_boolean','logic_negate','logic_operation','logic_compare','math_number'].map(type => block(type))),
+      devices ? { ...fast4wdToolbox, contents: fast4wdToolbox.contents.filter(({ type }) =>
+        type === 'fast4wd_connected' || type === 'fast4wd_stop' ||
+        (devices.drivetrain.wheels.length && ['fast4wd_drive','fast4wd_forward','fast4wd_strafe','fast4wd_turn'].includes(type))) }
+        : fast4wdToolbox,
+      ...robotDeviceToolbox(devices, p),
+    ],
+  };
   const advanced = mode === 'advanced';
   const num = n => shadow('math_number',{NUM:n});
   const controls = [block('beginner_start'),block('beginner_forever'),block('beginner_wait'),
@@ -32,6 +48,7 @@ export function editorToolbox(boardId, mode = 'beginner') {
     category('Hiển thị','#9664d6',display),
     category('Cảm biến','#45a4ad',[block('beginner_serial_ready')]),
     category('Tay cầm PS4 (mô phỏng)','#cf5b9b',ps4),
+    ...robotDeviceToolbox(devices, p),
   ];
   if(advanced) {
     const rawPs4=[];
