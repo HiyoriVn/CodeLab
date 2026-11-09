@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
-import { BOARD_PROFILES, DEFAULT_BOARD_ID, projectBoardId } from './boards/profiles.js';
+import { BOARD_PROFILES, DEFAULT_BOARD_ID, getBoardProfile, projectBoardId } from './boards/profiles.js';
+import { validateProjectDeviceConfigs } from './boards/robot-devices.js';
+import { robotBlocks } from './blocks/robot-devices.js';
 import { projectEditorMode } from './blocks/beginner-toolbox.js';
 import blinkLesson from '../examples/beginner/lesson_blink/lesson_blink.codelab.json';
 import messageLesson from '../examples/beginner/lesson_message/lesson_message.codelab.json';
 import counterLesson from '../examples/beginner/lesson_counter/lesson_counter.codelab.json';
 import randomLesson from '../examples/beginner/lesson_random/lesson_random.codelab.json';
 import ps4Lesson from '../examples/beginner/lesson_ps4_simulation/lesson_ps4_simulation.codelab.json';
+import fast4wdLesson from '../examples/beginner/lesson_ps4_4wd/lesson_ps4_4wd.codelab.json';
+import mecanumLesson from '../examples/beginner/lesson_robot_mecanum/lesson_robot_mecanum.codelab.json';
+import motorEventsLesson from '../examples/beginner/lesson_robot_motor_events/lesson_robot_motor_events.codelab.json';
+import { generateArduino } from './generators/arduino.js';
 import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
 import CodePreview from './components/CodePreview.jsx';
 import DevicePanel from './components/DevicePanel.jsx';
+import RobotDeviceConfig from './components/RobotDeviceConfig.jsx';
 import SerialMonitor from './components/SerialMonitor.jsx';
 import TopBar from './ui/TopBar.jsx';
 import Modal from './ui/Modal.jsx';
@@ -21,8 +28,8 @@ const LEGACY_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-project';
 const FILE_VERSION = 1;
 const emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } };
-function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = DEFAULT_BOARD_ID, editorMode = 'beginner') {
-  return { id: crypto.randomUUID(), name, workspace, boardId, editorMode, updatedAt: new Date().toISOString() };
+function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = DEFAULT_BOARD_ID, editorMode = 'beginner', deviceConfigs) {
+  return { id: crypto.randomUUID(), name, workspace, boardId, editorMode, deviceConfigs, updatedAt: new Date().toISOString() };
 }
 function readProjects() {
   try {
@@ -53,9 +60,16 @@ function App() {
   const project = projectStore.projects.find((item) => item.id === projectStore.activeId) || projectStore.projects[0];
 
   const boardId = projectBoardId(project);
+  const board = getBoardProfile(boardId);
+  const robotDevices = project.deviceConfigs?.[boardId];
   const editorMode = projectEditorMode(project);
   const changeMode = (event) => persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id ? {...item, editorMode: event.target.value} : item) });
   const changeBoard = (event) => persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id ? {...item, boardId: event.target.value} : item) });
+  const saveRobotDevices = devices => {
+    persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id
+      ? { ...item, deviceConfigs: { ...item.deviceConfigs, [boardId]: devices } } : item) });
+    setDialog(null);
+  };
 
   const showToast = useCallback((message) => {
     setToast(message);
@@ -100,11 +114,15 @@ function App() {
     setDialog(null); showToast('Đã tạo dự án mới');
   };
   const openLesson = (event) => {
-    const lesson = {blink:blinkLesson,message:messageLesson,ps4:ps4Lesson,counter:counterLesson,random:randomLesson}[event.target.value]?.project;
+    const lesson = {
+      blink: blinkLesson, message: messageLesson, ps4: ps4Lesson, counter: counterLesson, random: randomLesson,
+      fast4wd: fast4wdLesson, mecanum: mecanumLesson, motorEvents: motorEventsLesson,
+      mecanumTemplate: { project: { ...mecanumLesson.project, name: 'Mẫu cấu hình mecanum', workspace: emptyWorkspace } },
+    }[event.target.value]?.project;
     if (!lesson) return;
-    const nextProject = makeProject(lesson.name, lesson.workspace, lesson.boardId, 'beginner');
+    const nextProject = makeProject(lesson.name, lesson.workspace, lesson.boardId, 'beginner', lesson.deviceConfigs);
     persist({activeId:nextProject.id,projects:[...snapshotProjects(),nextProject]});
-    showToast('Đã mở bài mẫu trên profile Newmania OPI; chưa nạp lên mạch.');
+    showToast('Đã mở bài mẫu · ' + getBoardProfile(lesson.boardId).name);
   };
   const renameProject = (event) => {
     const name = event.target.value;
@@ -112,7 +130,7 @@ function App() {
   };
   const saveProjectFile = () => {
     const state = workspaceRef.current ? Blockly.serialization.workspaces.save(workspaceRef.current) : project.workspace;
-    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state, boardId, editorMode } };
+    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state, boardId, editorMode, deviceConfigs: project.deviceConfigs } };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url; link.download = `${project.name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'codelab-project'}.codelab.json`; link.click(); URL.revokeObjectURL(url);
     showToast('Đã tải tệp dự án xuống');
@@ -124,6 +142,7 @@ function App() {
       const payload = JSON.parse(await file.text());
       const content = payload.format === FILE_TYPE && payload.version === FILE_VERSION ? payload.project : payload.format === 'codelab-workspace' && payload.version === 1 ? { name: file.name.replace(/\.codelab\.json$|\.json$/i, ''), workspace: payload.workspace } : null;
       if (!content?.workspace) throw new Error('Tệp không đúng định dạng hoặc phiên bản chưa được hỗ trợ.');
+      validateProjectDeviceConfigs(content.deviceConfigs);
       // Validate in isolation before replacing the visible workspace or saved projects.
       const validationWorkspace = new Blockly.Workspace();
       try {
@@ -131,14 +150,19 @@ function App() {
       } finally {
         validationWorkspace.dispose();
       }
-      const imported = makeProject(content.name || file.name, content.workspace, projectBoardId(content), projectEditorMode(content));
+      const imported = makeProject(content.name || file.name, content.workspace, projectBoardId(content), projectEditorMode(content), content.deviceConfigs);
       persist({ activeId: imported.id, projects: [...snapshotProjects(), imported] });
       showToast(`Đã mở ${file.name}`);
     } catch (error) { window.alert(error.message || 'Không thể mở dự án.'); }
   };
   const closeDialog = useCallback(() => setDialog(null), []);
 
-  const openDevice = () => { setTerminalOpen(false); setCodeOpen(false); setDialog('connect'); };
+  const openDevice = () => {
+    if (workspaceRef.current) handleCodeChange(generateArduino(workspaceRef.current, boardId, robotDevices));
+    setTerminalOpen(false);
+    setCodeOpen(false);
+    setDialog('connect');
+  };
   const toggleTerminal = () => {
     const next = !terminalOpen;
     setTerminalOpen(next);
@@ -179,10 +203,26 @@ function App() {
         onLanguage={() => showToast('Chưa có bản dịch, hiện chỉ có Tiếng Việt')}
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
-      <div className="board-profile-toolbar"><label>Chế độ <select aria-label="Chế độ lập trình" value={editorMode} onChange={changeMode}><option value="beginner">Cơ bản</option><option value="advanced">Nâng cao</option></select></label><label>Board <select aria-label="Board profile" value={boardId} onChange={changeBoard}>{BOARD_PROFILES.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}</select></label><label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}><option value="">Chọn bài (Newmania OPI)…</option><option value="blink">Đèn nhấp nháy</option><option value="message">Lời nhắn &amp; tín hiệu</option><option value="ps4">PS4 mô phỏng</option><option value="counter">Vòng lặp đếm số</option><option value="random">Điều kiện và số ngẫu nhiên</option></select></label><small>Chưa nạp chương trình lên mạch</small></div>
+      <div className="board-profile-toolbar">
+        <label>Chế độ <select aria-label="Chế độ lập trình" value={editorMode} onChange={changeMode}><option value="beginner">Cơ bản</option><option value="advanced">Nâng cao</option></select></label>
+        <label>Board <select aria-label="Board profile" value={boardId} onChange={changeBoard}>{BOARD_PROFILES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <button type="button" className="button button-quiet" onClick={() => setDialog('robot-config')}>Cấu hình robot</button>
+        <label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}>
+          <option value="">Chọn bài mẫu…</option>
+          <option value="blink">Đèn nhấp nháy</option>
+          <option value="message">Lời nhắn &amp; tín hiệu</option>
+          <option value="ps4">PS4 mô phỏng</option>
+          <option value="counter">Vòng lặp đếm số</option>
+          <option value="random">Điều kiện và số ngẫu nhiên</option>
+          <option value="fast4wd">Robot mecanum 4 bánh bằng PS4</option>
+          <option value="mecanum">Tự lập trình mecanum bằng PS4</option>
+          <option value="motorEvents">PS4 điều khiển từng motor</option>
+          <option value="mecanumTemplate">Mẫu cấu hình mecanum</option>
+        </select></label>
+      </div>
       <div className="main">
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
-          <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode={editorMode} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
+          <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode={editorMode} robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
           <ZoomControls workspaceRef={workspaceRef} />
           <div className="workspace-status"><span><i className="status-dot" />Sẵn sàng chỉnh sửa</span><span>{blockCount} khối đang dùng</span></div>
         </div>
@@ -206,11 +246,17 @@ function App() {
           <li>Thả khối gần đáy khối khác để nối thành chuỗi.</li>
           <li>Bấm nút code để xem code text.</li>
         </ol>
+        <details><summary>Help các khối cấu hình robot</summary>
+          <dl>{robotBlocks.map(({ type, title, tooltip }) => <div key={type}><dt><strong>{title}</strong></dt><dd>{tooltip}</dd></div>)}</dl>
+        </details>
         <button className="btn p" onClick={closeDialog}>Đã hiểu</button>
+      </Modal>
+      <Modal open={dialog === 'robot-config'} onClose={closeDialog} title="Cấu hình robot">
+        <RobotDeviceConfig key={project.id + boardId} board={board} devices={robotDevices} onSave={saveRobotDevices} />
       </Modal>
       <Modal open={dialog === 'connect'} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
-        <DevicePanel key={project.id} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={generatedCode.warnings} />
+        <DevicePanel key={project.id + boardId} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={generatedCode.warnings} onOpenSerial={toggleTerminal} />
         <div className="dialog-actions"><button className="btn" onClick={closeDialog}>Đóng</button></div>
       </Modal>
       <div className={`toast ${toast ? 'on' : ''}`} role="status">{toast}</div>
