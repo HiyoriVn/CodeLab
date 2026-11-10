@@ -11,6 +11,7 @@ const HOST = '127.0.0.1';
 const PORT = Number(process.env.CODELAB_BRIDGE_PORT || 8787);
 const FQBN = process.env.CODELAB_FQBN || 'esp32:esp32:esp32s3';
 const CLI = process.env.ARDUINO_CLI_PATH || 'arduino-cli';
+const CLI_CONFIG = process.env.ARDUINO_CONFIG_FILE;
 const MAX_BODY = 1_000_000;
 const DIST = resolve('dist');
 const FIRMWARE_LIBRARIES = fileURLToPath(new URL('../firmware/libraries', import.meta.url));
@@ -18,7 +19,7 @@ const FIRMWARE_LIBRARIES = fileURLToPath(new URL('../firmware/libraries', import
 
 function run(args, timeout = 180_000) {
   return new Promise((resolveRun) => {
-    const child = spawn(CLI, args, { windowsHide: true, shell: false });
+    const child = spawn(CLI, CLI_CONFIG ? ['--config-file', CLI_CONFIG, ...args] : args, { windowsHide: true, shell: false });
     let output = '';
     let error = '';
     let settled = false;
