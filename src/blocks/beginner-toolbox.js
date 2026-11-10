@@ -15,9 +15,9 @@ export function editorToolbox(boardId, mode = 'beginner', devices) {
     kind: 'categoryToolbox',
     contents: [
       category('Bắt đầu & Điều khiển', '#e79b23', [
-        ...(devices ? [] : [block('beginner_start')]), block('beginner_forever'), block('beginner_wait'), block('controls_if'),
+        ...(devices ? [] : [block('beginner_start')]), block('beginner_forever'), block('controls_if'),
       ]),
-      category('PS4', '#cf5b9b', ['fast4wd_button_pressed','fast4wd_button_released','fast4wd_connected','fast4wd_axis'].map(type=>block(type))),
+      category('PS4', '#cf5b9b', ['robot_ps4_event','robot_ps4_button','robot_ps4_axis','fast4wd_connected'].map(type=>block(type))),
       category('Logic', '#5c81a6', ['logic_boolean','logic_negate','logic_operation','logic_compare','math_number'].map(type => block(type))),
       devices ? { ...fast4wdToolbox, contents: fast4wdToolbox.contents.filter(({ type }) =>
         type === 'fast4wd_connected' || type === 'fast4wd_stop' ||
@@ -28,7 +28,7 @@ export function editorToolbox(boardId, mode = 'beginner', devices) {
   };
   const advanced = mode === 'advanced';
   const num = n => shadow('math_number',{NUM:n});
-  const controls = [block('beginner_start'),block('beginner_forever'),block('beginner_wait'),
+  const controls = [block('beginner_start'),block('beginner_forever'),
     block('controls_if'),block('controls_if',{extraState:{hasElse:true}}),
     block('controls_repeat_ext',{inputs:{TIMES:num(5)}}),
     block('controls_whileUntil',{fields:{MODE:'UNTIL'},inputs:{BOOL:shadow('logic_boolean',{BOOL:'FALSE'})}})];
