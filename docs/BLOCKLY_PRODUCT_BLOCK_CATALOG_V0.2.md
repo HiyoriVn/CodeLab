@@ -1,42 +1,36 @@
 # CodeLab — Blockly Product Specification V0.2 (BẢN DUYỆT)
 
-> **Status:** DESIGN REVIEW / CHƯA TRIỂN KHAI. 10/11/2026.  
+> **Status:** DESIGN REVIEW / CHƯA TRIỂN KHAI. 10/11/2026, chỉnh theo phản hồi trước G0.  
 > **Baseline:** CodeLab <code>main</code> @ <code>2a0705d4</code>; V0.1 tại <code>docs/BLOCKLY_PRODUCT_BLOCK_CATALOG_V0.1.md</code>.  
 > **Scope:** đặc tả trải nghiệm kéo thả + hợp đồng generator/runtime/thiết bị cho sản phẩm cuối. **Không phải** xác nhận các API đã được lập trình, biên dịch hay kiểm thử phần cứng.
 >
 > **Chủ đích:** học sinh có thể tạo bài đơn motor, PS4, 4WD và sau này thêm cảm biến mà không phải biết GPIO/FreeRTOS. Không cài runtime trung gian; kế hoạch WebAssembly nạp qua web được tách ở Issue #27, chưa triển khai.
 
-**Ưu tiên đọc để duyệt:** §1 (các quyết định), §2 (RUN/FAULT), §3 (scheduler), §5 (Basic 30 block), §6 (schema C++), §8 (bài mẫu/test). Sau khi duyệt mới triển khai theo Issue #28.
+**Ưu tiên đọc để duyệt:** §1 (các quyết định), §2 (RUN/FAULT), §3 (scheduler), §5 (Basic 30 block), §6 (schema C++), §8 (bài mẫu), §9 (test và ngưỡng G1). Sau khi duyệt mới triển khai theo Issue #28.
 
 ## 1. Quyết định nền tảng và những thay đổi so với V0.1
 
 | Vấn đề | Quyết định V0.2 | Ý nghĩa / giới hạn |
 |---|---|---|
-| Bắt đầu sau cấp nguồn | <code>INIT → READY</code>, motor PWM=0; **không tự RUN** | Board rút USB vẫn dùng được khi có START vật lý hợp lệ; BOOT GPIO0 chưa được chọn |
-| Chế độ PS4/auto | Generator suy ra <code>requiresController</code> từ block PS4 khả dụng; cấu hình dự án cũng lưu <code>runMode=CONTROLLER/AUTONOMOUS</code> để kiểm tra tính nhất quán | Controller-required mất freshness thì FAULT; auto thuần không phụ thuộc PS4 |
-| Khởi tạo thiết bị | Devices tự khai báo và khởi tạo trong runtime an toàn; block khởi tạo thủ công chỉ Advanced | Không yêu cầu học sinh kéo "khởi tạo M1" và "kết nối PS4" |
-| ARM/DISARM | Lệnh hệ thống, **không phải block Basic**; Options/Share dành riêng | Basic có "Robot đang chạy?" và "Dừng chương trình" nếu thực sự cần; STOP web không được tự xưng E-stop phần cứng |
-| Sau STOP | RUN → READY, hủy script/timer, reset biến trước lần RUN kế; **không resume** | FAULT cần clear riêng; clear không đồng nghĩa START |
-| Motor sau handler | **Latched command:** lệnh motor còn hiệu lực sau khi handler kết thúc, đến khi bị thay hoặc STOP/FAULT/end chương trình | Handler kết thúc ≠ chương trình kết thúc; program RUN được giữ sống khi chờ sự kiện |
-| Các script | Mỗi script gồm **một hat và các block con**; các vòng lặp nằm *trong* script; không tạo task FreeRTOS riêng theo hat | Backward compatibility v1 là opt-in migration (§7) |
-| Sự kiện PS4 | Chốt cạnh ở tầng adapter; sự kiện hệ thống có ưu tiên cao, không vào queue học sinh | Event theo nút có pending tối đa 1, không mất vì block <code>Đợi</code> |
-| <code>Đợi</code> | Nhường **script**, không block scheduler; có thể hủy khi STOP/FAULT; cuối mỗi vòng lặp phải yield | Generator mới cần resumable state-machine hoặc bounded coroutine; chưa chọn công cụ cuối cùng |
-| Nhiều script ghi motor | Basic dùng **last accepted write wins**, có cảnh báo tĩnh; lệnh STOP/FAULT luôn ưu tiên | Timer cũ không được dừng lệnh mới: cần token/generation cho mỗi lệnh |
-| Dấu và đơn vị | Học sinh: +tiến, +phải, +xoay-phải; facade chuyển một lần sang mixer nội bộ | C++ preview hiển thị lệnh theo hệ học sinh + chú giải mixer; giữ nguyên MecanumMixer hiện có |
-| Chuyển động theo thời gian/vị trí | Giữ 3 loại độc lập: liên tục, có thời hạn/điều kiện, theo cảm biến | Không âm thầm lấy thời gian giả làm cm hay độ |
-| Cảm biến | Chỉ hiện trong Basic khi Devices khai báo và **backend/driver đã hỗ trợ** | Sensor chưa nghiệm thu không xuất hiện như block "đã dùng được" |
-| My Blocks chứa <code>Đợi</code> | **P0/P1: không cho yield trong hàm tự tạo**; báo validation rõ. Hỗ trợ resumable call stack ở P2 nếu thực sự cần | Tránh thiết kế call stack resumable quá sớm |
-| Tương thích dự án | V1 giữ nguyên ID/schema/Arduino legacy; V2 dùng block type mới khi ngữ nghĩa thay đổi | Không silently đổi <code>beginner_start</code> từ setup sang RUN |
-
-**V0.2 là thiết kế mục tiêu**, không được suy ra motor/servo đã có quyền phát PWM chỉ từ tài liệu.
+| Bắt đầu sau cấp nguồn | <code>INIT → READY</code>, PWM=0, cần START có chủ đích | AUTO chấp nhận nút vật lý đã xác minh hoặc Options tạm thời nếu đạt điều kiện §2.3 |
+| Phụ thuộc PS4 | Generator suy ra <code>requiresController</code> từ mã có thể thực thi. <code>runMode=CONTROLLER</code> luôn cần link; <code>AUTONOMOUS</code> từ chối block phụ thuộc PS4 | Dùng PS4 làm START không tạo dependency sau khi vào RUN |
+| Khởi tạo thiết bị | Devices khai báo và runtime khởi tạo ở trạng thái an toàn | Block khởi tạo thủ công chỉ Advanced |
+| ARM/DISARM | Options/Share là lệnh hệ thống. START lại chạy từ đầu; CLEAR riêng | STOP web là lệnh phần mềm; ngắt nguồn động lực xử lý tình huống CPU treo |
+| Vòng đời chuyển động | Lệnh liên tục giữ sau khi handler kết thúc. AUTO có kết thúc tự nhiên và giới hạn cứng; timed motion sống theo handle riêng | CONTROLLER chờ sự kiện cho đến STOP/FAULT; xem §3.4 |
+| Sự kiện PS4 | Một pending mới nhất cho mỗi hat; dispatch cần cạnh còn hiệu lực | Thả X hủy pending PRESS cũ, kể cả nhấn–thả nhanh trong khi handler đang đợi |
+| Scheduler | Một scheduler cooperative. Mỗi hat có một script; wait và cuối vòng lặp nhường quyền | G1 thử state-machine, bao gồm inline My Blocks có wait |
+| Nhiều script ghi motor | Lệnh hợp lệ sau cùng chiếm quyền. Chỉ cảnh báo xung đột lệnh có thể làm motor chạy | Lệnh dừng vẫn lấy quyền và hủy timer cũ |
+| Dấu và đơn vị | +tiến, +phải, +xoay-phải; facade chuyển một lần sang mixer | PS4 chuẩn hóa đầu vào riêng; giữ mixer hiện có |
+| Cảm biến | Devices chỉ hiện block khi có thiết bị và driver đã nghiệm thu | Chuyển động cm/độ tách riêng với chuyển động theo thời gian |
+| Type và tương thích | Type riêng <code>codelab_v2_&lt;snake_case&gt;</code> cho mọi block CodeLab mới hoặc có đổi hành vi/schema | Giữ type Blockly chuẩn khi hành vi và dữ liệu lưu giữ nguyên. Legacy và bản chuyển đổi opt-in theo §7.1 |
 
 ### 1.1. Enum và ký hiệu không trùng nhau
 
 - <code>kind</code>: <code>HAT</code> (hat/sự kiện), <code>STMT</code> (lệnh), <code>CONTROL</code> (khối chứa lệnh), <code>BOOL</code>, <code>NUMBER</code>, <code>TEXT</code>, <code>CONFIG</code> (Devices, không phải block).
 - <code>status</code>: <code>EXISTS</code> (main đã có một dạng block và generator, **chưa** đảm bảo ngữ nghĩa V0.2), <code>SIM_ONLY</code>, <code>GATED</code> (hiện chặn compile), <code>NEW</code>, <code>HW_VERIFY</code>.
 - <code>stage</code>: <code>S0</code> = scheduler không tải; <code>S1</code> = 1 motor + PS4; <code>S2</code> = 4WD; <code>S3</code> = sensor/advanced; không đồng nhất với P0/P1/P2 của inventory V0.1.
-- <code>blocking</code> = có đợi điều kiện/chuyển động không; <code>interruptible</code> = có hủy được khi STOP/FAULT không. Mọi block Basic **phải interruptible**; lệnh I/O đồng bộ phải có timeout hữu hạn.
-- <code>resources</code> = <code>MOTOR(M1)</code>, <code>DRIVE(M1..M4)</code>, <code>PS4(I2C)</code>, <code>LED(pin)</code>, <code>BUZZER</code>, <code>SENSOR(id)</code>, <code>SERIAL</code>, <code>NONE</code>. Khóa tài nguyên được tổng hợp theo Devices; cần kiểm tra xung đột và reserved pins trước compile.
+- <code>blocking</code> = có đợi điều kiện/chuyển động không; <code>interruptible</code> = có hủy được khi STOP/FAULT không. Mọi block Basic **phải interruptible**; I/O đồng bộ phải nằm ngoài đường dispatch hoặc có cận đã kiểm chứng trong budget §9.2.
+- <code>resources</code> = <code>MOTOR(M1)</code>, <code>DRIVE(M1..M4)</code>, <code>PS4(I2C)</code>, <code>ALL_MOTORS</code>, <code>LED(id)</code>, <code>BUZZER</code>, <code>SENSOR(id)</code>, <code>SERIAL</code>, <code>NONE</code>. Khóa tài nguyên được tổng hợp theo Devices; cần kiểm tra xung đột và reserved pins trước compile.
 - <code>i18n</code> là **khóa hiển thị**, không đổi Blockly <code>type</code> khi dịch hoặc thay nhãn.
 
 ## 2. Lifecycle & Safety Contract (trạng thái thực thi)
@@ -56,73 +50,63 @@
 
 | Từ → Đến | Trigger / điều kiện | Tác động bắt buộc |
 |---|---|---|
-| Power-on → INIT | Reset/cấp nguồn | Set output safe sớm nhất có thể; không chạy Blockly |
-| INIT → READY | Profile valid, safe startup và tài nguyên đã xác nhận; chưa bật motor | PWM=0; bật hiệu ứng ready nếu có |
-| INIT → FAULT | Invalid pin/driver/power/profile không an toàn | Motor=0; lỗi được chốt |
-| READY → RUN (CONTROLLER) | PS4 connected+fresh; tất cả trục neutral; **Options giữ đủ 1 giây** rồi nhả/được xác nhận; driver ready; không bị Share | Khởi tạo lại biến/script về trạng thái ban đầu, chạy hat <code>Khi bắt đầu</code>; không phát motor trong chính transition |
-| READY → RUN (AUTO) | **Cử chỉ/nút START vật lý đã xác minh** + vùng an toàn + xác nhận có chủ đích; driver ready; optional countdown có thông báo | Như trên; **chưa có nút vật lý được xác minh thì chặn AUTO_RUN trên phần cứng** |
-| RUN → READY | Share, nút STOP cục bộ hợp lệ hoặc explicit stopProgram, không phải lỗi | Ưu tiên ngắt; 0 PWM; cancel timed/latched commands, scripts, pending; reset biến ở lần start sau |
-| RUN → FAULT | Controller-required mất report/timeout, scheduler heartbeat quá hạn, driver power fault, sensor bắt buộc mất hợp lệ trong active motion, invalid runtime config | 0 PWM ngay trong giới hạn thực thi đã kiểm chứng; hủy tất cả; latch mã lỗi |
-| READY → FAULT | Lỗi cấu hình/safety phát hiện khi đang ready | Latch lỗi; vẫn 0 |
-| FAULT → READY | Lỗi nguyên nhân đã hết; user thực hiện CLEAR riêng; input fresh+neutral nếu controller required; motor driver ready | Xóa fault, vẫn 0, **không chạy hat và không tự RUN** |
-| READY → READY | Không có START hợp lệ; reset hoặc power cycle | Giữ 0 PWM, không tự chạy |
-| Mọi trạng thái → INIT | Reset/reboot | Mặc định output off; reboot **không có nghĩa là lệnh RUN** |
+| Power-on/reset → INIT | Cấp nguồn hoặc reboot | Đầu ra safe sớm nhất có thể; chưa chạy Blockly |
+| INIT → READY | Profile/Devices/driver đạt kiểm tra startup | Giữ PWM=0, chưa nhận START cũ |
+| INIT hoặc READY → FAULT | Phát hiện lỗi cấu hình hoặc phần cứng | Giữ 0, chốt mã lỗi |
+| READY → RUN (CONTROLLER) | PS4 fresh, trục neutral, Options giữ đủ 1 s rồi nhả hợp lệ theo §2.3; driver ready | Reset biến, script, motion và sự kiện; bắt đầu clock RUN, lập baseline PS4, lên lịch các hat bắt đầu. PWM giữ 0 trong transition |
+| READY → RUN (AUTO) | Driver ready và đường START đủ điều kiện §2.3 | Reset như trên, đặt deadline AUTO ngay khi vào RUN. PWM giữ 0 trong transition |
+| RUN → READY | STOP hợp lệ hoặc AUTO hoàn thành tự nhiên | Tắt đầu ra motor, hủy script, timer và pending; cần một START mới để chạy lại |
+| RUN → FAULT | Hết deadline AUTO, mất freshness khi <code>requiresController</code>, quá hạn heartbeat, lỗi driver hoặc lỗi cảm biến bắt buộc khi chuyển động | Khóa đầu ra motor theo thời gian đã kiểm chứng, hủy công việc, chốt mã lỗi |
+| FAULT → READY | Nguyên nhân đã hết, driver ready, CLEAR riêng; PS4 fresh/neutral nếu required | Giữ PWM=0. CLEAR chỉ đưa về READY, cần cử chỉ START mới |
+| READY → READY | Chờ START, giữ chưa đủ, hủy xác nhận hoặc không đủ điều kiện | PWM=0 |
 
-**Lưu ý tương thích:** firmware fast100 hiện từng dùng Options rising edge để ARM. V0.2 đề xuất **giữ Options ~1 giây** để giảm kích ngoài ý muốn; đây là **thay đổi hành vi cần được người dùng duyệt và thử bench**, chưa tự triển khai lên firmware đã kiểm chứng. Bản test của V0.2 sẽ có firmware-compat mode và không silently làm thay đổi hệ thống cũ.
+### 2.3. START, STOP và điều kiện chạy thật
 
-### 2.3. STOP / FAULT và giới hạn an toàn thực tế
-
-- Share là lệnh hệ thống ưu tiên cao, **không** đưa qua event queue của học sinh; Options và Share **không có trong dropdown handler Basic**, nút PS còn hạn chế/ẩn vì có thể kích tính năng hệ thống tay cầm.
-- Lệnh STOP web chỉ có hiệu lực khi trình duyệt vẫn kết nối và nhận được xác nhận; không phải E-stop hardware. Không mặc định dùng BOOT/GPIO0 làm START vì đây là chân strapping.
-- Độc lập với code học sinh: một **safety monitor/tác vụ ưu tiên** quản lý motor-enable, heartbeat và freshness. Nhưng nếu CPU treo hoàn toàn thì task phần mềm có thể không chạy; cần kiểm chứng watchdog reset, trạng thái driver khi PWM ngừng, và công tắc/cơ chế ngắt nguồn động lực phù hợp. Các mục này là <code>HW_VERIFY</code>, không tuyên bố đã đạt.
-- <code>requiresController</code> = true nếu có hat/reporter PS4 thật trong workspace V2 hoặc cấu hình runMode=CONTROLLER; kiểm tra mismatch runMode/Blocks trước compile. Script pure auto không phát sinh PS4 dependency. PS4 mô phỏng chỉ dùng test, không cấp ARM robot vật lý.
-- STOP trong khi motor chạy có thời hạn: hủy cả **timer đang chờ**, motor=0; khi RUN trở lại tạo script/timer mới từ đầu; không resume.
-- Tiêu chuẩn đề xuất sơ bộ: controller freshness 250 ms; safety heartbeat scheduler tối đa 250 ms. Đây là giá trị thiết kế để kiểm chứng trên bench, **không phải cam kết độ trễ dừng vật lý =250ms**.
+- **CONTROLLER:** dùng PS4 Options. **AUTO:** ưu tiên nút START vật lý đã xác minh trên board. Có thể cấu hình **Options làm START tạm** trên đúng board/bridge đã bench, khi có phương tiện ngắt nguồn động lực cục bộ, dễ tiếp cận và đã thử, và quy trình bảo đảm vùng chạy trống. Cấu hình chọn nguồn START rõ ràng. Nút vật lý chỉ hợp lệ sau khi đã quan sát nhả ở READY và nhận một cử chỉ mới theo profile đã thử. Nếu không có đường START hợp lệ, giữ chặn chạy tải bằng <code>V2_SAFETY_START_UNAVAILABLE</code>; vẫn cho phép mock trên host. BOOT/GPIO0 chưa được chọn.
+- **Cử chỉ Options:** trong READY, đợi một report fresh thấy nút đã nhả rồi mới nhận cạnh nhấn mới. Giữ liên tục tối thiểu **1 s đề xuất**, với link fresh, mọi trục neutral, driver ready và Share không nhấn suốt quá trình. Chỉ vào RUN khi nhận cạnh nhả fresh sau thời gian giữ. Nhả sớm, stale/mất link, lệch neutral, STOP hoặc lỗi hủy lần xác nhận; phải có cử chỉ mới. Sau STOP/CLEAR hoặc reconnect, bắt đầu lại từ baseline. Options và Share chỉ đi qua control plane; giữ từ lúc cấp nguồn/reconnect không tự START. Rising edge fast100 thuộc chế độ tương thích riêng.
+- **Phụ thuộc tay cầm:** tính <code>requiresController</code> qua các hat/đoạn chương trình có thể chạy, kể cả lời gọi My Blocks. CONTROLLER luôn required. AUTO từ chối mã phụ thuộc PS4 với <code>V2_RUN_MODE_MISMATCH</code>. Sau khi AUTO vào RUN, rớt link START không FAULT và không kéo dài deadline. Share chỉ dừng được khi runtime nhận report fresh thấy Share đang nhấn; STOP cục bộ qua phần mềm chỉ dùng khi đầu vào đó đã xác minh. Công tắc ngắt nguồn động lực là đường dừng cục bộ dùng được khi mất link hoặc CPU không phản hồi.
+- **Giám sát:** tác vụ safety ưu tiên cao quản lý motor-enable, heartbeat và freshness, ưu tiên trước công việc user. Khi chốt STOP/FAULT hoặc hết deadline AUTO, khóa cổng ghi output trước khi cleanup để lệnh user đang dispatch không thể tái bật motor. STOP/FAULT hủy cả lệnh đang chờ. STOP web cần kết nối và xác nhận, phụ thuộc phần mềm. Watchdog/reset, đầu ra khi CPU treo hay mất PWM và công tắc ngắt nguồn đều <code>HW_VERIFY</code>. Freshness và ngưỡng heartbeat 250 ms là mục tiêu đề xuất (§9.2); độ trễ dừng vật lý phải đo riêng.
+- **Phản hồi trạng thái tùy capability:** có thể báo READY, đang giữ START, RUN và FAULT qua LED status riêng, hoặc lightbar/rung PS4 nếu D1 và bridge hỗ trợ đã kiểm chứng. Cập nhật best-effort, có giới hạn tần suất, không block và không tham gia quyết định START/STOP. Nếu không có kênh báo, vẫn phải đáp ứng điều kiện START và ngắt nguồn ở trên. GPIO47 trên V2 là M6; tài nguyên LED theo §4.1.
 
 ## 3. Execution Contract — scheduler cho Blockly
 
 ### 3.1. Mô hình script
 
-Một script = **một hat và stack bên dưới**. <code>Khi bắt đầu</code>, <code>Khi nút X nhấn</code>, <code>Khi nút X thả</code>, <code>Lặp mãi mãi</code> là block con trong script (không được có 2 top-level loop tự chen vào <code>setup()</code>/<code>loop()</code> theo vị trí hiển thị). Các block top-level không có hat bị cảnh báo <code>V2_ORPHAN_STACK</code> và không thực thi, nhưng vẫn lưu nguyên. Hàm tự tạo là định nghĩa riêng, không chạy tự phát.
+Một script gồm **một hat** (<code>Khi bắt đầu</code>, PS4 press/release…) và stack dưới hat. <code>Lặp mãi mãi</code> nằm trong stack. Stack rời được lưu nhưng không thực thi (<code>V2_ORPHAN_STACK</code>). My Blocks chỉ chạy qua lời gọi.
 
-**Chiến lược codegen mục tiêu:** resumable C++ state-machine theo script. Mỗi script có <code>programCounter</code>, timer deadline, pending event, frame counters riêng (cho vòng lặp lồng nhau), và biến/hàm không-yield ở v0.2; **không có** một FreeRTOS task riêng mỗi hat. Trong một vòng <code>scheduler.tick()</code>, chỉ một script tại một thời điểm được dispatch. Safety controller riêng kiểm tra heartbeat.
+G1 thử resumable C++ state-machine, mỗi script có PC, frame/counter, deadline và trạng thái pending hữu hạn. Một scheduler dispatch từng script; safety monitor chạy riêng. Mỗi lần RUN có một generation riêng để vô hiệu công việc sót từ lần RUN trước.
 
 ### 3.2. Điểm nhường và tính công bằng
 
-- <code>Đợi(s)</code> tạo deadline dựa trên đồng hồ monotonic <code>millis()</code>, **suspend script**; 0 giây vẫn yield ít nhất một lần.
-- <code>Đợi đến khi</code> suspend và kiểm tra lại mỗi tick; bắt buộc timeout mặc định 10 s, khi timeout báo lỗi/hủy hành động theo trạng thái.
-- <code>Lặp N lần</code>, <code>Lặp khi</code>, <code>Lặp đến khi</code> và <code>Lặp mãi mãi</code>: **yield ở cuối mỗi vòng**, kể cả thân rỗng; đếm N tính một lần, counter nằm trong frame script, không dùng biến <code>i</code> trùng giữa vòng lặp.
-- Mỗi statement đơn giản được giới hạn thành một bước hoặc chi phí operation; nếu có quá nhiều statement liên tục, scheduler phải nhường khi hết budget, không phụ thuộc vào có vòng lặp hay không.
-- Đồng hồ wraparound xử lý bằng so sánh time difference an toàn; timeout mỗi lần không vượt quá phạm vi integer signed. Dừng/hủy phải chạy được dù đang suspended.
-
-**Ngân sách đề xuất cho spike** (phải benchmark): tối đa <code>16</code> scripts đã đăng ký, tối đa <code>16</code> active, <code>256</code> generated operations hoặc <code>2 ms</code> tổng script work cho một tick, kiểm tra heartbeat ≤<code>50 ms</code>, heartbeat timeout motor <code>250 ms</code>. Đây là **acceptance target**, chưa phải giới hạn tối ưu chứng minh được trên board. Một I²C/sensor call block không được chặn vượt ngân sách; phải có driver async/bounded poll.
+- <code>Đợi(s)</code> suspend riêng script đến deadline monotonic; 0 giây vẫn yield ít nhất một lần. <code>Đợi đến khi</code> kiểm tra lại mỗi tick, timeout mặc định đề xuất 10 s và báo lỗi khi hết hạn.
+- Tất cả các vòng lặp yield ở cuối mỗi lượt, kể cả thân rỗng. <code>Lặp N lần</code> tính N một lần, dùng counter trong frame script.
+- Đếm công việc sau khi inline, kể cả chuỗi statement dài và biểu thức. Cắt slice trước khi vượt quota §9.2, tiếp tục round-robin từ script kế ở tick sau. I/O trong scheduler chỉ dùng snapshot, enqueue hoặc poll có chi phí hữu hạn trong budget.
+- Deadline dùng elapsed/difference an toàn khi <code>millis()</code> wrap. STOP/FAULT được xử lý cả khi script suspended, trước các lệnh user.
 
 ### 3.3. Event edge và lịch điều phối
 
-1. Adapter PS4 xử lý frame hợp lệ **một lần** (sequence + freshness), chốt trạng thái pressed/released và counter cạnh theo nút. Không được tạo cạnh từ frame lặp hoặc stale. Lệnh hệ thống Share/Options được xử lý riêng.
-2. Với một hat PS4: nếu handler chưa active → chạy; nếu active → tăng pending nhưng **tối đa 1** (coalesce), lần nhấn tiếp theo vượt mức ghi counter overflow chẩn đoán. Không tạo hàng đợi vô hạn.
-3. Khi handler active hoàn thành, nếu pending=1 và còn RUN → chạy lại **từ đầu** một lượt, pending=0. Nếu đã STOP/FAULT → không chạy lại.
-4. Tie-break giữa các sự kiện **không dựa vào tọa độ x/y của block**: ưu tiên thứ tự sample frame (sequence/time), rồi loại sự kiện PRESS trước RELEASE nếu cùng nguồn/timestamp, rồi thứ tự enum nút cố định, cuối cùng <code>scriptUid</code> ổn định lưu trong metadata project. Thay vị trí block không đổi thứ tự; copy block tạo UID mới.
-5. Không có sự kiện nút Options/Share trong Basic; Share STOP ngay cả khi scheduler đang ở <code>Đợi</code>. Cờ STOP/FAULT được đọc ưu tiên cao trước khi dispatch script mới.
-6. Hai handler tác động cùng motor: ghi cuối đã **được chấp nhận** chiếm owner. Static analyzer phát <code>V2_MOTOR_MULTI_WRITER</code> cảnh báo (không chặn Basic). Motor stop riêng là lệnh write có thể ngắt owner trước.
+1. Adapter chỉ nhận report fresh, mới theo sequence và session. Lấy snapshot fresh ở START làm baseline, không phát lại cạnh READY. Khi khởi tạo lại adapter, mẫu đầu làm baseline, không tạo cạnh giả. Mỗi nút giữ <code>pressed</code> và <code>edgeGeneration</code> tăng trên **mỗi** đổi trạng thái đã quan sát. Cập nhật snapshot và pending cùng thứ tự nhận trước dispatch; Share/Options xử lý riêng.
+2. Mỗi hat có tối đa **một** token pending gồm nút, loại cạnh, edge generation và thứ tự report. Khi bận, cạnh cùng loại mới hơn thay token cũ, tăng counter coalesce nếu có thay thế. Cạnh ngược loại vô hiệu token cũ. Kể cả handler rảnh, token chờ tick kế cũng chịu kiểm tra như pending.
+3. Trước khi bắt đầu lượt mới, yêu cầu RUN, link fresh, generation còn là cạnh mới nhất của nút và trạng thái khớp (PRESS khi đang giữ, RELEASE khi đã nhả). Token cũ bị bỏ, không replay. Handler đang chạy có thể tiếp tục sau wait. Hat cạnh không mang nghĩa giữ-để-chạy; dùng reporter trạng thái ngay trước lệnh chạy nếu hành động sau wait còn cần điều kiện đang giữ nút.
+4. Các token hợp lệ được nhận theo thứ tự report, sau đó loại cạnh, enum nút và <code>scriptUid</code> ổn định. Trong cùng snapshot một nút chỉ có một trạng thái cuối. Tọa độ workspace không ảnh hưởng. STOP/FAULT có ưu tiên cao và xóa pending.
+5. **Giới hạn bridge:** bảo đảm trên các cạnh adapter thực sự quan sát được. Xung ngắn giữa hai report PS4/D1 hoặc hai poll ESP32 có thể mất. Sequence/freshness không phục hồi cạnh chưa nhận. Trước G3, đo chu kỳ report/poll và quét độ rộng/pha xung trên đúng D1/bridge. Nếu cần giữ cạnh nhanh, đánh giá counter theo nút kèm trạng thái cuối, sequence, reset/wrap. Counter đơn lẻ không đủ tái dựng thứ tự giữa nút; nếu cần thứ tự đầy đủ phải có thứ tự cạnh từ nguồn. Mọi pending vẫn qua guard trên.
 
-### 3.4. Latch, timer và quyền sở hữu chuyển động
+### 3.4. Latch, motion handle và kết thúc AUTO
 
-- <code>motor.run(M1,50%)</code> là **latched**. Kết thúc handler chỉ hủy stack handler, **không hủy lệnh motor**. Program RUN vẫn tồn tại để đón sự kiện dù không còn handler đang active.
-- <code>motor.stop(M1)</code>, <code>stopAll</code>, ghi mới lên M1, hoặc STOP/FAULT xóa latch. Chương trình kết thúc ở đây nghĩa là **lifecycle rời RUN** (STOP/FAULT/explicit program end), không phải khi một hat kết thúc.
-- <code>motorRunFor(...,1s,WAIT)</code>/<code>driveFor(...,1s,WAIT)</code> dùng **motion handle** và thời hạn do runtime/scheduler quản lý, **không** sinh <code>delay(1000)</code>. WAIT suspend script; DON'T_WAIT trả về ngay.
-- Khi lệnh mới ghi trùng channel, lệnh cũ bị thay/hủy, tăng <code>ownerGeneration</code>. Timer cũ kết thúc **không được stop motor do lệnh mới đang sở hữu**. Lệnh timed mới dừng output **chỉ nếu còn giữ đúng token**.
-- <code>DRIVE</code> coi là một command group atomic qua các motor trong drivetrain đã định nghĩa. Nếu script riêng ghi vào một motor đang do drivetrain quản lý, command cũ được hủy/đổi ownership theo chính sách; phát static warning.
-- <code>Đợi</code> không phải lệnh chuyển động và không tự stop latch. Trong V0.2 không có auto-stop khi handler kết thúc; cần guard heartbeat và giới hạn tối đa thời gian chạy phần cứng tùy bài/driver để giảm rủi ro.
+- Lệnh motor/drive liên tục giữ sau khi handler return cho tới khi bị ghi đè, dừng rõ ràng hoặc rời RUN. <code>Đợi</code> không tự dừng motor. CONTROLLER giữ RUN cả lúc không có script active để tiếp tục nhận sự kiện.
+- Mỗi timed motion dùng handle runtime gắn RUN generation, owner generation, channel hoặc group và deadline. <code>WAIT</code> suspend script, resume một lần khi handle hoàn tất hoặc bị lệnh khác hủy trong cùng RUN. <code>NO_WAIT</code> tiếp tục ngay, handle vẫn active và runtime vẫn xử lý deadline sau khi script return. Hết hạn bình thường chỉ tắt đầu ra còn thuộc handle. Hủy/hoàn tất loại handle khỏi tập active ngay; kết quả của waiter lưu trong frame tới khi resume. Handle pool hữu hạn theo nhóm/kênh đang sở hữu, không cấp phát động khi RUN; lỗi cạn slot dẫn tới FAULT an toàn.
+- Lệnh mới hợp lệ lên kênh trùng hủy owner cũ trước khi nhận owner mới. DRIVE là một nhóm nguyên tử. Khi một lệnh đụng nhóm cũ, hủy cả nhóm và đưa các kênh còn thuộc nhóm về 0 trước khi áp dụng lệnh mới. Timer cũ không có quyền dừng lệnh mới; STOP/FAULT vô hiệu mọi handle và không resume waiter.
+- **AUTO hoàn thành tự nhiên** ở cuối tick sau khi đã xử lý deadline: không còn script runnable/suspended (kể cả chờ handle hay vòng lặp vô hạn đang chạy), không còn pending hợp lệ hay hat sự kiện còn có thể kích hoạt, và không còn motion handle active. Latch liên tục không giữ chương trình sống. Runtime tắt motor, hủy công việc còn lại và chuyển RUN → READY; START lần kế reset từ đầu. Nếu đăng ký hat sự kiện còn sống hoặc chương trình không thoát, deadline AUTO vẫn áp dụng.
+- **Giới hạn cứng AUTO:** lưu <code>autoMaxRunSeconds</code> trong project, mặc định đề xuất **15 s** khi thiếu trường (hạ xuống trần profile nếu trần thấp hơn). Học sinh chọn số nguyên **1–60 s**, trong trần thấp hơn nếu profile đã duyệt yêu cầu. Giá trị ngoài khoảng chặn bằng <code>V2_AUTO_RUN_LIMIT_INVALID</code>; không có chế độ vô hạn. Đồng hồ bắt đầu khi vào RUN, không tính thời gian giữ Options và không reset theo script, handle hay link. Safety monitor kiểm deadline trước công việc user: khi đến hạn, tắt output, hủy cả WAIT/NO_WAIT và chuyển RUN → FAULT (<code>V2_AUTO_MAX_RUNTIME</code>). Deadline thắng natural completion nếu đồng thời. Trần profile và độ trễ tắt thực tế cần bench.
+- **Ghi nhiều nguồn:** last accepted write wins. Cảnh báo <code>V2_MOTOR_MULTI_WRITER</code> khi hai script đều có lệnh có thể phát công suất khác 0 lên kênh trùng, kể cả DRIVE mở rộng theo Devices. Lệnh stop hoặc hằng 0 không tạo cảnh báo này. Tách cảnh báo <code>V2_DRIVE_OWNERSHIP</code> khi có xung đột giữa các lệnh chạy nhóm và chạy kênh riêng; cùng quy tắc bỏ qua stop-only. Nếu cả hai cảnh báo trùng cặp/kênh, chỉ hiện cảnh báo DRIVE.
 
-### 3.5. My Blocks và runtime errors
+### 3.5. My Blocks và lỗi runtime
 
-- P0/P1 hỗ trợ hàm tự tạo **không chứa** <code>Đợi</code>, <code>Đợi đến khi</code>, timed-motion WAIT, hoặc gọi hàm con chứa những lệnh đó. Validator duyệt call graph và từ chối yield gián tiếp với <code>V2_PROC_YIELD_UNSUPPORTED</code>.
-- Hàm đệ quy bị chặn hoặc giới hạn độ sâu bằng static analysis (<code>V2_PROC_RECURSION</code>); P2 mới cân nhắc resumable call frame nếu được yêu cầu.
-- Mọi statement có side effect phải idempotent qua resume: khôi phục script ở <code>pc</code> sau khi đã gửi lệnh, không gửi lại motorRun hay Serial.print trong mỗi tick.
-- Giới hạn / hết bộ nhớ / lỗi scheduler dẫn đến chặn compile hoặc FAULT motor tùy mức; không âm thầm bỏ script rồi vẫn giữ động cơ chạy.
+- G1 thử **inline tại từng chỗ gọi** trên call graph không chu trình, bao gồm <code>Đợi</code>, wait lồng, timed WAIT và lời gọi bắc cầu. Mỗi đối số được tính một lần khi vào đoạn inline; frame của script giữ tham số, PC và counter qua yield. Mỗi chỗ gọi có slot riêng khi giá trị còn sống; resume đi tiếp sau wait, không tính lại đối số hay phát lại side effect. Không cần resumable call stack.
+- Chặn đệ quy trực tiếp/gián tiếp (<code>V2_PROC_RECURSION</code>). Tính quota code/frame sau mở rộng, báo <code>V2_PROC_INLINE_LIMIT</code> kèm chỗ gọi vượt giới hạn, chặn compile. Chỉ mở tính năng cho học sinh khi đạt G1 và stage tương ứng; mục tiêu stage ở §6, không tính thêm vào Basic 30.
+- Lỗi scheduler/runtime không được để motor tiếp tục giữ lệnh nếu không còn khả năng kiểm soát. Chặn compile nếu phát hiện trước RUN; nếu xảy ra trong RUN, tắt đầu ra và FAULT.
 
-### 3.6. Ví dụ semantics phải PASS trên đồng hồ ảo
+### 3.6. Kịch bản đồng hồ ảo
 
 ~~~text
 Khi nút X nhấn:
@@ -134,40 +118,34 @@ Khi nút O nhấn:
   Hiện "Xin chào!"
 ~~~
 
-- t=0: X pressed ⇒ M1 command = +50%, X script suspended đến deadline 2000ms.
-- t=500ms: O pressed ⇒ Serial "Xin chào!" ở tick kế tiếp trong budget; M1 vẫn +50%.
-- t=2000ms: script X resume ⇒ stop M1. Không phụ thuộc wall-clock chờ 2 giây trong unit test.
-- Nếu STOP tại t=750ms ⇒ M1=0, O/X pending bị hủy, không có stop callback cũ ở 2000ms; RUN trở lại thì script và biến reset.
-- Nếu X nhấn hai lần trong khi script X đang chờ ⇒ tối đa 1 lượt pending; sau t=2000ms chạy lại X nếu vẫn RUN.
-- Nếu script đơn <code>Khi nút X nhấn → M1 quay 50%</code> kết thúc và chờ <code>Khi X thả → Dừng M1</code>, M1 phải còn +50% ở giữa.
-- Vòng lặp <code>forever {}</code>, <code>repeat N {}</code> hoặc <code>while(true){}</code> rỗng không được làm đói handler O; mọi STOP phải ngắt được.
-- Thử <code>Đợi</code> lồng trong repeat→if→repeat; sau resume counter đúng, không lặp lại side-effect.
-- Không có rủi ro cho robot thật trong spike: dùng mock motor + virtual clock trên PC.
+- **X/O độc lập:** X tại 0 ms → M1=50%, X chờ; O tại 500 ms → enqueue lời nhắn ở lượt scheduler kế tiếp khi sink mock còn chỗ; X tại deadline 2000 ms resume và M1=0. Biến thể STOP ở 750 ms → M1=0 ngay tại lượt safety, không còn callback/script khi đồng hồ qua 2000 ms.
+- **Regression pending press/release:** thêm `Khi X thả → Dừng M1`. Báo X nhấn/thả/nhấn/thả ở 0/100/200/300 ms. Lần nhấn ở 200 ms chờ vì handler X còn active; cạnh ở 300 ms vô hiệu token và motor=0. Sau deadline 2000 ms M1 vẫn 0, tổng cộng chỉ một lệnh chạy 50%. Đối chứng: bỏ cạnh thả ở 300 ms, giữ X qua deadline thì lượt pending hợp lệ chạy đúng một lần; có thêm cạnh trùng khi đang bận cũng chỉ giữ token mới nhất.
+- **Latch đúng:** với handler X chỉ có lệnh chạy, M1 vẫn 50% sau khi handler return và dừng khi handler RELEASE chạy. Nút được giữ từ lúc vào RUN không tạo cạnh giả.
+- **AUTO và NO_WAIT:** cùng script một lệnh chạy 1 s, WAIT hay NO_WAIT đều giữ chuyển động tới 1000 ms rồi về READY/0 khi hết việc. Với NO_WAIT, script đã return trước 1000 ms. Latch không có handle và không còn việc → READY/0 ở cuối tick. Nếu dừng handle bằng lệnh thay thế trong khi có waiter, waiter resume một lần; nếu STOP hoặc FAULT thì không resume. Khi deadline AUTO trùng deadline handle, FAULT thắng. Vòng lặp vô hạn hoặc hat còn mở phải dừng ở deadline AUTO.
+- **My Blocks:** hai chỗ gọi cùng một thủ tục có tham số và wait bên trong repeat → if → My Block con. Thay biến nguồn của tham số trong handler O lúc đang chờ; lần gọi đã bắt đầu giữ giá trị cũ, lần gọi sau đọc giá trị mới. Counter vòng lặp giữ đúng, không lặp lại side effect, STOP giữa wait hủy mọi continuation. Vòng lặp rỗng vẫn nhường cho O.
 
-### 3.7. Hai kiến trúc cần làm spike so sánh (chưa chốt implementation)
+### 3.7. Lựa chọn scheduler ở G1
 
-| | Resumable state-machine C++ | Bounded cooperative coroutines/tasks |
+| | Resumable state-machine C++ | Bounded cooperative coroutines/contexts |
 |---|---|---|
-| Bộ nhớ | Per-script PC+frame/counter tĩnh, không task stack riêng | Bộ nhớ stack/context trên mỗi script hoặc số task cố định |
-| Đợi lồng if/repeat | Compiler phải chia continuation đúng; phức tạp | C++ source gần block hơn nếu dùng stack |
-| Dữ liệu dùng chung | Chỉ một script dispatch tại một lúc | Chỉ một script dispatch tại một lúc |
-| My Blocks chứa Đợi | Phải làm resumable call stack | Có thể thuận tiện hơn, nhưng vẫn cần bound |
-| Rủi ro | Độ phức tạp generator cao | RAM/context switching/cancellation cần xác minh |
-| Quyết định | **Chọn làm spike đầu tiên**, vì không thêm FreeRTOS task/stack theo hat | Spike đối chứng nếu state-machine thất bại hoặc không đáp ứng test |
+| Tài nguyên | PC và frame tĩnh theo script; inline có thể tăng code size | Stack/context có quota, cần đo thêm RAM và chi phí chuyển context |
+| Wait, My Blocks | Tách continuation tại điểm yield, kể cả thủ tục inline | Có thể giữ luồng C++ gần cấu trúc block, vẫn cần giới hạn và hủy được |
+| Trạng thái dùng chung | Một script dispatch tại một lúc | Cùng hợp đồng dispatch |
+| Quyết định | Thử trước, bao gồm My Blocks có wait | Thử đối chứng nếu state-machine trượt ngưỡng §9.2 |
 
-**Go/No-Go:** chỉ chọn implementation sau khi pass 2 handler X/O + nested wait + stop + retrigger + no-starvation trên virtual clock, đo RAM/code size/độ phức tạp và có bản codegen tối thiểu chạy được. Không thay firmware thật trong spike.
+G1 dùng mock motor, PS4 và virtual clock trên host. Quyết định triển khai dựa trên toàn bộ test bắt buộc và ngưỡng định lượng §9.2.
 
 ## 4. Devices, cảm biến và tọa độ
 
 ### 4.1. Devices metadata và tên/ID
 
-- Mỗi project lưu <code>boardId</code>, <code>runMode</code>, <code>devices[]</code>, <code>motorRoles</code>, <code>invert</code>, <code>limits</code>, <code>sensorMap</code> (schema mới, có version). Cấu hình Devices được generator/firmware áp dụng **trước khi RUN**.
+- Mỗi project lưu <code>boardId</code>, <code>runMode</code>, nguồn START theo profile, <code>autoMaxRunSeconds</code> (AUTO), <code>devices[]</code>, <code>motorRoles</code>, <code>invert</code>, <code>limits</code>, <code>sensorMap</code> (schema mới, có version). Cấu hình Devices được generator/firmware áp dụng **trước khi RUN**.
 - Block lưu ID ổn định như <code>M1</code>, <code>M2</code> (physical channels), <code>Group_1</code> hoặc <code>Sensor_A</code>. UI hiển thị alias như "Bánh trước trái". Đổi tên không đổi ID; xóa Device → block còn nguyên, gắn warning <code>V2_DEVICE_MISSING</code>; **không tự map sang kênh khác**.
 - Mỗi kênh thiết bị chỉ gán một chân/driver profile được kiểm chứng; raw GPIO/I²C trong Advanced bị chặn nếu trùng motor, USB, PS4, boot/strapping, bộ nhớ flash/PSRAM.
 - <code>Devices</code> tự setup; block khởi tạo chỉ Advanced hoặc template dạy kỹ thuật, không hiển thị Basic.
 - <code>cfg.maxDutyPercent</code> (safety, không học sinh tự nâng), <code>motorLimit(M1)</code> và <code>driveLimit</code> được kết hợp theo **minimum applicable bound**. Giá trị 100% là *duty command*, không tự suy thành RPM thực.
 - D06 Drivetrain phải lưu geometry cho tương lai: <code>wheelDiameterMm</code> (chưa biết → null), <code>trackWidthMm</code> (null), <code>wheelBaseMm</code> (null), <code>gearRatio</code> (nếu biết). Không tự điền kích thước giả cho block cm/degree.
-- LED status PS4 và block LED học sinh không được cùng ghi GPIO trực tiếp: <code>LED_RESOURCE</code> có chính sách owner, mặc định system-status owns; block LED học sinh chỉ bật nếu tắt status qua Devices và không xung đột. V2 GPIO47 dành M6, **không** mặc định là LED.
+- LED status phần cứng và LED học sinh là tài nguyên theo ID. System sở hữu LED dành cho status; chỉ hiện E01v2 nếu Devices có LED hợp lệ riêng hoặc đã tắt status trên LED được chia sẻ. GPIO47 trên V2 dành cho M6. Lightbar/rung PS4 nếu hỗ trợ là kênh system riêng (§2.3).
 - Servo, encoder, IMU, siêu âm, color, line sensor chỉ hiện khi Devices có thiết bị tương thích **và** runtime feature được nghiệm thu. Nếu mất sensor sau khi đã lưu project: block vẫn còn, warning + compile gate; không tự xóa hay giả giá trị.
 
 ### 4.2. Profile facts đọc từ main (không phải hardware acceptance)
@@ -206,34 +184,34 @@ Mỗi bản đọc phải có <code>{value, valid, sampledAtMs}</code>, thiết 
 
 | ID | type / kind / category / i18n | Label và fields/inputs (default) | C++/execution semantics | Resources · Yield · Warn | Status |
 |---|---|---|---|---|---|
-| A01v2 | <code>codelab_when_run</code> HAT / control / <code>block.when_run</code> | "Khi chương trình bắt đầu"; <code>BODY: Statement</code> | Script entry khi READY→RUN; **không** phải Arduino setup() | NONE · N · ORPHAN | NEW/S0 |
-| A02v2 | <code>codelab_forever</code> CONTROL / control / <code>block.forever</code> | "Lặp lại mãi mãi"; <code>DO: Statement</code> | Scheduler back-edge + yield mỗi lượt | NONE · Y · SCRIPT_BUDGET | NEW/S0 |
+| A01v2 | <code>codelab_v2_when_run</code> HAT / control / <code>block.when_run</code> | "Khi chương trình bắt đầu"; <code>BODY: Statement</code> | Script entry khi READY→RUN; **không** phải Arduino setup() | NONE · N · ORPHAN | NEW/S0 |
+| A02v2 | <code>codelab_v2_forever</code> CONTROL / control / <code>block.forever</code> | "Lặp lại mãi mãi"; <code>DO: Statement</code> | Scheduler back-edge + yield mỗi lượt | NONE · Y · SCRIPT_BUDGET | NEW/S0 |
 | A03 | <code>controls_if</code> CONTROL / logic / <code>block.if</code> | <code>IF0: Boolean=false</code>, <code>DO0: Statement</code> | <code>if(cond) {...}</code> continuation-safe | NONE · N · TYPE_MISMATCH | EXISTS/S0 |
 | A04 | <code>controls_if</code> CONTROL / logic / <code>block.if_else</code> | Như A03 + <code>ELSE: Statement</code>; mutator hasElse=true | <code>if(cond) {...} else {...}</code> | NONE · N · TYPE_MISMATCH | EXISTS/S0 |
-| A06 | <code>controls_repeat_ext</code> CONTROL / control / <code>block.repeat_n</code> | <code>TIMES: Number=5</code>, <code>DO: Statement</code> | Count eval **một lần**, per-script loop frame; yield mỗi iteration | NONE · Y · REPEAT_LIMIT | EXISTS/S0 (rewrite codegen) |
-| A08v2 | <code>codelab_wait_seconds</code> STMT / control / <code>block.wait_seconds</code> | <code>SECONDS: Number=1</code> (0..60) | <code>scheduler.sleep(scriptId,1000)</code> + resume, **không delay()** | NONE · Y · INVALID_DURATION | NEW/S0 |
+| A06v2 | <code>codelab_v2_repeat_n</code> CONTROL / control / <code>block.repeat_n</code> | <code>TIMES: Number=5</code>, <code>DO: Statement</code> | Count eval **một lần**, per-script loop frame; yield mỗi iteration | NONE · Y · REPEAT_LIMIT | NEW/S0 |
+| A08v2 | <code>codelab_v2_wait_seconds</code> STMT / control / <code>block.wait_seconds</code> | <code>SECONDS: Number=1</code> (0..60) | <code>scheduler.sleep(scriptId,1000)</code> + resume, **không delay()** | NONE · Y · INVALID_DURATION | NEW/S0 |
 
 ### 5.2. Chuyển động (8)
 
 | ID | type / kind / category / i18n | Label; fields/inputs và default | C++/execution semantics | Resources · Yield · Warn | Status |
 |---|---|---|---|---|---|
-| B02v2 | <code>codelab_motor_run</code> STMT / motion / <code>block.motor_run</code> | "Motor [M1] quay [tiến] [50]%"; <code>MOTOR_ID=M1</code>, <code>DIR=FORWARD</code>, <code>POWER:Number=50</code> | <code>robot.motorRun(M1,Forward,50);</code>; latched | MOTOR(M1) · N · DRIVER_GATED | NEW/S1; HW_VERIFY |
-| B03v2 | <code>codelab_motor_power</code> STMT / motion / <code>block.motor_power</code> | "Motor [M1] công suất [0]%"; <code>MOTOR_ID=M1</code>, <code>POWER:Number=0</code> (-100..100) | <code>robot.motorSetPower(M1,0);</code>; latched | MOTOR(M1) · N · DRIVER_GATED | NEW/S1 |
-| B04v2 | <code>codelab_motor_stop</code> STMT / motion / <code>block.motor_stop</code> | <code>MOTOR_ID=M1</code> | <code>robot.motorStop(M1);</code> | MOTOR(M1) · N · DEVICE_MISSING | NEW/S1 |
-| B05v2 | <code>codelab_motor_stop_all</code> STMT / motion / <code>block.motor_stop_all</code> | Không tham số | <code>robot.stopAllMotors();</code>; hệ thống STOP có ưu tiên cao hơn | ALL_MOTORS · N · DRIVER_GATED | NEW/S1 |
-| C02v2 | <code>codelab_drive_direction</code> STMT / motion / <code>block.drive_direction</code> | "Robot [tiến ▾] [50]%"; <code>DIRECTION=FORWARD</code> (BACKWARD/STRAFE_LEFT/RIGHT/TURN_LEFT/RIGHT), <code>POWER:Number=50</code> | <code>robot.driveDirection(Forward,50);</code>; latched | DRIVE · N · DRIVE_NOT_CONFIGURED | NEW/S2 |
-| C06v2 | <code>codelab_drive_axes</code> STMT / motion / <code>block.drive_axes</code> | "Robot tiến [0] ngang-phải [0] xoay-phải [0]"; <code>FWD/RIGHT/CW:Number=0</code> | <code>robot.drive(fwd,right,cw);</code>; signs converted only in facade | DRIVE · N · DRIVE_NOT_CONFIGURED | NEW/S2 |
-| C08v2 | <code>codelab_drive_stop</code> STMT / motion / <code>block.drive_stop</code> | Không tham số | <code>robot.driveStop();</code> | DRIVE · N · DRIVE_NOT_CONFIGURED | NEW/S2 |
-| C10v2 | <code>codelab_drive_for_time</code> STMT / motion / <code>block.drive_for_time</code> | "Robot [tiến] [50]% trong [1] giây [và đợi]"; <code>DIRECTION=FORWARD</code>, <code>POWER:Number=50</code>, <code>SECONDS:Number=1</code>, <code>WAIT=WAIT</code> hoặc <code>NO_WAIT</code> | <code>motion.startTimedDrive(Forward,50,1000,WAIT);</code>; wait suspend script, timer stop **if still owner** | DRIVE · Y if WAIT · MOTION_TIMEOUT | NEW/S2 |
+| B02v2 | <code>codelab_v2_motor_run</code> STMT / motion / <code>block.motor_run</code> | "Motor [M1] quay [tiến] [50]%"; <code>MOTOR_ID=M1</code>, <code>DIR=FORWARD</code>, <code>POWER:Number=50</code> | <code>robot.motorRun(M1,Forward,50);</code>; latched | MOTOR(M1) · N · DRIVER_GATED | NEW/S1; HW_VERIFY |
+| B03v2 | <code>codelab_v2_motor_power</code> STMT / motion / <code>block.motor_power</code> | "Motor [M1] công suất [0]%"; <code>MOTOR_ID=M1</code>, <code>POWER:Number=0</code> (-100..100) | <code>robot.motorSetPower(M1,0);</code>; latched | MOTOR(M1) · N · DRIVER_GATED | NEW/S1 |
+| B04v2 | <code>codelab_v2_motor_stop</code> STMT / motion / <code>block.motor_stop</code> | <code>MOTOR_ID=M1</code> | <code>robot.motorStop(M1);</code> | MOTOR(M1) · N · DEVICE_MISSING | NEW/S1 |
+| B05v2 | <code>codelab_v2_motor_stop_all</code> STMT / motion / <code>block.motor_stop_all</code> | Không tham số | <code>robot.stopAllMotors();</code>; hệ thống STOP có ưu tiên cao hơn | ALL_MOTORS · N · DRIVER_GATED | NEW/S1 |
+| C02v2 | <code>codelab_v2_drive_direction</code> STMT / motion / <code>block.drive_direction</code> | "Robot [tiến ▾] [50]%"; <code>DIRECTION=FORWARD</code> (BACKWARD/STRAFE_LEFT/RIGHT/TURN_LEFT/RIGHT), <code>POWER:Number=50</code> | <code>robot.driveDirection(Forward,50);</code>; latched | DRIVE · N · DRIVE_NOT_CONFIGURED | NEW/S2 |
+| C06v2 | <code>codelab_v2_drive_axes</code> STMT / motion / <code>block.drive_axes</code> | "Robot tiến [0] ngang-phải [0] xoay-phải [0]"; <code>FWD/RIGHT/CW:Number=0</code> | <code>robot.drive(fwd,right,cw);</code>; signs converted only in facade | DRIVE · N · DRIVE_NOT_CONFIGURED | NEW/S2 |
+| C08v2 | <code>codelab_v2_drive_stop</code> STMT / motion / <code>block.drive_stop</code> | Không tham số | <code>robot.driveStop();</code> | DRIVE · N · DRIVE_NOT_CONFIGURED | NEW/S2 |
+| C10v2 | <code>codelab_v2_drive_for_time</code> STMT / motion / <code>block.drive_for_time</code> | "Robot [tiến] [50]% trong [1] giây [và đợi]"; <code>DIRECTION=FORWARD</code>, <code>POWER:Number=50</code>, <code>SECONDS:Number=1</code>, <code>WAIT=WAIT</code> hoặc <code>NO_WAIT</code> | <code>motion.startTimedDrive(Forward,50,1000,WAIT);</code>; WAIT suspend; NO_WAIT trả về ngay, handle còn active đến deadline/hủy (§3.4) | DRIVE · Y if WAIT · MOTION_TIMEOUT | NEW/S2 |
 
 ### 5.3. Tay cầm PS4 (5; chỉ hiện nếu Devices có PS4 I²C được hỗ trợ)
 
 | ID | type / kind / category / i18n | Label, fields/inputs, default | C++/execution semantics | Resources · Yield · Warn | Status |
 |---|---|---|---|---|---|
-| A14v2 | <code>codelab_when_ps4_pressed</code> HAT / ps4 / <code>block.ps4_when_pressed</code> | "Khi nút [X] được nhấn"; <code>BUTTON=X</code>, BODY statement | <code>events.onPressed(X,scriptUID)</code>; edge latched; Options/Share/PS không chọn được | PS4 · N · RESERVED_BUTTON | NEW/S0 |
-| A17v2 | <code>codelab_when_ps4_released</code> HAT / ps4 / <code>block.ps4_when_released</code> | "Khi nút [X] được thả"; <code>BUTTON=X</code>, BODY statement | <code>events.onReleased(X,scriptUID)</code> | PS4 · N · RESERVED_BUTTON | NEW/S0 |
-| DP03v2 | <code>codelab_ps4_pressed</code> BOOL / ps4 / <code>block.ps4_pressed</code> | "Nút [X] đang được nhấn?"; <code>BUTTON=X</code> | <code>ps4.pressed(X)</code> đọc snapshot đã xác minh | PS4 · N · PS4_UNAVAILABLE | NEW/S1 |
-| DP06v2 | <code>codelab_ps4_axis_percent</code> NUMBER / ps4 / <code>block.ps4_axis_percent</code> | "Cần [trái] trục [dọc] (%)"; <code>STICK=LEFT</code>, <code>AXIS=Y</code>; -100..100 | <code>ps4.axisPercent(LY)</code> (LY lên = dương) | PS4 · N · PS4_UNAVAILABLE | NEW/S1 |
+| A14v2 | <code>codelab_v2_when_ps4_pressed</code> HAT / ps4 / <code>block.ps4_when_pressed</code> | "Khi nút [X] được nhấn"; <code>BUTTON=X</code>, BODY statement | <code>events.onPressed(X,scriptUID)</code>; token cạnh còn hợp lệ theo §3.3; Options/Share/PS không chọn được | PS4 · N · RESERVED_BUTTON | NEW/S0 |
+| A17v2 | <code>codelab_v2_when_ps4_released</code> HAT / ps4 / <code>block.ps4_when_released</code> | "Khi nút [X] được thả"; <code>BUTTON=X</code>, BODY statement | <code>events.onReleased(X,scriptUID)</code>; token theo §3.3 | PS4 · N · RESERVED_BUTTON | NEW/S0 |
+| DP03v2 | <code>codelab_v2_ps4_pressed</code> BOOL / ps4 / <code>block.ps4_pressed</code> | "Nút [X] đang được nhấn?"; <code>BUTTON=X</code> | <code>ps4.pressed(X)</code> đọc snapshot đã xác minh | PS4 · N · PS4_UNAVAILABLE | NEW/S1 |
+| DP06v2 | <code>codelab_v2_ps4_axis_percent</code> NUMBER / ps4 / <code>block.ps4_axis_percent</code> | "Cần [trái] trục [dọc] (%)"; <code>STICK=LEFT</code>, <code>AXIS=Y</code>; -100..100 | <code>ps4.axisPercent(LY)</code> (LY lên = dương) | PS4 · N · PS4_UNAVAILABLE | NEW/S1 |
 | DP02v2 | <code>codelab_v2_ps4_connected</code> BOOL / ps4 / <code>block.ps4_connected</code> | "PS4 đã kết nối?"; không tham số | <code>ps4.connected()</code> valid+fresh+not-stale | PS4 · N · PS4_UNAVAILABLE | NEW/S1 |
 
 Allowed PS4 buttons sau khi xác nhận mapping thực: <code>X, Circle, Square, Triangle, L1, R1, L2, R2, DPadUp, DPadDown, DPadLeft, DPadRight, L3, R3</code>. L2/R2 trong V0.2 chỉ được dùng như nút digital khi report hỗ trợ; không khẳng định có analog trigger. <code>Options</code>, <code>Share</code> là hệ thống, <code>PS</code> ẩn/chặn.
@@ -247,33 +225,35 @@ Allowed PS4 buttons sau khi xác nhận mapping thực: <code>X, Circle, Square,
 | H03 | <code>logic_operation</code> BOOL / logic / <code>block.logic_operation</code> | <code>OP=AND</code>, <code>A:Boolean=true</code>, <code>B:Boolean=true</code> | <code>(a && b)</code> | NONE · N · TYPE_MISMATCH | EXISTS/S0 |
 | H04 | <code>logic_negate</code> BOOL / logic / <code>block.logic_not</code> | <code>BOOL:Boolean=true</code> | <code>!a</code> | NONE · N · TYPE_MISMATCH | EXISTS/S0 |
 | H05 | <code>math_number</code> NUMBER / math / <code>block.number</code> | <code>NUM=0</code> | <code>0</code> | NONE · N · INVALID_NUMBER | EXISTS/S0 |
-| H06 | <code>math_arithmetic</code> NUMBER / math / <code>block.arithmetic</code> | <code>OP=ADD</code>, <code>A:Number=1</code>, <code>B:Number=1</code> | <code>a + b</code> / - × ÷, guard division by zero | NONE · N · DIVIDE_BY_ZERO | EXISTS/S0 |
+| H06v2 | <code>codelab_v2_arithmetic</code> NUMBER / math / <code>block.arithmetic</code> | <code>OP=ADD</code>, <code>A:Number=1</code>, <code>B:Number=1</code> | <code>a + b</code>, −, ×, ÷, lũy thừa; mẫu số 0 chặn khi biết tĩnh, nếu xảy ra khi RUN thì FAULT trước side effect | NONE · N · DIVIDE_BY_ZERO | NEW/S0 |
 
 ### 5.5. Biến (3)
 
 | ID | type / kind / category / i18n | Fields, inputs và default | C++/execution semantics | Resources · Yield · Warn | Status |
 |---|---|---|---|---|---|
-| I02 | <code>variables_set</code> STMT / variable / <code>block.variable_set</code> | <code>VAR=biến_mới</code>, <code>VALUE:Number=0</code> | <code>var_&lt;stableId&gt; = 0;</code> | NONE · N · TYPE_MISMATCH | EXISTS/S0 |
-| I03 | <code>math_change</code> STMT / variable / <code>block.variable_change</code> | <code>VAR=biến_mới</code>, <code>DELTA:Number=1</code> | <code>var_&lt;stableId&gt; += 1;</code> | NONE · N · NON_NUMERIC_VARIABLE | EXISTS/S0 |
-| I04 | <code>variables_get</code> NUMBER / variable / <code>block.variable_get</code> | <code>VAR=biến_mới</code> | <code>var_&lt;stableId&gt;</code> | NONE · N · UNDEFINED_VARIABLE | EXISTS/S0 |
+| I02v2 | <code>codelab_v2_variable_set_number</code> STMT / variable / <code>block.variable_set</code> | <code>VAR=biến_mới</code>, <code>VALUE:Number=0</code> | <code>var_&lt;stableId&gt; = 0;</code> | NONE · N · TYPE_MISMATCH | NEW/S0 |
+| I03v2 | <code>codelab_v2_variable_change_number</code> STMT / variable / <code>block.variable_change</code> | <code>VAR=biến_mới</code>, <code>DELTA:Number=1</code> | <code>var_&lt;stableId&gt; += 1;</code> | NONE · N · NON_NUMERIC_VARIABLE | NEW/S0 |
+| I04v2 | <code>codelab_v2_variable_get_number</code> NUMBER / variable / <code>block.variable_get</code> | <code>VAR=biến_mới</code> | <code>var_&lt;stableId&gt;</code> | NONE · N · UNDEFINED_VARIABLE | NEW/S0 |
 
-Đối với Basic, biến **số** là kiểu P0. Sau này bổ sung text/bool theo type system rõ. Tên Unicode trong UI không trực tiếp thành symbol C++: dùng ID/namespace-generated identifier có collision guard, giữ tên hiển thị cho người học. Reset lại trạng thái biến mỗi lần READY→RUN.
+Biến Basic V2 là kiểu **số**. Các block biến dùng type riêng vì ràng buộc kiểu và reset tại RUN (§7.1). Sau này bổ sung text/bool theo type system rõ. Tên Unicode trong UI không trực tiếp thành symbol C++: dùng ID/namespace-generated identifier có collision guard, giữ tên hiển thị cho người học. Reset lại trạng thái biến mỗi lần READY→RUN.
 
-### 5.6. Hiển thị và LED (2; LED chỉ hiện nếu Devices đã cấu hình và không trùng nguồn system)
+### 5.6. Hiển thị và LED (2; LED cần Devices và quyền ghi của học sinh)
 
 | ID | type / kind / category / i18n | Fields, inputs và default | C++/execution semantics | Resources · Yield · Warn | Status |
 |---|---|---|---|---|---|
-| E05 | <code>beginner_message</code> STMT / display / <code>block.serial_message</code> | <code>VALUE: String="Xin chào!"</code> | <code>Serial.println("Xin chào!");</code> | SERIAL · N · STRING_UNSUPPORTED | EXISTS/S0 |
-| E01 | <code>beginner_led</code> STMT / led / <code>block.led_toggle</code> | <code>STATE=HIGH</code> | <code>ui.ledSet(LED_ON)</code>; facade owns pin, **không digitalWrite trực tiếp khi system link LED đang chiếm** | LED · N · LED_BUSY/NO_LED | EXISTS label / NEW facade |
+| E05v2 | <code>codelab_v2_serial_message</code> STMT / display / <code>block.serial_message</code> | <code>VALUE: String hoặc Number</code>, text shadow mặc định "Xin chào!" | <code>ui.tryLogLine(value);</code>; enqueue hữu hạn, best-effort | SERIAL · N · SERIAL_DROPPED | NEW/S0 |
+| E01v2 | <code>codelab_v2_led_set</code> STMT / led / <code>block.led_toggle</code> | <code>LED_ID</code> mặc định là LED học sinh duy nhất hoặc LED mặc định trong Devices. Nếu không có mặc định thì phải chọn ID, <code>STATE=ON</code> hoặc <code>OFF</code> | <code>ui.ledSet(LED_ID,On);</code>; facade kiểm quyền sở hữu | LED · N · LED_BUSY/NO_LED | NEW/S1, HW_VERIFY |
 
-**Đếm:** 6 Control + 8 Motion + 5 PS4 + 6 Logic/Math + 3 Variables + 2 Display/LED = **30 block/biến thể cốt lõi**. Các block phần cứng chỉ được hiển thị khi Devices/runtime đáp ứng; vì vậy một dự án chưa chọn PS4/motor sẽ có ít hơn 30 block. Điều này là chủ ý.
+**Serial V2:** serialize từng dòng vào buffer cố định; giới hạn đề xuất 128 byte UTF‑8 mỗi dòng (kể cả xuống dòng) và tổng queue 1 KiB. Bỏ nguyên dòng mới nếu không có sink, vượt giới hạn hoặc queue đầy; tăng counter <code>V2_SERIAL_DROPPED</code>, không retry từ script. Sink drain độc lập theo dung lượng có thể ghi hoặc API nonblocking đã kiểm chứng. Không gọi <code>Serial.println()</code> / flush đồng bộ từ scheduler, kể cả USB CDC không có host. L0/§3.6 dùng sink mock còn chỗ; thời điểm quan sát trên USB có thể muộn hơn enqueue.
+
+**Đếm:** 6 Control + 8 Motion + 5 PS4 + 6 Logic/Math + 3 Variables + 2 Display/LED = **30 block/biến thể cốt lõi**. Các block phần cứng chỉ được hiển thị khi Devices/runtime đáp ứng; vì vậy một dự án chưa chọn PS4/motor sẽ có ít hơn 30 block. A05 ở §6; L2 dùng hai A04 lồng nhau.
 
 ### 5.7. Quy ước schema bổ sung
 
 - Giá trị mặc định ở mọi <code>Number input</code> dùng Blockly shadow <code>math_number</code>; không để socket số rỗng khi tạo block. Dropdown dùng **stable ID** từ Devices, UI label có thể đổi tên mà không đổi JSON; xóa Device giữ block + warning icon.
 - Mỗi block phải có <code>type</code>, <code>message0</code>, <code>args0</code>, <code>fieldName</code>, <code>inputName</code>, <code>outputCheck</code> (BOOL→<code>Boolean</code>, NUMBER→<code>Number</code>, TEXT→<code>String</code>), <code>previousStatement/nextStatement</code> hoặc <code>output</code>, <code>colour</code>/<code>style</code>, <code>tooltip</code>, <code>i18n</code>, <code>status</code>, <code>requiredCapabilities</code>, <code>resources</code>, <code>blocking</code>, <code>interruptible</code>, <code>validationCodes</code>.
 - Màu áp dụng từ palette <code>src/blocks/palette.js</code>: control <code>#7ECBB1</code>, math <code>#9ECB8E</code>, logic <code>#8DB5E6</code>, variable <code>#EDB070</code>, display <code>#C4A3D8</code>, sensor <code>#7CC4DA</code>, PS4 <code>#D9A0D3</code>, advanced <code>#A8B6C8</code>. **Motion** là category mới cần chọn trong theme (đề xuất <code>#4C97FF</code>), không xóa màu đang lưu ở block cũ.
-- <code>resources</code> phân tích tĩnh từ block + target ID + Devices. Static warning nếu hai script cùng ghi một motor (<code>V2_MOTOR_MULTI_WRITER</code>) nhưng runtime Basic là last accepted write wins. Bị block compile nếu device missing/profile unsafe.
+- <code>resources</code> phân tích tĩnh từ block + target ID + Devices. Áp dụng cảnh báo nhiều writer theo §3.4; lệnh dừng vẫn tham gia arbitration. Bị block compile nếu device missing/profile unsafe.
 - Blockly JSON version 2 bổ sung <code>scriptUid</code> ổn định cho từng hat. Trạng thái công việc sau khi người dùng kéo block, undo/redo hoặc đổi layout phải giữ UID. Cùng 2 event chồng nhau áp dụng tie-break §3.3.
 - <code>blocking</code> trong bảng là suspend *script*, không block FreeRTOS. API C++ trong bảng là biểu diễn contract; generator thực có thể sinh state-machine thay vì một lời gọi hàm đơn lẻ.
 
@@ -290,13 +270,12 @@ Những nhóm sau vẫn nằm trong **sản phẩm cuối** nhưng không phải
 | Control | A11 thoát loop | <code>break;</code> theo continuation frame đúng | S1 |
 | Control | A12 dừng chương trình | <code>runtime.requestStop()</code>; CANCEL all latches/timers | S0 |
 | Control | A13 giây từ khi RUN | <code>runtime.runSeconds()</code>; reset mỗi lần START | S1 |
-| Events | A15 PS4 mất kết nối | <code>events.onLostLink(...)</code> chỉ trong dự án controller; safety xử lý trước script | S2 |
+| Events | A15 PS4 mất kết nối | Sự kiện chẩn đoán của system khi vào FAULT. Không dispatch handler học sinh sau khi khóa motor | S2 / SYSTEM |
 | Events | A16 nhận tin nhắn | <code>events.onMessage("start")</code>; 1 pending per handler | S3 |
-| Control | A17 PS4 nhả | **MỚI**, hat như §5.3, BUTTON=X mặc định | S0 |
 | Motor | B01 khởi tạo M1 | Advanced: <code>robot.initMotor(M1)</code>; Basic tự setup Devices | S1 |
 | Motor | B06 giới hạn M1 | <code>robot.motorLimit(M1,100)</code>; min Device bound | S1 |
 | Motor | B07 đảo chiều M1 | Thiết lập trong Devices; Advanced setup <code>cfg.motor[M1].inverted=false</code> | S1 |
-| Motor | B08 chạy motor trong thời gian | <code>motion.startTimedMotor(M1,Forward,30,1000,WAIT)</code>; token owner, interruptible | S1 |
+| Motor | B08 chạy motor trong thời gian | <code>motion.startTimedMotor(M1,Forward,30,1000,WAIT)</code>; chọn WAIT/NO_WAIT, handle theo §3.4 | S1 |
 | Motor | B09 motor đang nhận lệnh? | <code>robot.motorCommanded(M1)</code>; **không** chứng minh bánh quay | S2 |
 | Motor | B10 công suất yêu cầu M1 | <code>robot.motorCommandPercent(M1)</code>; số có dấu -100..100 | S2 |
 | Motor | B11–B12 nhóm motor | <code>robot.groupRun(Group_1,Forward,30)</code>/<code>robot.groupStop(Group_1)</code>; DEVICES-defined | S2 |
@@ -312,8 +291,8 @@ Những nhóm sau vẫn nằm trong **sản phẩm cuối** nhưng không phải
 | Drive | **MỚI** quay đến hướng [0]° | <code>motion.turnToHeading(0,WAIT)</code> | IMU yaw calibrated |
 | Drive | **MỚI** đặt lại hướng | <code>sensors.resetHeading(0)</code> | IMU feature HW_VERIFY |
 | Drive | **MỚI** timeout chuyển động mặc định | <code>cfg.motionTimeoutMs=10000</code> (Devices; không override safety) | S3 |
-| PS4 | D-P01 kết nối PS4 | **Advanced** manual; Basic auto init I2C 0x30 SDA8 SCL9 từ Devices | S1 |
-| PS4 | D-P04 Options edge | **SYSTEM-ONLY**: giữ Options 1s để START; không có handler student | S1 + bench |
+| PS4 | D-P01 kết nối PS4 | **Advanced** manual; runtime auto init từ Devices theo profile đã xác minh; địa chỉ/chân lấy từ profile | S1 |
+| PS4 | D-P04 Options edge | **SYSTEM-ONLY**: Options giữ đủ 1 s rồi nhả để START theo §2.3; không có handler học sinh | S1 + bench |
 | PS4 | D-P05 vừa thả X? | <code>ps4.justReleased(X)</code>, state latched per frame | S1 |
 | PS4 | D-P07 forward percent | <code>ps4.forwardPercent()</code>; LY lên positive | S2 |
 | PS4 | D-P08 turn percent | <code>ps4.turnClockwisePercent()</code>; LX right positive | S2 |
@@ -321,13 +300,13 @@ Những nhóm sau vẫn nằm trong **sản phẩm cuối** nhưng không phải
 | PS4 | D-P10/D-P11 ARM/DISARM | **Không có block Basic**; control-plane Options/Share; Advanced diagnostics không được bypass safety | S1 |
 | PS4 | D-P12 đang RUN? | <code>runtime.isRunning()</code>, BOOL | S1 |
 | PS4 | D-P13 đang FAULT? | <code>runtime.hasFault()</code>, BOOL | S1 |
-| PS4 | D-P14 clear fault | Control-plane only, require fresh/neutral; **không auto-arm** | S1 |
+| PS4 | D-P14 clear fault | Control-plane theo §2.2; fresh/neutral nếu required, CLEAR không START | S1 |
 | PS4 | D-P15 fault code | <code>runtime.faultCode()</code> | S1 |
 | PS4 | D-P16 timeout | <code>ps4.linkTimedOut()</code>; safety limit 250ms is runtime constant, **không chỉnh Devices Basic** | S1 |
 | LED | E02 blink | <code>ui.ledBlink(500)</code>; nonblocking runtime, no raw delay in concurrent handler | S1, led ownership |
 | LED | E03 báo PS4 | <code>ui.setLinkLedEnabled(true)</code>; system owns LED | S1 |
 | LED | E04 độ sáng | <code>ui.ledBrightness(50)</code> | PWM LED support verified |
-| Display | E06 print raw | <code>Serial.print(value)</code>, default 0 | S1 |
+| Display | E06 print raw | <code>ui.tryLog(value)</code>, mặc định 0; cùng hàng đợi hữu hạn §5.6 | S1 |
 | Buzzer | E07 beep/E08 off | <code>ui.buzzerBeep(200)</code>/<code>ui.buzzerOff()</code> | HW_VERIFY |
 | Servo | F01 init S1 | Auto Devices, không bật PWM khi nguồn chưa ổn | HW_VERIFY |
 | Servo | F02 tới 90° | <code>robot.servoSetAngle(S1,90)</code> | HW_VERIFY |
@@ -349,24 +328,24 @@ Những nhóm sau vẫn nằm trong **sản phẩm cuối** nhưng không phải
 | Text | I05/I06 literal/join | <code>String("Xin chào!")</code>/<code>concat(a,b)</code>; bounded memory/no heap growth across endless loop | S1 |
 | Text | I07 length | <code>stringLength("abc")</code> | S2 |
 | Lists | I08/I09/I10 create/append/get | Bounded list, max-length defined; do not use unbounded growth | S3 |
-| My Blocks | J01/J02 define/call | <code>void chayRobot(){...}</code>/<code>chayRobot();</code> ; no yield | S1 |
-| My Blocks | J03/J04 param define/call | <code>void quay(double speed)</code>/<code>quay(30);</code>; no yield, typed | S2 |
+| My Blocks | J01/J02 define/call | Thủ tục và lời gọi inline vào state-machine của script, hỗ trợ wait theo §3.5 | G1 spike, S1 sau khi PASS |
+| My Blocks | J03/J04 param define/call | Thủ tục có tham số kiểu số, ví dụ <code>quay(30)</code>; đánh giá một lần khi vào đoạn inline | G1 spike, S2 sau khi PASS |
 | Advanced | K01/K02 GPIO read/write | Raw GPIO only when profile permits and no conflict | S1 |
 | Advanced | K03/K04 ADC/PWM | Respect reserved pin map; V2 GPIO47=M6, reject PWM there | S1 |
-| Advanced | K05/K06/K07 Serial | <code>Serial.available()</code>/<code>Serial.read()</code>/<code>Serial.println()</code> | S1 |
+| Advanced | K05/K06/K07 Serial | <code>serial.available()</code>/<code>serial.tryRead()</code>/<code>ui.tryLogLine()</code>; I/O hữu hạn theo §3.2 và §5.6 | S1 |
 | Advanced | K08 UART legacy | Preserve adapter; not PS4 I2C path | compatibility |
 | Advanced | K09/K10/K11 raw I2C | Prevent conflict with PS4 0x30, IMU 0x6A, shared bus | S3 |
 | Advanced | K12 pull input | <code>pinMode(1, INPUT_PULLUP)</code> | S1 |
 
-**Lưu ý hồ sơ:** Một số nhóm V0.1 hiện ở P0 nhưng V0.2 chuyển thành Stage S2/S3/HW_VERIFY; đây là **chủ đích giảm phạm vi sản phẩm cơ bản**, không xóa nhu cầu dài hạn. Những ID không đổi ngữ nghĩa cần giữ đúng v0.1 để hỗ trợ mở project cũ.
+**Lưu ý hồ sơ:** Một số nhóm V0.1 hiện ở P0 nhưng V0.2 chuyển thành Stage S2/S3/HW_VERIFY; đây là **chủ đích giảm phạm vi sản phẩm cơ bản**, không xóa nhu cầu dài hạn. Mã danh mục lịch sử tra ở Phụ lục A. Các mục §6 có type riêng mới hoặc đổi semantics phải theo quy ước §1 khi chốt schema.
 
 ## 7. Migration, validation và mã C++
 
 ### 7.1. Migration v1 → v2 không âm thầm thay ý nghĩa
 
 - Project hiện có: <code>format=codelab-project</code>, <code>version=1</code>, Blockly block IDs như <code>beginner_start</code>, <code>beginner_forever</code>, <code>beginner_wait</code>, <code>beginner_motor</code>, PS4 simulation/UART.
-- **V2 không tự dịch** <code>beginner_start</code> thành <code>codelab_when_run</code>, vì trước đó nó phát code trong <code>setup()</code> của Arduino và không cùng ngữ nghĩa READY→RUN. V1 tiếp tục mở ở <code>Legacy</code> hoặc được người dùng chọn **Tạo bản chuyển đổi**.
-- Chuyển đổi tạo **project copy** version2, giữ file gốc; mở preview diff, yêu cầu chọn runMode, Devices, xử lý orphan stack, xác nhận không có unsupported actuator; không tự ghi đè v1.
+- V1 tiếp tục mở ở <code>Legacy</code> hoặc được người dùng chọn **Tạo bản chuyển đổi**. Các type riêng mới hoặc đổi semantics dùng <code>codelab_v2_&lt;snake_case&gt;</code>. Type chuẩn giữ lại nếu hợp đồng không đổi (ví dụ A03/A04 cùng <code>controls_if</code> với mutation khác nhau). Không alias block legacy vào hành vi V2.
+- Chuyển đổi tạo **project copy** version 2, giữ file gốc, hiển thị diff và yêu cầu xác nhận runMode, Devices, orphan stack và capability. Nêu rõ các đổi hành vi, gồm <code>beginner_start</code> từ setup sang RUN, LED từ GPIO cố định sang ID/owner, Serial từ ghi trực tiếp sang best-effort, và PS4 connected sang freshness đã xác minh. Kiểm tra dữ liệu biến cũ trước khi chuyển sang block biến số.
 - Rename alias Device không đổi <code>MOTOR_ID</code>. Xóa motor/sensor giữ block và báo <code>V2_DEVICE_MISSING</code>; đổi board giữ block và báo invalid channel, không remap.
 - Generator Basic V2 không dùng mã <code>delay()</code> của V1 cho script wait. V1 codegen vẫn ở adapter legacy đến khi có migration reviewed.
 - Thay màu/theme và ngôn ngữ không đổi type/schema của project; đơn vị số và dấu được quy định bởi schema version.
@@ -381,15 +360,21 @@ Những nhóm sau vẫn nằm trong **sản phẩm cuối** nhưng không phải
 | <code>V2_PIN_RESERVED</code> | Raw pin xung đột USB/motor/boot/PSRAM | BLOCK | Không compile |
 | <code>V2_PS4_UNAVAILABLE</code> | Dùng PS4 mà chưa có bridge/profile phù hợp | BLOCK | Không kết nối giả |
 | <code>V2_RESERVED_BUTTON</code> | Hat chọn Options/Share/PS | BLOCK | Chọn nút khác |
-| <code>V2_MOTOR_MULTI_WRITER</code> | Hai script write cùng motor | WARN | Last accepted write wins, giải thích conflict |
-| <code>V2_DRIVE_OWNERSHIP</code> | Drive và motor riêng ghi cùng kênh | WARN | Arbitration token, deterministic |
+| <code>V2_MOTOR_MULTI_WRITER</code> | Hai script có thể phát công suất khác 0 trên kênh trùng | WARN | Hiện kênh và script; bỏ qua stop/0 tĩnh |
+| <code>V2_DRIVE_OWNERSHIP</code> | Lệnh chạy DRIVE và lệnh chạy kênh riêng xung đột | WARN | Giải thích hủy cả nhóm; gộp cảnh báo trùng |
 | <code>V2_SENSOR_NOT_READY</code> | Motion degree/cm khi sensor chưa validated | BLOCK | Không có time fallback |
 | <code>V2_SENSOR_STALE</code> | Sensor invalid/stale lúc chạy | RUNTIME | Stop motion / FAULT theo policy |
 | <code>V2_WAIT_TIMEOUT</code> | Wait until hoặc motion until quá deadline | RUNTIME | Cancel action, stop owned channel, notify |
-| <code>V2_PROC_YIELD_UNSUPPORTED</code> | Hàm tự tạo chứa suspend trực tiếp/gián tiếp | BLOCK | Viết lại logic hoặc chờ P2 |
+| <code>V2_PROC_RECURSION</code> | Call graph có chu trình | BLOCK | Hiện chuỗi lời gọi để bỏ đệ quy |
+| <code>V2_PROC_INLINE_LIMIT</code> | Mở rộng My Blocks vượt quota code/frame | BLOCK | Chỉ rõ chỗ gọi và quota đã vượt |
 | <code>V2_SCRIPT_LIMIT</code> | >16 scripts hoặc vượt quota memory | BLOCK | Không tạo scheduler quá giới hạn |
 | <code>V2_PROFILE_MISMATCH</code> | Board selected khác board/firmware validated | BLOCK | Không flash bằng profile sai |
-| <code>V2_SAFETY_START_UNAVAILABLE</code> | Autonomous muốn RUN nhưng không có START device verified | BLOCK HARDWARE RUN | Cho phép chỉnh block/host sim, không cho phép chạy motor vật lý |
+| <code>V2_SAFETY_START_UNAVAILABLE</code> | AUTO thiếu đường START đã bench và điều kiện an toàn §2.3 | BLOCK HARDWARE RUN | Cho phép chỉnh block/host sim; giữ PWM=0 |
+| <code>V2_RUN_MODE_MISMATCH</code> | AUTO có hat/reporter phụ thuộc PS4 trong mã có thể chạy | BLOCK | Đổi mode hoặc bỏ dependency |
+| <code>V2_AUTO_RUN_LIMIT_INVALID</code> | Thời hạn AUTO không hợp lệ | BLOCK | Dùng số nguyên trong khoảng profile cho phép |
+| <code>V2_AUTO_MAX_RUNTIME</code> | AUTO chạm deadline RUN | FAULT | Hủy script/motion, tắt đầu ra motor, cần CLEAR |
+| <code>V2_SERIAL_DROPPED</code> | Log thiếu sink, quá dài hoặc queue đầy | COUNTER | Bỏ dòng; scheduler tiếp tục |
+| <code>V2_DIVIDE_BY_ZERO</code> | Chia cho 0 | BLOCK / FAULT | Chặn nếu biết tĩnh; khóa đầu ra motor nếu gặp trong RUN |
 | <code>V2_TYPE_MISMATCH</code> | BOOL/NUMBER/TEXT sai kiểu | BLOCK | Không emit placeholder lệnh tải |
 
 ### 7.3. API C++ facade mục tiêu (pseudocode, KHÔNG phải code hiện có)
@@ -425,7 +410,7 @@ void Ps4Adapter::updateStudentSnapshot(const RawFrame& f) {
 struct XScript {
   uint16_t pc = 0;
   uint32_t deadline = 0;
-  bool active = false, pending = false;
+  bool active = false; // Scheduler owns the bounded pending edge token.
 };
 void tickX(uint32_t now) {
   if (!runtime.isRunning()) return; // STOP/FAULT cancel script elsewhere
@@ -440,7 +425,7 @@ void tickX(uint32_t now) {
       robot.motorStop(M1);
       x.active = false;
       x.pc = 0;
-      // pending rerun (max 1) is dispatched by scheduler
+      // Scheduler dispatches only a still-current pending edge (§3.3).
       return;
   }
 }
@@ -487,15 +472,16 @@ Khi chương trình bắt đầu
     Nếu [giá trị cần trái ngang > 20]
       Motor M1 tiến 40%
       Motor M2 lùi 40%
-    Nếu không nếu [giá trị cần trái ngang < -20]
-      Motor M1 lùi 40%
-      Motor M2 tiến 40%
     Nếu không
-      Dừng motor M1
-      Dừng motor M2
+      Nếu [giá trị cần trái ngang < -20]
+        Motor M1 lùi 40%
+        Motor M2 tiến 40%
+      Nếu không
+        Dừng motor M1
+        Dừng motor M2
 ~~~
 
-Phải chọn/mapping Devices để "quay" có nghĩa cơ khí; không tự suy 2 motor bất kỳ là robot hai bánh.
+L2 chỉ dùng hai khối A04 lồng nhau trong Basic. Phải chọn/mapping Devices để "quay" có nghĩa cơ khí; không tự suy 2 motor bất kỳ là robot hai bánh.
 
 ### L3 — Mecanum4 PS4: học sinh tự ghép
 
@@ -516,16 +502,16 @@ Khi chương trình bắt đầu
 
 Motor commands chỉ được nhận khi runtime RUN, independent link watchdog, fault prevents auto resume.
 
-### L4 — Autonomous (CHỈ sau khi xác minh trigger phần cứng)
+### L4 — Autonomous có thời hạn
 
 ~~~text
-Devices: Drivetrain4, runMode=AUTONOMOUS, physical START validated
+Devices: Drivetrain4; runMode=AUTONOMOUS; autoMaxRunSeconds=15
+Nguồn START: nút vật lý đã xác minh, hoặc PS4 Options tạm theo §2.3
 Khi chương trình bắt đầu
   Robot [tiến] [50]% trong [1] giây [và đợi]
-  Robot dừng
 ~~~
 
-Tại nguồn lên READY và motor=0; khi bấm START vật lý đã được xác minh → RUN. Không có START hardware → **BLOCK HARDWARE RUN**, vẫn test mock trên PC.
+Cấp nguồn → READY/0. Sau START hợp lệ robot chạy theo thời hạn rồi tự về READY/0. Đổi sang [không đợi] thì hat kết thúc ngay, handle vẫn giữ chương trình sống đúng 1 giây. Không cần thêm `Robot dừng` cuối bài. Nếu START bằng PS4, rớt link sau RUN không đổi kết quả. Khi chưa đạt điều kiện phần cứng §2.3, L4 chỉ chạy mock.
 
 ### L5 — Sensor future (not enabled until supported)
 
@@ -538,40 +524,48 @@ Khi chương trình bắt đầu
 
 Không bật nếu chưa có distance + IMU + encoder (hoặc thuật toán tương đương đã nghiệm thu). Sensor invalid/stale khiến chuyển động stop; không tự thay bằng lệnh thời gian.
 
-## 9. Kế hoạch triển khai sau khi duyệt, tests & acceptance
+## 9. Kế hoạch triển khai sau khi duyệt
 
-| Gate | Công việc | Chứng cứ bắt buộc | Không làm |
-|---|---|---|---|
-| G0: Spec Review | Duyệt lifecycle, schema, 30 block, Device IDs, PS4 system buttons, backward compatibility | Biên bản chỉnh/duyệt V0.2 | Không sửa motor/flash |
-| G1: Scheduler Spike | Hai handler X/O + nested wait + STOP + retrigger + empty loops; compare two implementations | Unit tests virtual clock deterministic, codegen generated C++ compile host, RAM/time budget | Không dùng board/motor thật |
-| G2: Devices & Generator | Parser project v2, schema and errors; latching + ownership; bộ dựng C++ | Tests serialization, device delete/rename, i18n/locale, conflict, latest-write token, backward import | Không tích hợp WASM |
-| G3: One Motor | Tích hợp lớp facade với driver 4WD thực đã kiểm chứng; PS4 I2C sequence/freshness; bench trên 1 motor | Build đúng target, Bench log M1, STOP/FAULT, Options hold, Shared links, mất controller, timed stop/overwriting | Không mở M5/M6, servo |
-| G4: Drivetrain4 | FL/FR/RL/RR, mixer sign adapter, robot.drive, battery/driver guard | Test 6 hướng, diagonal, inversion, limit min, stop, reboot; golden L1–L3 | Không coi compile PASS là movement PASS |
-| G5: Advanced & Sensors | Gated/available theo Devices/feature flags; my blocks and sensor contracts | Per-driver hardware tests + simulated invalid/stale + timeout | Không hứa quay 90°/30cm khi thiếu sensor |
-| G6: Browser WASM | Sau khi Blockly ổn định mới thử esp-wasm PoC từ Issue #27 | Biên dịch/nạp offline-browser, tests no CLI/cloud compiler | Không xóa local bridge trước khi PASS |
+| Gate | Việc cần làm | Chứng cứ để qua |
+|---|---|---|
+| G0 | Duyệt lifecycle, safety, Basic 30, Devices, type và migration | Xác nhận các quyết định §10 trong Issue #28 |
+| G1 | Spike codegen scheduler, inline My Blocks có wait, AUTO và motion handle | Toàn bộ ca host, C++ sinh ra build được, số đo và ngưỡng §9.2 |
+| G2 | Devices, generator và migration | Roundtrip/schema/i18n, arbitration, compile gates, smoke UI |
+| G3 | Xác minh đúng board, driver, D1/PS4 và START/STOP trên 1 motor | Log release/hold, link loss, xung ngắn, watchdog/reset, STOP và ngắt nguồn. AUTO Options chỉ bật khi đạt §2.3 |
+| G4 | Drivetrain 4WD | Bench dấu, tổ hợp trục, giới hạn, STOP/reboot và L1–L4 theo capability |
+| G5 | Advanced, cảm biến, servo | Bằng chứng per-driver, stale/invalid/timeout và gate theo Devices |
+| G6 | PoC WASM của #27 | Build/nạp browser-only sau khi luồng Blockly ổn định |
 
-### 9.1. Test matrix — phải có ít nhất
+### 9.1. Test matrix
 
-1. **Tương thích:** import/export v1 byte-preservation; opt-in v2 migration; rename/xóa Devices giữ block/ID; board switch không remap; script order không đổi khi kéo block sang vị trí khác.
-2. **Scheduler:** t=0 X/t=500 O/t=2000 stop; STOP 750; X nhấn lại khi busy pending max1; 100 sự kiện spam không vượt bound; "forever{}" và nested loops empty không starvation; timeout error; timer wrap.
-3. **Motion latch:** X run→handler return→motor still running→X released→stop; timed motion overwritten by new command timer không dừng lệnh mới; stopAll, disarm, fault đều hủy lệnh/timer. Basic multi writer warn nhưng runtime deterministic.
-4. **Safety lifecycle:** boot stays READY/0 PWM; controller required fails on timeout; auto-only no PS4 link-fault; Options start with neutral + hold, Share stop; STOP→READY→START resets vars, no resume; fault clear separate; reboot never auto-run.
-5. **Block schema:** type/field shadow/Boolean+Number checks/i18n; unavailable sensor hidden; deleted device icon warning; raw pin conflict; unsupported motor compile gated.
-6. **Coordinates:** raw LY up→student forward+; raw LX right→student turn CW+; student drive right+→mixer vy negative; CW+→omega negative. Validate six directions and mixed axes.
-7. **Resource budgets:** 16 scripts/handlers, operation cap & time budget, PS4 polling timeout, memory, CPU; defaults are preliminary and may change after profiling. Hardware watchdog behavior must be measured, not inferred from host.
-8. **Real build:** npm test/npm run build; Arduino CLI compile correct FQBN for local baseline (no upload automatic); motor 4WD only after exact board mapping; wasm integration deferred.
+| Nhóm | Ca bắt buộc |
+|---|---|
+| Scheduler và bridge | Tất cả ca §3.6. Spam 100 cạnh quan sát được vẫn tối đa 1 pending/hat. Duplicate/stale report, sequence wrap/reset theo adapter, reconnect, STOP trước dispatch, tie-break bất biến khi kéo block, timer wrap. Đo xung ngắn trên đúng D1/ESP32 theo §3.3 ở G3 |
+| Motion | WAIT/NO_WAIT, hết hạn, stopAll, ghi đè timer cũ, ghi kênh trùng hủy cả DRIVE, handle pool và cleanup. Lệnh chạy + stop không warning; hai lệnh chạy xung đột có warning, DRIVE không báo trùng |
+| AUTO | Natural completion có/không timed handle, latch không giữ RUN, hat còn chờ và forever chỉ thoát khi stop/fault hoặc deadline. Kiểm mặc định, biên khoảng, trần profile, deadline wrap, ưu tiên deadline khi trùng completion, reset sau START mới |
+| Lifecycle | Boot PWM=0, held-at-boot, nhả sớm, stale, lệch neutral, Share và mất link trước khi xác nhận Options. Sau RUN, CONTROLLER mất link → FAULT, AUTO chỉ dùng PS4 để START vẫn chạy. Share khi còn link, đường START không đủ điều kiện, ngắt nguồn cục bộ và CLEAR riêng |
+| Inline và I/O | Inline wait/WAIT bắc cầu, hai call site, đối số chỉ tính một lần, quota và đệ quy bị chặn. Serial sink trống/đầy/mất kết nối, dòng UTF-8 quá dài; drop counter và scheduler/STOP vẫn đạt budget. Status LED/lightbar vắng mặt không ảnh hưởng lifecycle |
+| Schema/legacy | V1 mở lại cùng semantics; opt-in migration giữ file gốc; type mới không đụng legacy; A03/A04 dùng mutation chuẩn; L2 chỉ dùng Basic. Xóa Device giữ block/ID; đổi board không remap; GPIO47 không dùng làm LED V2; sensor thiếu driver bị gate |
+| Dấu và build | PS4 raw → học sinh; facade → mixer. 6 hướng và mixed axes. `npm test`, `npm run build`, Arduino compile đúng FQBN trước bench; hardware PASS cần số đo từ mạch |
 
-## 10. Những quyết định cần chủ dự án duyệt
+### 9.2. Ngưỡng Go/No-Go G1 đề xuất, chưa benchmark
 
-- [ ] V0.2 dùng **2 chế độ RUN**: PS4 và Autonomous; power-on chỉ READY/PWM0; autonomous chưa có START hardware confirmed thì chặn motor.
-- [ ] Basic ẩn ARM/DISARM, Options+Share là hệ thống; Options hold 1s **mới là đề xuất**, có cần giữ rising-edge fast100 để backward compatibility không?
-- [ ] Chọn **resumable state-machine** làm spike đầu; fallback bounded cooperative contexts nếu không qua test; My Blocks có wait chỉ ở stage sau.
-- [ ] Latch motor sau handler return, STOP/FAULT xóa, lifetime program=RUN, owner token ngăn timer cũ stop lệnh mới.
-- [ ] 16 scripts và 2ms/tick/250ms heartbeat là mục tiêu thử nghiệm, không phải con số phần cứng được bảo chứng.
-- [ ] Schema Basic 30 block + Devices auto init; sensor only when hardware capable, giữ inventory V0.1 ở Advanced/Backlog.
-- [ ] Quy ước +forward/+right/+clockwise ở facade, chuyển dấu duy nhất vào mixer; PS4 input normalization là tầng riêng.
-- [ ] Không rewrite hoặc tự động di trú project v1 mà thiếu sự chấp thuận/tác động rõ với user.
-- [ ] Bản spec được duyệt trước khi viết generator, không thực hiện flash/actuator hiện tại.
+| Hạng mục | Ngưỡng đề xuất |
+|---|---|
+| Quy mô | Tối đa 16 script đăng ký, 16 active, 1 pending/hat. Sau inline, tối đa 1024 operation tĩnh toàn project và 256 byte frame/script |
+| Scheduler | Tối đa 256 operation đã tính phí mỗi tick và 2 ms tổng script work/tick. Dừng slice trước khi vượt một trong hai quota; I/O không được giữ scheduler chờ. Khoảng phát heartbeat mục tiêu ≤50 ms; timeout heartbeat và freshness mỗi loại 250 ms |
+| RAM và flash | Phần tăng so với baseline ≤16 KiB RAM (static + peak stack/heap tăng thêm của runtime, script, log và motion) và ≤64 KiB flash (.text + .rodata + dữ liệu khởi tạo lưu trong flash) |
+| Thực thi | PASS toàn bộ ca host liên quan G1, gồm §3.6, cạnh stale, timeout, chặn inline vượt quota/đệ quy, Serial đầy và STOP ưu tiên. Không có side effect chạy lại sau resume hoặc PWM từ lần RUN trước |
+
+**Cách đo:** dùng cùng toolchain, FQBN, flags và stub I/O cho baseline không có scheduler V2 và fixture 16 script có inline lồng, motion WAIT/NO_WAIT, log đầy và burst PS4 mock. Lưu generated C++, build log, linker map và cách tính peak stack/heap. Chạy ít nhất 10.000 tick tải trên host, ghi cấu hình máy, max và p99 cho script work/heartbeat. Cross-compile ESP32-S3 để đối chiếu footprint; phần RAM peak chưa đo trực tiếp phải có cận trên từ frame/stack/pool đã phân bổ. Trượt ngưỡng hoặc thiếu số liệu thì chưa Go, ghi nguyên nhân và thu hẹp inline/quota hoặc thử đối chứng. Kết quả host không xác nhận timing, watchdog hay thời gian dừng trên mạch; xác minh lại ở G3 trước khi bật tải.
+
+## 10. Các lựa chọn V0.2 để duyệt tại G0
+
+- READY khi cấp nguồn. Options giữ 1 s rồi nhả cho CONTROLLER và cho AUTO tạm nếu đạt §2.3; fast100 rising edge thuộc Legacy.
+- Dispatch chỉ cạnh còn hiệu lực. CONTROLLER chờ sự kiện, AUTO tự dừng khi hết việc và còn giới hạn cứng. Motion có thời hạn dùng handle kể cả NO_WAIT.
+- G1 thử state-machine với My Blocks inline có wait, theo ngưỡng §9.2. Các con số ở §2, §3, §5 và §9 là đề xuất chưa bench.
+- Basic vẫn 30 block/biến thể. Devices mở tính năng theo capability; type đổi semantics tách Legacy và migration tạo bản sao.
+- G0 cần xác nhận review. G1–G6 cần chứng cứ riêng theo §9.
 
 ## 11. References
 
@@ -583,141 +577,51 @@ Không bật nếu chưa có distance + IMU + encoder (hoặc thuật toán tư�
 
 **Đây là tài liệu REVIEW — các tên API facade chỉ là đề xuất, không phải phần mềm đã tích hợp.**
 
-## Phụ lục A. Traceability đầy đủ 126 block của Catalog V0.1
+## Phụ lục A. Đối chiếu danh mục V0.1 → V0.2
 
-**Bảng dưới là đối chiếu ID/tên cũ với quyết định V0.2, không phải bảng schema mới cho từng block P2.** Cột "block V0.1" là nhãn lịch sử (để người duyệt dò), hợp đồng mới §§2–7 được ưu tiên khi có xung đột. Các chức năng HW_VERIFY không được mặc định enable trên main.
+Mỗi ID cũ có một đích trong bảng. Khoảng ID theo thứ tự trong V0.1. Basic tra type tại §5, extension tra hợp đồng và capability tại §6. V0.1 giữ nguyên để đối chiếu. A17v2 là hat RELEASE mới, không thuộc tập 126 block cũ.
 
-| ID V0.1 | Tên/mục cũ | Diễn giải V0.2 |
+| ID V0.1 | Đích V0.2 (ID/type hoặc hợp đồng) | Stage / trạng thái |
 |---|---|---|
-| A01 | Khi bắt đầu chương trình | Đổi type ở project V2; v1 vẫn là Arduino setup, v2 khi RUN |
-| A02 | Lặp lại mãi mãi | Vòng lặp là block con của script; yield cuối mỗi lượt |
-| A03 | Nếu ... thì | Giữ native controls_if, V2 dùng continuation-safe codegen |
-| A04 | Nếu ... thì / Nếu không | Giữ controls_if với ELSE; không tạo id duplicate trong serialization |
-| A05 | Nếu ... / nếu không nếu ... | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| A06 | Lặp lại [5] lần | Loop frame per script, count eval một lần + yield |
-| A07 | Lặp đến khi [đúng] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| A08 | Đợi [1] giây | NEW type, đợi suspend script, không delay blocking |
-| A09 | Đợi đến khi [đúng] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| A10 | Lặp khi [đúng] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| A11 | Thoát vòng lặp | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| A12 | Dừng chương trình an toàn | explicit program STOP; không stop khi handler return |
-| A13 | Thời gian từ khi bật mạch | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| A14 | Khi nút PS4 [X] vừa nhấn | Hat PS4 P0 + per-button edge latch |
-| A15 | Khi PS4 mất kết nối | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| A16 | Khi nhận thông điệp [start] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| B01 | Khởi tạo động cơ [M1] | Basic auto Devices init, Advanced manual only |
-| B02 | Động cơ [M1] quay [tiến] tốc độ [30]% | V2 latched run; nonblocking; mới facade |
-| B03 | Đặt công suất động cơ [M1] bằng [0]% | Power signed; last accepted write wins |
-| B04 | Dừng động cơ [M1] | Stop override latch/token |
-| B05 | Dừng tất cả động cơ | Stop all active motors |
-| B06 | Đặt tốc độ tối đa motor [M1] là [100]% | Bound is min(DeviceLimit, MotorLimit, DriveLimit) |
-| B07 | Đổi chiều motor [M1] | Prefer Devices inversion only |
-| B08 | Chạy motor [M1] trong [1] giây | Timed motor with WAIT/NO_WAIT + owner token, no delay |
-| B09 | Động cơ [M1] đang được ra lệnh chạy? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| B10 | Công suất đang đặt cho [M1] (%) | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| B11 | Nhóm [G1] quay [tiến] tốc độ [30]% | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| B12 | Dừng nhóm [G1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| B13 | Đặt kiểu dừng [thả trôi] cho [M1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| B14 | Motor [M1] quay [90] độ | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| B15 | Vị trí motor [M1] (độ) | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| B16 | Motor [M1] tiêu thụ dòng [A] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| C01 | Khởi tạo robot [4 bánh mecanum] | Devices auto drivetrain init |
-| C02 | Robot tiến tốc độ [30]% | Gộp vào codelab_drive_direction dropdown |
-| C03 | Robot lùi tốc độ [30]% | Gộp vào codelab_drive_direction dropdown |
-| C04 | Robot đi ngang [trái] tốc độ [30]% | Gộp vào codelab_drive_direction dropdown |
-| C05 | Robot xoay tại chỗ [trái] tốc độ [30]% | Gộp vào codelab_drive_direction dropdown |
-| C06 | Di chuyển theo trục: tiến [0] ngang [0] xoay [0] (%) | V2 new drive axes, facade sign normalization |
-| C07 | Đặt tốc độ tối đa robot [100]% | Limit min model |
-| C08 | Dừng robot | Drive group stop |
-| C09 | Robot đã cấu hình đủ bánh? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| C10 | Robot chạy [tiến] trong [1] giây | Motion handle and WAIT/NO_WAIT |
-| D-P01 | Kết nối tay cầm PS4 | Basic Devices auto I2C setup; no legacy adapter conflation |
-| D-P02 | PS4 đã kết nối? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| D-P03 | Nút [X] đang được nhấn? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| D-P04 | Nút [Options] vừa nhấn? | Options SYSTEM ONLY; no student event for reserved key |
-| D-P05 | Nút [X] vừa thả? | Edge event remains P1 reporter, latched |
-| D-P06 | Cần [trái] trục [dọc] (%) | V2 -100..100 student-axis normalization |
-| D-P07 | Cần trái: tiến/lùi (%) | PS4 adapter forwards LY up positive |
-| D-P08 | Cần trái: xoay (%) | PS4 adapter LX right to clockwise positive |
-| D-P09 | Cần phải: đi ngang (%) | PS4 adapter RX right to strafe-right positive |
-| D-P10 | Cho phép điều khiển robot (ARM) | ARM control plane only; remove from Basic |
-| D-P11 | Ngắt điều khiển và dừng (DISARM) | DISARM control plane only; remove from Basic |
-| D-P12 | Robot đang được ARM? | Expose runtime.isRunning() Basic optional |
-| D-P13 | Robot gặp lỗi điều khiển? | Expose runtime.hasFault() Basic optional |
-| D-P14 | Xóa lỗi sau khi đã an toàn | Fault clear separate from START, Advanced/control plane |
-| D-P15 | Mã lỗi điều khiển | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| D-P16 | Tay cầm mất kết nối hơn [250] ms? | 250ms fixed runtime safety threshold (not Devices field) |
-| E01 | Bật/tắt đèn trên mạch | LED ownership facade; no direct GPIO when system owns |
-| E02 | Nhấp nháy đèn mỗi [0.5] giây | Nonblocking LED effect, avoid delay in handler |
-| E03 | Bật đèn báo trạng thái PS4 | LED system owns when status enabled |
-| E04 | Đặt độ sáng đèn [50]% | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| E05 | Hiện lời nhắn [Xin chào!] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| E06 | Hiện giá trị [0] không xuống dòng | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| E07 | Phát tiếng bíp trong [0.2] giây | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| E08 | Dừng còi | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| F01 | Khởi tạo servo [S1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| F02 | Đặt servo [S1] tới [90] độ | Hardware gated until servo power validated |
-| F03 | Đặt tốc độ servo [45] độ/giây | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| F04 | Tắt tín hiệu servo [S1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| F05 | Góc đặt cho servo [S1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G01 | Chân [D1] đang ở mức cao? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G02 | Giá trị analog của [A1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G03 | Khởi tạo cảm biến khoảng cách [Khoảng cách 1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G04 | Khoảng cách đo được (cm) | Sensor {value, valid, sampledAt}, never stale success |
-| G05 | Có vật cản gần hơn [20] cm? | Invalid sensor => false + active motion cancels |
-| G06 | Cảm biến dò vạch [L1] thấy vạch? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G07 | Cảm biến [Button1] được nhấn? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G08 | Cảm biến màu phát hiện [đỏ]? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G09 | Cường độ màu [đỏ] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G10 | Khởi tạo IMU | IMU HW gated; +heading clockwise only in sensor layer |
-| G11 | Góc quay robot (yaw, độ) | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G12 | Độ nghiêng [pitch] (độ) | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G13 | Số xung encoder [E1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G14 | Đặt bộ đếm encoder [E1] về 0 | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| G15 | Cảm biến [S1] có dữ liệu hợp lệ? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H01 | Đúng / Sai | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H02 | [1] [=] [1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H03 | [đúng] và [đúng] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H04 | Không [đúng] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H05 | Số [0] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H06 | [1] + [1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H07 | Số dư [10] chia [3] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H08 | Số ngẫu nhiên từ [1] đến [10] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H09 | Giá trị tuyệt đối của [-5] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H10 | Làm tròn [3.5] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H11 | Giới hạn [50] từ [0] đến [100] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H12 | Đổi thang [50] từ [-100..100] sang [-255..255] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H13 | Chọn giá trị nhỏ nhất/lớn nhất | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| H14 | Trị sin/cos của [0] độ | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| I01 | Tạo biến [điểm] | Stable var ID to unique C++ symbol, Unicode collision proof |
-| I02 | Đặt [điểm] thành [0] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| I03 | Thay đổi [điểm] một lượng [1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| I04 | Giá trị biến [điểm] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| I05 | Chuỗi chữ [Xin chào!] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| I06 | Ghép chữ [A] với [B] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| I07 | Độ dài văn bản [abc] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| I08 | Tạo danh sách [Giá trị] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| I09 | Thêm [0] vào danh sách [Giá trị] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| I10 | Phần tử thứ [1] của danh sách | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| J01 | Định nghĩa [chạy robot] | P0/P1 procedure no wait or yield |
-| J02 | Gọi [chạy robot] | P0/P1 procedure no wait or yield |
-| J03 | Định nghĩa hàm [quay] nhận [tốc độ] | P0/P1 procedure no wait or yield |
-| J04 | Gọi hàm [quay] với [30] | P0/P1 procedure no wait or yield |
-| K01 | Đọc GPIO [1] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K02 | Ghi GPIO [1] [LOW] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K03 | Đọc Analog GPIO [2] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K04 | PWM GPIO [47] duty [0] | Respect GPIO47=M6 on V2, reserved GPIO |
-| K05 | Đọc Serial có dữ liệu? | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K06 | Đọc ký tự Serial | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K07 | Ghi Serial [hello] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K08 | Cấu hình UART PS4 | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K09 | Cấu hình I²C nâng cao | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K10 | Đọc byte I²C từ [0x30] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K11 | Ghi byte I²C tới [0x30] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
-| K12 | Đặt chế độ GPIO [INPUT_PULLUP] | Giữ mục tiêu sản phẩm cuối; triển khai theo gate/capability thay vì hiện sẵn Basic |
+| A01–A02 | A01v2 `codelab_v2_when_run`, A02v2 `codelab_v2_forever` | S0 Basic mới |
+| A03–A04 | A03/A04 `controls_if` (mutation ELSE ở A04) | S0 Basic giữ type |
+| A05 | A05, biến thể else-if của `controls_if` | S0 extension |
+| A06 | A06v2 `codelab_v2_repeat_n` | S0 Basic mới |
+| A07, A09–A11, A13 | Cùng ID ở §6, loop/wait và thời gian RUN | S1 extension |
+| A08 | A08v2 `codelab_v2_wait_seconds` | S0 Basic mới |
+| A12 | A12, `runtime.requestStop()` | S0 extension |
+| A14 | A14v2 `codelab_v2_when_ps4_pressed` | S0 Basic mới |
+| A15 | A15, chẩn đoán mất link | S2 system |
+| A16 | A16, hat tin nhắn | S3 extension |
+| B01 | Devices tự khởi tạo, B01 manual | S1 Devices / Advanced |
+| B02–B05 | B02v2–B05v2 `codelab_v2_motor_{run,power,stop,stop_all}` | S1 Basic gated driver |
+| B06–B08 | Cùng ID ở §6, limit/invert/timed motor | S1 extension |
+| B09–B12 | Cùng ID ở §6, reporter và nhóm motor | S2 extension |
+| B13–B16 | Cùng ID ở §6, brake/encoder/current | HW_VERIFY |
+| C01 | Devices drivetrain, C01 manual | S2 Devices / Advanced |
+| C02–C05 | Gộp vào C02v2 `codelab_v2_drive_direction` | S2 Basic |
+| C06, C08, C10 | C06v2 `codelab_v2_drive_axes`, C08v2 `codelab_v2_drive_stop`, C10v2 `codelab_v2_drive_for_time` | S2 Basic |
+| C07, C09 | Cùng ID ở §6, limit/ready | S2 extension |
+| D-P01 | Devices PS4, D-P01 manual | S1 Devices / Advanced |
+| D-P02, D-P03, D-P06 | DP02v2 `codelab_v2_ps4_connected`, DP03v2 `codelab_v2_ps4_pressed`, DP06v2 `codelab_v2_ps4_axis_percent` | S1 Basic gated PS4 |
+| D-P04, D-P10–D-P11, D-P14 | Options, ARM/STOP, CLEAR ở §2 | S1 system |
+| D-P05, D-P12–D-P13, D-P15–D-P16 | Cùng ID ở §6, reporter PS4/runtime | S1 extension |
+| D-P07–D-P09 | Cùng ID ở §6, reporter theo hướng | S2 extension |
+| E01, E05 | E01v2 `codelab_v2_led_set`, E05v2 `codelab_v2_serial_message` | S1 Basic LED gated / S0 Basic log |
+| E02–E03, E06 | Cùng ID ở §6, hiệu ứng LED/status/log | S1 extension |
+| E04, E07–E08 | Cùng ID ở §6, LED PWM/buzzer | HW_VERIFY |
+| F01–F05 | Devices servo và cùng ID ở §6 | HW_VERIFY |
+| G01–G14 | Cùng ID ở §6, Devices/driver tương ứng | Gated theo capability / HW_VERIFY |
+| G15 | G15, reporter sensor valid | S3 extension |
+| H01–H05 | H01–H05, type Blockly chuẩn ở §5.4 | S0 Basic giữ type |
+| H06 | H06v2 `codelab_v2_arithmetic` | S0 Basic mới |
+| H07–H09, H10–H11, H12–H14 | Cùng ID ở §6, toán mở rộng | S0, S1, S2 tương ứng |
+| I01 | I01, tạo biến qua UI | S0 UI |
+| I02–I04 | I02v2–I04v2 `codelab_v2_variable_{set,change,get}_number` | S0 Basic biến số |
+| I05–I06, I07, I08–I10 | Cùng ID ở §6, text/list | S1, S2, S3 tương ứng |
+| J01–J02, J03–J04 | Cùng ID ở §6, My Blocks inline, có/không tham số | Spike G1, S1/S2 sau PASS |
+| K01–K07, K12 | Cùng ID ở §6, GPIO/PWM/Serial | S1 Advanced |
+| K08 | Adapter UART legacy | Legacy |
+| K09–K11 | Cùng ID ở §6, I²C nâng cao | S3 Advanced |
 
-### Phụ lục B. Trạng thái triển khai
-
-- **Đã hoàn thành ở lượt này:** chỉ soạn bản đặc tả và mapping từ V0.1.
-- **Chưa làm:** scheduler spike, facade runtime, Blockly generator mới, board bench, sửa flash/upload, WASM compiler.
-- **Không thay đổi:** main, nhánh WASM thử nghiệm, firmware cũ và các project đã lưu.
+D01–D11 là 11 mục cấu hình Devices ngoài tập 126 block. Đối chiếu ở §4: D01 profile; D02–D06 motor/role/invert/group/drivetrain; D07 bridge PS4; D08–D09 servo/sensor gated; D10 giới hạn và brake; D11 thiết lập editor.
