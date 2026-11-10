@@ -1,0 +1,31 @@
+Host: Microsoft Windows 10.0.26300
+Compiler: g++.exe (MinGW-W64 x86_64-msvcrt-posix-seh, built by Brecht Sanders) 13.2.0
+Compile: g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic scheduler.cpp scheduler_test.cpp -o C:\Users\Admin\AppData\Local\Packages\sandbox.{7242168d-e8f5-481d-a6cd-47780955344a}\AC\Temp\codelab-g1-scheduler-tests.exe
+PASS: X t=0 / O t=500 / X continuation t=2000 independent waits
+PASS: STOP at 750ms cancels waits and wins over stale writes
+PASS: rapid X edge tokens bounded to one and stale PRESS not replayed
+PASS: empty forever yields; nested repeat/if timer wait does not starve peers
+PASS: old timer ownership plus timed WAIT/NO_WAIT natural AUTO completion
+PASS: inline My Block wait, recursion/quota rejection, explicit restart reset
+PASS: AUTO timeout, heartbeat watchdog, 16-script cap, 256-op cooperative quota
+PASS: identical virtual-time/input traces produce byte-stable ordered events
+BENCH: host_ticks=10000 scripts=16 ops=160000 max_tick_ns=10500 sizeof_scheduler=9704 sizeof_gate=80 static_bytes=9784 max_script_tick_ops=1
+PASS: §9.2 16-script benchmark: operation, static RAM, and 2ms tick budgets
+RESULT: all deterministic virtual-clock tests passed
+HOST_EXECUTABLE_BYTES: 87076 (host binary; not ESP32 flash usage)
+HOST_CORE_OBJECT_SIZE (-Os; host sections, not ESP32 flash usage):
+   text	   data	    bss	    dec	    hex	filename
+   5348	      0	      0	   5348	   14e4	C:\Users\Admin\AppData\Local\Packages\sandbox.{7242168d-e8f5-481d-a6cd-47780955344a}\AC\Temp\codelab-g1-scheduler-core.o
+
+=== ESP32-S3 compile-only probe ===
+CLI: Arduino CLI 1.5.1 (bundled with Arduino IDE)
+Installed platform: esp32:esp32 3.3.7
+Supported profile: steam-mainboard-v2 / ESP32-S3-MINI-1-N8
+FQBN: esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled
+Sketch: temporary G1SchedulerCompile.ino including only scheduler.hpp/.cpp and a mock callback; source/output under %TEMP%.
+Action: compile only; no upload or board access.
+Result: PASS
+Arduino report: Sketch uses 273583 bytes (8%) of program storage space. Maximum is 3342336 bytes.
+Arduino report: Global variables use 31060 bytes (9%) of dynamic memory, leaving 296620 bytes for local variables. Maximum is 327680 bytes.
+Artifacts: .ino.bin=273728 bytes; merged.bin=8388608 bytes (partition image, not application usage).
+Note: initial target attempt exposed Core DISABLED macro collision; renamed PoC-only ScriptState enumerator to INACTIVE, then host tests passed and target compile succeeded.
