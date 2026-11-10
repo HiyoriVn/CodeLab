@@ -15,11 +15,28 @@ export function editorToolbox(boardId, mode = 'beginner', devices) {
     kind: 'categoryToolbox',
     contents: [
       category('Bắt đầu & Điều khiển', '#e79b23', [
-        ...(devices ? [] : [block('beginner_start')]), block('beginner_forever'), block('beginner_wait'), block('controls_if'),
+        block('beginner_start'), block('beginner_forever'), block('beginner_wait'),
+        block('controls_if'), block('controls_if',{extraState:{hasElse:true}}),
         block('controls_repeat_ext',{inputs:{TIMES:shadow('math_number',{NUM:5})}}),
+        block('beginner_message',{inputs:{VALUE:shadow('text',{TEXT:'Xin chào!'})}}),
       ]),
       category('PS4', '#cf5b9b', ['robot_ps4_event','robot_ps4_button','robot_ps4_axis','fast4wd_connected'].map(type=>block(type))),
-      category('Logic', '#5c81a6', ['logic_boolean','logic_negate','logic_operation','logic_compare','math_number'].map(type => block(type))),
+      category('Logic', '#5c81a6', [
+        ...['logic_boolean','logic_negate','logic_operation','logic_compare','math_number'].map(type => block(type)),
+        block('math_arithmetic',{inputs:{A:shadow('math_number',{NUM:1}),B:shadow('math_number',{NUM:1})}}),
+        block('text'),
+      ]),
+      {
+        kind: 'category',
+        name: CATEGORIES.variable.name,
+        custom: 'VARIABLE',
+        colour: CATEGORIES.variable.colour,
+        contents: [
+          block('variables_set',{inputs:{VALUE:shadow('math_number',{NUM:0})}}),
+          block('math_change',{inputs:{DELTA:shadow('math_number',{NUM:1})}}),
+          block('variables_get'),
+        ],
+      },
       devices ? { ...fast4wdToolbox, contents: fast4wdToolbox.contents.filter(({ type }) =>
         type === 'fast4wd_connected' || type === 'fast4wd_stop' ||
         (devices.drivetrain.wheels.length && ['fast4wd_drive','fast4wd_forward','fast4wd_strafe','fast4wd_turn'].includes(type))) }

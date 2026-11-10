@@ -1,6 +1,7 @@
 const EDGE_BUTTONS = { CROSS: 0, CIRCLE: 1, SQUARE: 2, TRIANGLE: 3, L1: 4, R1: 5,
   L2: 6, R2: 7, SHARE: 8, OPTIONS: 9, L3: 10, R3: 11, PS: 12,
   UP: 13, DOWN: 14, LEFT: 15, RIGHT: 16 };
+const SETUP_BLOCKS = new Set(['fast4wd_init', 'fast4wd_connect', 'fast4wd_speed', 'fast4wd_led']);
 
 const stableUid = id => {
   let hash = 2166136261;
@@ -13,6 +14,18 @@ function motorPort(block, gen) {
   return motor ? motor.port - 1 : -1;
 }
 
+function hasRuntimeStatements(hat) {
+  for (let b = hat.getInputTargetBlock('DO'); b; b = b.getNextBlock()) {
+    if (!SETUP_BLOCKS.has(b.type)) return true;
+  }
+  return false;
+}
+
+function resolveEdgeButton(raw) {
+  if (/^\d+$/.test(String(raw))) return Number(raw);
+  return EDGE_BUTTONS[raw] ?? 0;
+}
+
 function compileHat(block, gen) {
   const cases = [];
   let nextPc = 1;
@@ -22,7 +35,9 @@ function compileHat(block, gen) {
   const substack = (b, input) => b.getInputTargetBlock(input);
   const chain = (first, terminal = endPc, depth = 0) => {
     const blocks = [];
-    for (let b = first; b; b = b.getNextBlock()) blocks.push(b);
+    for (let b = first; b; b = b.getNextBlock()) {
+      if (!SETUP_BLOCKS.has(b.type)) blocks.push(b);
+    }
     let continuation = terminal;
     for (let i = blocks.length - 1; i >= 0; --i) continuation = statement(blocks[i], continuation, depth);
     return continuation;
@@ -85,6 +100,23 @@ function compileHat(block, gen) {
         break;
       }
       case 'robot_mecanum': action = `codelabDrivePercent(${['FORWARD','LEFT','TURN'].map(n => value(b,n)).join(',')});`; break;
+      case 'variables_set': {
+        const id = b.getFieldValue('VAR');
+        if (gen.invalidVariableIds_.has(id) || gen.variableTypes_.get(id) !== 'number') throw new Error('G1_INVALID_VARIABLE:' + id);
+        action = `${gen.getVariableName(id)} = ${value(b, 'VALUE', '0')};`;
+        break;
+      }
+      case 'math_change': {
+        const id = b.getFieldValue('VAR');
+        if (gen.invalidVariableIds_.has(id) || gen.variableTypes_.get(id) !== 'number') throw new Error('G1_INVALID_VARIABLE:' + id);
+        action = `${gen.getVariableName(id)} += ${value(b, 'DELTA', '0')};`;
+        break;
+      }
+      case 'beginner_message': {
+        const msgVal = value(b, 'VALUE', '"Hello!"');
+        action = b.getInputTargetBlock('VALUE')?.type === 'text' ? `codelabLogMessage(${msgVal});` : `codelabLogNumber(${msgVal});`;
+        break;
+      }
       case 'controls_flow_statements': throw new Error('G1_FLOW_CONTROL_UNSUPPORTED');
       default: throw new Error('G1_UNSUPPORTED_BLOCK:' + b.type);
     }
@@ -102,12 +134,13 @@ function compileHat(block, gen) {
   const uid = stableUid(block.id);
   const fn = `codelabScript_${uid}`;
   const arms = block.type === 'robot_ps4_event'
-    ? `codelabSchedulerRegistered = codelabSchedulerRegistered && codelabScheduler.registerEventScript(${uid}UL, ${fn}, ${EDGE_BUTTONS[block.getFieldValue('BUTTON')] ?? 0}, codelab::v2::Edge::${block.getFieldValue('EDGE') === 'RELEASE' ? 'RELEASE' : 'PRESS'});`
+    ? `codelabSchedulerRegistered = codelabSchedulerRegistered && codelabScheduler.registerEventScript(${uid}UL, ${fn}, ${resolveEdgeButton(block.getFieldValue('BUTTON'))}, codelab::v2::Edge::${block.getFieldValue('EDGE') === 'RELEASE' ? 'RELEASE' : 'PRESS'});`
     : `codelabSchedulerRegistered = codelabSchedulerRegistered && codelabScheduler.registerScript(${uid}UL, ${fn});`;
   const casesText = cases.map(({ pc, body }) => `    case ${pc}: { ${body} }`).join('\n');
   return {
     fn,
     definition: `static codelab::v2::StepResult ${fn}(codelab::v2::ScriptContext& ctx, uint32_t nowMs) {\n` +
+      `  codelabResetRunState(ctx.runGeneration);\n` +
       `  if (!codelabScheduler.accountOperations(ctx)) { codelabScheduler.fault(codelab::v2::FaultCode::INLINE_LIMIT, nowMs); return codelab::v2::StepResult::DONE; }\n` +
       `  if (ctx.pc == 0) ctx.pc = ${entry};\n` +
       `  switch (ctx.pc) {\n${casesText}\n` +
@@ -118,9 +151,18 @@ function compileHat(block, gen) {
 
 export function generateV2Scheduler(workspace, gen) {
   const top = workspace.getTopBlocks(true).filter(block => block.isEnabled() && !block.getInheritedDisabled());
-  const hats = top.filter(block => block.type === 'robot_ps4_event' || block.type === 'beginner_forever');
+  const hats = top.filter(block =>
+    block.type === 'robot_ps4_event' ||
+    block.type === 'beginner_forever' ||
+    (block.type === 'beginner_start' && hasRuntimeStatements(block))
+  );
   if (!hats.length) return { definitions: '', setup: '', loop: '' };
   if (hats.length > 16) throw new Error('V2_SCRIPT_LIMIT: tối đa 16 script event/forever.');
+  const resetVars = workspace.getAllVariables()
+    .map(v => v.getId())
+    .filter(id => !gen.invalidVariableIds_.has(id) && gen.variableTypes_.get(id) === 'number')
+    .map(id => `${gen.getVariableName(id)} = 0;`)
+    .join(' ');
   const scripts = [];
   for (const hat of hats) scripts.push(compileHat(hat, gen));
   return {
@@ -129,20 +171,56 @@ export function generateV2Scheduler(workspace, gen) {
       `static codelab::v2::Scheduler codelabScheduler(codelabSchedulerGate);\n` +
       `static bool codelabSchedulerRegistered = true;\n` +
       `static uint8_t codelabDriveMode = 0; static float codelabDriveValues[3] = {};\n` +
-      `static void codelabDriveFromPs4() { codelabDriveMode = 1; }\n` +
-      `static void codelabDrive(float forward, float left, float turn) { codelabDriveMode = 2; codelabDriveValues[0] = forward; codelabDriveValues[1] = left; codelabDriveValues[2] = turn; }\n` +
-      `static void codelabDrivePercent(float forward, float left, float turn) { codelabDrive(forward / 100.0f, left / 100.0f, turn / 100.0f); }\n` +
-      `static void codelabApplyDrive() { if (codelabDriveMode == 1) robot4wd.driveFromPs4(); else if (codelabDriveMode == 2) robot4wd.move(codelabDriveValues[0], codelabDriveValues[1], codelabDriveValues[2]); }\n` +
-      `static uint32_t codelabSchedulerRepeatCount(double n) { return !isfinite(n) || n <= 0 ? 0 : (n >= UINT32_MAX ? UINT32_MAX : (uint32_t)n); }\n` +
-      `static int16_t codelabSchedulerPower(double n) { return !isfinite(n) ? 0 : (int16_t)(n < 0 ? -1 : 1) * (int16_t)(n < 0 ? (n < -100 ? 100 : -n) : (n > 100 ? 100 : n)); }\n` +
+      `static uint32_t codelabRunGeneration = 0;\n` +
+      `static constexpr size_t CODELAB_LOG_CAPACITY = 8;\n` +
+      `static constexpr size_t CODELAB_LOG_MAX_LEN = 128;\n` +
+      `static char codelabLogQueue[CODELAB_LOG_CAPACITY][CODELAB_LOG_MAX_LEN] = {};\n` +
+      `static uint8_t codelabLogHead = 0, codelabLogTail = 0, codelabLogCount = 0;\n` +
+      `static uint32_t codelabLogDrops = 0;\n` +
+      `static void codelabResetRunState(uint32_t generation) { if (codelabRunGeneration == generation) return; codelabRunGeneration = generation; ${resetVars ? resetVars + ' ' : ''}codelabLogHead = 0; codelabLogTail = 0; codelabLogCount = 0; codelabLogDrops = 0; }\n` +
+      `[[maybe_unused]] static bool codelabLogMessage(const char* message) {\n` +
+      `  if (!message) return false;\n` +
+      `  size_t len = 0;\n` +
+      `  while (message[len] != '\\0' && len < CODELAB_LOG_MAX_LEN) ++len;\n` +
+      `  if (len >= CODELAB_LOG_MAX_LEN || codelabLogCount >= CODELAB_LOG_CAPACITY) { ++codelabLogDrops; return false; }\n` +
+      `  for (size_t i = 0; i < len; ++i) codelabLogQueue[codelabLogTail][i] = message[i];\n` +
+      `  codelabLogQueue[codelabLogTail][len] = '\\0';\n` +
+      `  codelabLogTail = (uint8_t)((codelabLogTail + 1U) % CODELAB_LOG_CAPACITY);\n` +
+      `  ++codelabLogCount;\n` +
+      `  return true;\n` +
+      `}\n` +
+      `[[maybe_unused]] static bool codelabLogNumber(double value) {\n` +
+      `  if (!isfinite(value)) { ++codelabLogDrops; return false; }\n` +
+      `  char buf[32] = {};\n` +
+      `  const int written = snprintf(buf, sizeof(buf), "%.6g", value);\n` +
+      `  if (written <= 0 || (size_t)written >= sizeof(buf)) { ++codelabLogDrops; return false; }\n` +
+      `  return codelabLogMessage(buf);\n` +
+      `}\n` +
+      `[[maybe_unused]] static bool codelabPopLogMessage(char* out, size_t size) {\n` +
+      `  if (!codelabLogCount || !out || !size) return false;\n` +
+      `  const char* src = codelabLogQueue[codelabLogHead];\n` +
+      `  size_t i = 0;\n` +
+      `  for (; src[i] != '\\0' && i + 1 < size; ++i) out[i] = src[i];\n` +
+      `  out[i] = '\\0';\n` +
+      `  codelabLogHead = (uint8_t)((codelabLogHead + 1U) % CODELAB_LOG_CAPACITY);\n` +
+      `  --codelabLogCount;\n` +
+      `  return true;\n` +
+      `}\n` +
+      `[[maybe_unused]] static void codelabDriveFromPs4() { codelabDriveMode = 1; }\n` +
+      `[[maybe_unused]] static void codelabDrive(float forward, float left, float turn) { codelabDriveMode = 2; codelabDriveValues[0] = forward; codelabDriveValues[1] = left; codelabDriveValues[2] = turn; }\n` +
+      `[[maybe_unused]] static void codelabDrivePercent(double forward, double left, double turn) { codelabDrive(isfinite(forward) ? (float)(forward / 100.0) : 0.0f, isfinite(left) ? (float)(left / 100.0) : 0.0f, isfinite(turn) ? (float)(turn / 100.0) : 0.0f); }\n` +
+      `[[maybe_unused]] static void codelabApplyDrive() { if (codelabDriveMode == 1) robot4wd.driveFromPs4(); else if (codelabDriveMode == 2) robot4wd.move(codelabDriveValues[0], codelabDriveValues[1], codelabDriveValues[2]); }\n` +
+      `[[maybe_unused]] static uint32_t codelabSchedulerRepeatCount(double n) { return !isfinite(n) || n <= 0 ? 0 : (n >= UINT32_MAX ? UINT32_MAX : (uint32_t)n); }\n` +
+      `[[maybe_unused]] static int16_t codelabSchedulerPower(double n) { return !isfinite(n) ? 0 : (int16_t)(n < 0 ? -1 : 1) * (int16_t)(n < 0 ? (n < -100 ? 100 : -n) : (n > 100 ? 100 : n)); }\n` +
       scripts.map(script => script.definition).join('\n'),
     setup: scripts.map(script => script.registration).join('\n') + '\n',
     loop: `static void codelabSchedulerLoop() {\n` +
       `  const uint32_t nowMs = millis();\n` +
-      `  if (robot4wd.buttonEdge(8, true)) codelabScheduler.stop(nowMs);\n` +
+      `  const bool shareEdge = robot4wd.buttonEdge(8, true);
+  if (shareEdge || (codelabScheduler.state() == codelab::v2::LifecycleState::RUN && !robot4wd.controllerArmed())) codelabScheduler.stop(nowMs);\n` +
       `  if (codelabScheduler.state() == codelab::v2::LifecycleState::RUN && !robot4wd.connected()) codelabScheduler.fault(codelab::v2::FaultCode::LINK_LOST, nowMs);\n` +
       `  if (robot4wd.buttonEdge(12, true)) codelabScheduler.clearFault();\n` +
-      `  if (codelabSchedulerRegistered && codelabScheduler.state() == codelab::v2::LifecycleState::READY && robot4wd.controllerArmed()) codelabScheduler.startController(nowMs);\n` +
+      `  if (!shareEdge && codelabSchedulerRegistered && codelabScheduler.state() == codelab::v2::LifecycleState::READY && robot4wd.controllerArmed()) codelabScheduler.startController(nowMs);\n` +
       `  if (codelabScheduler.state() != codelab::v2::LifecycleState::RUN) codelabDriveMode = 0;\n` +
       `  if (codelabScheduler.state() == codelab::v2::LifecycleState::RUN) {\n` +
       `    codelabApplyDrive();\n` +

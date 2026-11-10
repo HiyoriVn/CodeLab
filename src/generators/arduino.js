@@ -121,8 +121,8 @@ CodeLabPS4Adapter codelabPs4;`;
 
 function variableTypeOf(block, knownTypes) {
   if (!block) return null;
-  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'math_random_int', 'math_round', 'math_constrain', 'codelab_analog_read', 'codelab_serial_available', 'codelab_serial_read', 'codelab_ps4_axis', 'beginner_ps4_axis'].includes(block.type)) return 'number';
-  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_gpio_read_mode', 'codelab_ps4_connected', 'codelab_ps4_button', 'beginner_ps4_connected', 'beginner_ps4_button', 'beginner_serial_ready'].includes(block.type)) return 'boolean';
+  if (['math_number', 'math_arithmetic', 'math_single', 'math_modulo', 'math_random_int', 'math_round', 'math_constrain', 'codelab_analog_read', 'codelab_serial_available', 'codelab_serial_read', 'codelab_ps4_axis', 'beginner_ps4_axis', 'robot_ps4_axis', 'robot_motor_pwm'].includes(block.type)) return 'number';
+  if (['logic_boolean', 'logic_compare', 'logic_operation', 'logic_negate', 'math_number_property', 'codelab_gpio_read', 'codelab_gpio_read_mode', 'codelab_ps4_connected', 'codelab_ps4_button', 'beginner_ps4_connected', 'beginner_ps4_button', 'beginner_serial_ready', 'robot_ps4_button', 'fast4wd_connected'].includes(block.type)) return 'boolean';
   if (['text', 'text_join'].includes(block.type)) return 'string';
   if (block.type === 'variables_get') return knownTypes.get(block.getFieldValue('VAR')) || null;
   return null;
@@ -159,8 +159,8 @@ function initializeVariables(generator, workspace) {
     if (block.type !== 'variables_set') continue;
     const id = block.getFieldValue('VAR');
     const valueBlock = block.getInputTargetBlock('VALUE');
-    const inferred = variableTypeOf(valueBlock, knownTypes);
-    if (!valueBlock || !inferred) unresolved.add(id);
+    const inferred = !valueBlock && generator.fast4wd_ ? 'number' : variableTypeOf(valueBlock, knownTypes);
+    if (!inferred || (generator.fast4wd_ && inferred !== 'number')) unresolved.add(id);
     if (inferred) {
       if (!assignedTypes.has(id)) assignedTypes.set(id, new Set());
       assignedTypes.get(id).add(inferred);
