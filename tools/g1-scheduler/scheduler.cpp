@@ -31,7 +31,7 @@ bool MockMotorOutputGate::stopIfOwned(uint8_t motor, uint32_t generation, uint32
   return true;
 }
 
-Scheduler::Scheduler(MockMotorOutputGate& gate) : gate_(gate) {}
+Scheduler::Scheduler(MotorOutputGate& gate) : gate_(gate) {}
 
 bool Scheduler::registerScript(uint32_t id, ScriptStep step) {
   if (!step || find(id) || scriptCount_ == kMaxScripts) return false;
@@ -57,10 +57,36 @@ bool Scheduler::startAuto(uint32_t nowMs, uint32_t maxRunMs) {
   ++runGeneration_;
   if (!runGeneration_) ++runGeneration_;
   state_ = LifecycleState::RUN;
+  controllerMode_ = false;
   faultCode_ = FaultCode::NONE;
   autoDeadlineMs_ = nowMs + maxRunMs;
   heartbeatAt_ = nowMs;
   // Reset every continuation while retaining the registered stable script IDs.
+  for (size_t i = 0; i < scriptCount_; ++i) {
+    auto& s = slots_[i];
+    const uint32_t id = s.ctx.scriptUid;
+    s.ctx = {};
+    s.ctx.scriptUid = id;
+    s.ctx.runGeneration = runGeneration_;
+    s.ctx.active = s.hat == HatKind::START;
+    s.pending = false;
+    s.state = s.hat == HatKind::START ? ScriptState::RUNNABLE : ScriptState::INACTIVE;
+  }
+  for (auto& h : handles_) h = {};
+  cursor_ = 0;
+  gate_.unlock(runGeneration_);
+  record("start", nowMs, runGeneration_);
+  return true;
+}
+
+bool Scheduler::startController(uint32_t nowMs) {
+  if (state_ != LifecycleState::READY) return false;
+  ++runGeneration_;
+  if (!runGeneration_) ++runGeneration_;
+  state_ = LifecycleState::RUN;
+  controllerMode_ = true;
+  faultCode_ = FaultCode::NONE;
+  heartbeatAt_ = nowMs;
   for (size_t i = 0; i < scriptCount_; ++i) {
     auto& s = slots_[i];
     const uint32_t id = s.ctx.scriptUid;
@@ -111,6 +137,14 @@ void Scheduler::fault(FaultCode code, uint32_t nowMs) {
   record("fault", nowMs, static_cast<uint32_t>(code));
 }
 
+bool Scheduler::clearFault() {
+  if (state_ != LifecycleState::FAULT) return false;
+  state_ = LifecycleState::READY;
+  faultCode_ = FaultCode::NONE;
+  controllerMode_ = false;
+  return true;
+}
+
 void Scheduler::buttonEdge(uint8_t button, Edge edge, uint32_t nowMs) {
   if (button >= 17) return;
   ++ps4_.sequence;
@@ -147,7 +181,7 @@ void Scheduler::record(const char* kind, uint32_t atMs, uint32_t value) {
 
 void Scheduler::safetyPhase(uint32_t nowMs) {
   if (state_ != LifecycleState::RUN) return;
-  if (static_cast<int32_t>(nowMs - autoDeadlineMs_) >= 0) {
+  if (!controllerMode_ && static_cast<int32_t>(nowMs - autoDeadlineMs_) >= 0) {
     fault(FaultCode::AUTO_MAX_RUNTIME, nowMs);
     return;
   }
@@ -269,6 +303,9 @@ bool Scheduler::handleActive(uint32_t id) const {
 }
 
 bool Scheduler::isIdle() const {
+  if (controllerMode_) {
+    for (size_t i = 0; i < scriptCount_; ++i) if (slots_[i].hat == HatKind::BUTTON_EDGE) return false;
+  }
   for (size_t i = 0; i < scriptCount_; ++i) {
     const auto& s = slots_[i];
     if (s.state == ScriptState::RUNNABLE || s.state == ScriptState::WAITING || s.pending) return false;

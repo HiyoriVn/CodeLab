@@ -11,7 +11,7 @@ namespace codelab::v2 {
 enum class StepResult : uint8_t { YIELD = 0, DONE = 1, WAIT = 2 };
 enum class WaitKind : uint8_t { NONE, TIMER, HANDLE };
 enum class LifecycleState : uint8_t { INIT, READY, RUN, FAULT };
-enum class FaultCode : uint16_t { NONE, LOOP_STALL, AUTO_MAX_RUNTIME, SCRIPT_LIMIT, INLINE_RECURSION, INLINE_LIMIT };
+enum class FaultCode : uint16_t { NONE, LOOP_STALL, AUTO_MAX_RUNTIME, SCRIPT_LIMIT, INLINE_RECURSION, INLINE_LIMIT, LINK_LOST };
 enum class ScriptState : uint8_t { INACTIVE, RUNNABLE, WAITING, DONE, CANCELED };
 enum class HatKind : uint8_t { START, BUTTON_EDGE };
 enum class Edge : uint8_t { PRESS, RELEASE };
@@ -48,12 +48,21 @@ struct TraceEvent {
   uint32_t value = 0;
 };
 
-class MockMotorOutputGate {
+class MotorOutputGate {
  public:
-  void hardLock();
-  bool unlock(uint32_t generation);
-  bool write(uint8_t motor, int16_t power, uint32_t generation, uint32_t handleId = 0);
-  bool stopIfOwned(uint8_t motor, uint32_t generation, uint32_t handleId);
+  virtual ~MotorOutputGate() = default;
+  virtual void hardLock() = 0;
+  virtual bool unlock(uint32_t generation) = 0;
+  virtual bool write(uint8_t motor, int16_t power, uint32_t generation, uint32_t handleId = 0) = 0;
+  virtual bool stopIfOwned(uint8_t motor, uint32_t generation, uint32_t handleId) = 0;
+};
+
+class MockMotorOutputGate : public MotorOutputGate {
+ public:
+  void hardLock() override;
+  bool unlock(uint32_t generation) override;
+  bool write(uint8_t motor, int16_t power, uint32_t generation, uint32_t handleId = 0) override;
+  bool stopIfOwned(uint8_t motor, uint32_t generation, uint32_t handleId) override;
   bool locked() const { return locked_; }
   const MotorCommand& command(uint8_t motor) const { return outputs_.at(motor); }
  private:
@@ -72,12 +81,14 @@ class Scheduler {
   static constexpr uint32_t kMaxExpandedOps = 1024;
   static constexpr size_t kMaxFrameBytes = 256;
 
-  explicit Scheduler(MockMotorOutputGate& gate);
+  explicit Scheduler(MotorOutputGate& gate);
   bool registerScript(uint32_t scriptUid, ScriptStep stepFunc);
   bool registerEventScript(uint32_t scriptUid, ScriptStep stepFunc, uint8_t button, Edge edge);
   bool startAuto(uint32_t nowMs, uint32_t maxRunMs);
+  bool startController(uint32_t nowMs);
   void stop(uint32_t nowMs);
   void fault(FaultCode code, uint32_t nowMs);
+  bool clearFault();
   void buttonEdge(uint8_t button, Edge edge, uint32_t nowMs);
   void safetyPhase(uint32_t nowMs);
   void tick(uint32_t nowMs);
@@ -130,7 +141,7 @@ class Scheduler {
   bool tokenStillValid(const Slot& slot) const;
   void record(const char* kind, uint32_t atMs, uint32_t value = 0);
 
-  MockMotorOutputGate& gate_;
+  MotorOutputGate& gate_;
   std::array<Slot, kMaxScripts> slots_{};
   std::array<MotionHandle, kMaxHandles> handles_{};
   size_t scriptCount_ = 0;
@@ -143,6 +154,7 @@ class Scheduler {
   uint32_t maxCallbackOperations_ = 0;
   uint64_t totalOperations_ = 0;
   LifecycleState state_ = LifecycleState::READY;
+  bool controllerMode_ = false;
   FaultCode faultCode_ = FaultCode::NONE;
   MockPs4 ps4_{};
   std::array<TraceEvent, 256> trace_{};

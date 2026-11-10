@@ -1,7 +1,7 @@
 import { robotDeviceWarnings } from '../boards/robot-devices.js';
 
 const setupBlocks = new Set(['fast4wd_init', 'fast4wd_connect', 'fast4wd_speed', 'fast4wd_led']);
-const logicBlocks = new Set(['controls_if', 'logic_boolean', 'logic_negate', 'logic_operation', 'logic_compare', 'math_number']);
+const logicBlocks = new Set(['controls_if', 'controls_repeat_ext', 'beginner_wait', 'logic_boolean', 'logic_negate', 'logic_operation', 'logic_compare', 'math_number']);
 const actions = {
   fast4wd_drive: 'robot4wd.driveFromPs4();\n',
   fast4wd_stop: 'robot4wd.stop();\n',
@@ -14,6 +14,13 @@ const usesDrivetrain = type => type === 'fast4wd_drive' || type === 'robot_mecan
 function inStartup(block) {
   for (let parent = block.getParent(); parent; parent = parent.getParent()) {
     if (parent.type === 'beginner_start') return true;
+  }
+  return false;
+}
+
+function inRuntimeHat(block) {
+  for (let parent = block.getParent(); parent; parent = parent.getParent()) {
+    if (parent.type === 'beginner_forever' || parent.type === 'robot_ps4_event') return true;
   }
   return false;
 }
@@ -49,6 +56,10 @@ export function fast4wdConfig(workspace, profile, devices) {
       if (type === 'robot_ps4_event' && !devices) warnings.add('Lưu Cấu hình robot trước khi thêm sự kiện PS4.');
     } else if (!startup && (Object.hasOwn(actions, type) || usesDrivetrain(type) || type === 'fast4wd_connected' ||
         logicBlocks.has(type) || motorBlocks.has(type) || controllerBlocks.has(type))) {
+      if ((type === 'beginner_wait' || type === 'controls_if' || type === 'controls_repeat_ext' ||
+          Object.hasOwn(actions, type) || usesDrivetrain(type) || motorBlocks.has(type)) && !inRuntimeHat(block)) {
+        warnings.add('Đặt Wait, điều kiện, vòng lặp và lệnh robot bên trong sự kiện PS4 hoặc Lặp lại mãi mãi.');
+      }
       // The loop can contain only bounded logic so each iteration services the motor watchdog.
       if (type.startsWith('robot_') && !devices) warnings.add('Lưu Cấu hình robot trước khi dùng các khối mới.');
       if (devices && motorBlocks.has(type) && !devices.motors.some(motor => motor.id === block.getFieldValue('MOTOR') && motor.enabled)) {

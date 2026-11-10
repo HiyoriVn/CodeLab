@@ -22,9 +22,19 @@ static void passed(const char* name) { std::cout << "PASS: " << name << '\n'; }
 static StepResult xWait2000(ScriptContext& ctx, uint32_t now) {
   if (!op(ctx)) return StepResult::YIELD;
   if (ctx.pc == 0) {
-    ++xStarts; g->motorWrite(0, 40, now); ctx.deadlineMs = now + 2000; ctx.waitKind = WaitKind::TIMER; ctx.pc = 1; return StepResult::WAIT;
+    ++xStarts; g->motorWrite(0, 50, now); ctx.deadlineMs = now + 2000; ctx.waitKind = WaitKind::TIMER; ctx.pc = 1; return StepResult::WAIT;
   }
   if (ctx.pc == 1) { g->motorWrite(0, 0, now); xEndAt = now; return StepResult::DONE; }
+  return StepResult::DONE;
+}
+static StepResult motorOn50(ScriptContext& ctx, uint32_t now) {
+  if (!op(ctx)) return StepResult::YIELD;
+  g->motorWrite(0, 50, now);
+  return StepResult::DONE;
+}
+static StepResult motorOff(ScriptContext& ctx, uint32_t now) {
+  if (!op(ctx)) return StepResult::YIELD;
+  g->motorWrite(0, 0, now);
   return StepResult::DONE;
 }
 static StepResult oImmediate(ScriptContext& ctx, uint32_t) { if (!op(ctx)) return StepResult::YIELD; ++oStarts; ctx.pc++; return StepResult::DONE; }
@@ -97,7 +107,7 @@ static void test_XO_independence_and_x_resume() {
   require(s.registerEventScript(2, oImmediate, 1, Edge::PRESS), "register O");
   require(s.startAuto(0, 10000), "start X/O run");
   s.buttonEdge(0, Edge::PRESS, 0); clock.tick(s, 0);
-  require(xStarts == 1 && s.scriptState(1) == ScriptState::WAITING, "X waits independently");
+  require(xStarts == 1 && s.scriptState(1) == ScriptState::WAITING && gate.command(0).power == 50, "X starts M1 at 50 and waits independently");
   clock.maintain(s, 450);
   s.buttonEdge(1, Edge::PRESS, 500); clock.tick(s, 500);
   require(oStarts == 1, "O dispatched during X wait");
@@ -125,9 +135,22 @@ static void test_rapid_edges() {
   s.buttonEdge(2, Edge::RELEASE, 1); s.buttonEdge(2, Edge::PRESS, 2); s.buttonEdge(2, Edge::RELEASE, 3);
   require(s.pendingCount(7) == 0, "opposite edge clears pending press"); c.tick(s, 3);
   c.tick(s, 10); c.tick(s, 11);
-  require(rapidStarts == 1, "rapid press-release sequence does not replay");
+  require(rapidStarts == 1 && gate.command(0).power == 0, "rapid press-release sequence does not replay or leave motor latched on");
   s.buttonEdge(2, Edge::PRESS, 12); c.tick(s, 12); require(rapidStarts == 2, "fresh later press dispatches normally");
   passed("rapid X edge tokens bounded to one and stale PRESS not replayed");
+}
+
+static void test_x_press_and_release_latch_motor() {
+  MockMotorOutputGate gate; Scheduler s(gate); g = &s;
+  require(s.registerEventScript(20, motorOn50, 0, Edge::PRESS), "register X motor start");
+  require(s.registerEventScript(21, motorOff, 0, Edge::RELEASE), "register X motor stop");
+  require(s.startController(0), "start controller for X latch");
+  s.buttonEdge(0, Edge::PRESS, 0); s.tick(0);
+  require(gate.command(0).power == 50, "X press latches M1 at 50 percent");
+  s.buttonEdge(0, Edge::RELEASE, 10); s.tick(10);
+  require(gate.command(0).power == 0 && s.state() == LifecycleState::RUN, "X release stops M1 while controller remains live");
+  s.stop(11);
+  passed("X press latches M1 50%; X release stops it");
 }
 
 static void test_forever_fairness_and_nested_wait() {
@@ -225,6 +248,21 @@ static void test_deterministic_trace() {
   passed("identical virtual-time/input traces produce byte-stable ordered events");
 }
 
+static void test_controller_mode_keeps_event_hats_live_and_fault_locked() {
+  MockMotorOutputGate gate; Scheduler s(gate); g = &s;
+  oStarts = 0;
+  require(s.registerEventScript(12, oImmediate, 1, Edge::PRESS), "register controller event");
+  require(s.startController(0), "start unbounded controller mode");
+  s.buttonEdge(1, Edge::PRESS, 0); s.tick(0);
+  require(oStarts == 1 && s.state() == LifecycleState::RUN, "controller dispatches button edge");
+  for (uint32_t now = 50; now <= 60'000; now += 50) s.tick(now);
+  require(s.state() == LifecycleState::RUN, "controller mode does not apply AUTO timeout");
+  s.fault(FaultCode::LINK_LOST, 60'001);
+  require(gate.locked() && s.state() == LifecycleState::FAULT, "link fault locks the output gate");
+  require(s.clearFault() && s.state() == LifecycleState::READY && gate.locked(), "fault clear keeps outputs locked");
+  passed("controller mode keeps event hats live until STOP or link fault");
+}
+
 int main() {
   test_XO_independence_and_x_resume();
   test_stop_priority();
@@ -233,6 +271,8 @@ int main() {
   test_timer_ownership_and_motion_wait_modes();
   test_inline_wait_recursion_limits_and_reset();
   test_timeout_watchdog_pool_and_quota();
+  test_x_press_and_release_latch_motor();
+  test_controller_mode_keeps_event_hats_live_and_fault_locked();
   test_deterministic_trace();
   benchmark();
   std::cout << "RESULT: all deterministic virtual-clock tests passed\n";

@@ -179,6 +179,7 @@ class Robot : private robot::MotorInterface {
   }
 
   bool connected() const { return busReady_ && receiver_.snapshot(millis()).connected; }
+  bool controllerArmed() const { return controller_.state() == robot::State::ARMED; }
   float axis(unsigned index) const {
     const auto input = receiver_.snapshot(millis());
     const int16_t axes[] = {input.lx, input.ly, input.rx, input.ry};

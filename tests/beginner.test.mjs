@@ -40,7 +40,8 @@ test('toolbox is compact, profile-aware and raw hardware appears only in Advance
     if (board.capabilities.fast4wd) {
       assert.deepEqual(basic, advanced);
       assert.ok(types(basic).includes('fast4wd_drive'));
-      assert.ok(!types(basic).includes('beginner_wait'));
+      assert.ok(types(basic).includes('beginner_wait'));
+      assert.ok(types(basic).includes('controls_repeat_ext'));
       assert.ok(!types(advanced).includes('codelab_gpio_write'));
       continue;
     }

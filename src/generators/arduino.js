@@ -2,6 +2,7 @@ import * as Blockly from 'blockly';
 import { getBoardProfile, DEFAULT_BOARD_ID, validatePin } from '../boards/profiles.js';
 import { startupCode } from '../boards/startup.js';
 import { fast4wdConfig, fast4wdConstructor, registerFast4wdBlocks } from './fast4wd.js';
+import { generateV2Scheduler } from './v2-scheduler.js';
 
 const ATOMIC = 0;
 
@@ -203,6 +204,7 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
     super('Arduino');
     this.profile_ = profile;
     this.fast4wd_ = fast4wd;
+    this.workspace_ = null;
     if (fast4wd) this.addReservedWords('robot4wd,codelabRobotBlocks');
     this.ORDER_ATOMIC = ATOMIC;
     this.addReservedWords('codelabRandom,codelabClamp,codelabRepeatCount,codelabModulo,setup,loop,Serial,boolean,bool,char,int,long,float,double,void,const,if,else,for,while,break,continue,return,true,false');
@@ -210,6 +212,7 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
 
   init(workspace) {
     super.init(workspace);
+    this.workspace_ = workspace;
     this.definitions_ = Object.create(null);
     this.includes_ = Object.create(null);
     this.repeatIndex_ = 0;
@@ -247,9 +250,10 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
 
   finish(code) {
     const startup = startupCode(this.profile_);
-    const definitions = [startup.definitions, ...Object.values(this.definitions_ || {})].filter(Boolean).join('\n');
+    const configuredRobot = Boolean(this.fast4wd_);
+    const scheduler = configuredRobot ? generateV2Scheduler(this.workspace_, this) : { definitions: '', setup: '', loop: '' };
+    const definitions = [startup.definitions, ...Object.values(this.definitions_ || {}), scheduler.definitions, scheduler.loop].filter(Boolean).join('\n');
     const includes = [...new Set(['#include <Arduino.h>', ...startup.includes, ...Object.values(this.includes_ || {})])].join('\n');
-    const configuredRobot = Boolean(this.fast4wd_?.devices);
     return [
       includes,
       definitions,
@@ -258,12 +262,13 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
       '  Serial.begin(115200);',
       ...Array.from(this.setupStatements_.values()).map((line) => '  ' + line),
       ...this.beginnerStartup_,
+      ...(scheduler.setup ? ['  ' + scheduler.setup.trim().replaceAll('\n', '\n  ')] : []),
       '}',
       '',
-      ...(configuredRobot ? ['static void codelabRobotBlocks() {', code.trimEnd(), '}', ''] : []),
+      ...(configuredRobot && !scheduler.loop ? ['static void codelabRobotBlocks() {', code.trimEnd(), '}', ''] : []),
       'void loop() {',
-      this.loopPreamble_ ? '  ' + this.loopPreamble_ : '',
-      configuredRobot ? '  codelabRobotBlocks();' : code.trimEnd(),
+      this.loopPreamble_ && !scheduler.loop ? '  ' + this.loopPreamble_ : '',
+      configuredRobot && scheduler.loop ? '  robot4wd.beginLoop();\n  codelabSchedulerLoop();' : configuredRobot ? '  codelabRobotBlocks();' : code.trimEnd(),
       ...(this.fast4wd_ ? ['  robot4wd.endLoop();'] : []),
       '}',
       '',

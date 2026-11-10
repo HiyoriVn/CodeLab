@@ -7,6 +7,7 @@ import * as Blockly from 'blockly';
 import 'blockly/blocks';
 import '../src/blocks/beginner.js';
 import '../src/blocks/fast4wd.js';
+import '../src/blocks/robot-devices.js';
 import { robotDeviceToolbox } from '../src/blocks/robot-devices.js';
 import { BOARD_PROFILES, FAST4WD_BOARD_ID, getBoardProfile, validatePin } from '../src/boards/profiles.js';
 import { defaultRobotDevices, robotDeviceWarnings, validateProjectDeviceConfigs } from '../src/boards/robot-devices.js';
@@ -21,7 +22,9 @@ test('4WD lesson generates real runtime calls, preserves its workspace, and reje
     assert.deepEqual(out.warnings, []);
     assert.match(out.code, /#include <CodeLabFast4wd.h>\s+static codelab::fast4wd::Robot robot4wd\(100\)/);
     assert.match(out.code, /robot4wd.begin\(true\);/);
-    assert.match(out.code, /robot4wd.beginLoop\(\);\s*robot4wd.driveFromPs4\(\);\s*robot4wd.endLoop\(\);/);
+    assert.match(out.code, /robot4wd.beginLoop\(\);\s*codelabSchedulerLoop\(\);\s*robot4wd.endLoop\(\);/);
+    assert.match(out.code, /registerScript\(/);
+    assert.doesNotMatch(out.code, /codelabRobotBlocks\(\);/);
     const saved = Blockly.serialization.workspaces.save(workspace);
     for (const board of BOARD_PROFILES.filter(board => board.id !== FAST4WD_BOARD_ID)) {
       const result = generateArduino(workspace, board.id);
@@ -51,9 +54,14 @@ test('4WD lesson generates real runtime calls, preserves its workspace, and reje
     const extended = generateArduino(workspace, profile.id);
     assert.deepEqual(extended.warnings, []);
     assert.match(extended.code, /robot4wd\(25\);/);
-    assert.match(extended.code, /if \(robot4wd.connected\(\)\) \{\s*robot4wd.move\(1, 0, 0\);\s*robot4wd.move\(0, -1, 0\);\s*robot4wd.move\(0, 0, 1\);\s*robot4wd.stop\(\);/);
-    workspace.newBlock('beginner_wait');
-    assert.equal(generateArduino(workspace, profile.id).code, '');
+    assert.match(extended.code, /Fast4wdSchedulerGate.h/);
+    assert.match(extended.code, /codelabSchedulerLoop\(\)/);
+    assert.match(extended.code, /codelabScheduler.registerScript/);
+    assert.match(extended.code, /codelabDrive\(1,0,0\)/);
+    assert.doesNotMatch(extended.code, /codelabRobotBlocks\(\);/);
+    const waiting = workspace.newBlock('beginner_wait');
+    assert.ok(generateArduino(workspace, profile.id).warnings.length);
+    waiting.dispose();
   } finally {
     workspace.dispose();
   }
@@ -103,6 +111,65 @@ test('device configurations validate board ports, distinct enabled wheels and ve
   assert.throws(() => validateProjectDeviceConfigs({ [FAST4WD_BOARD_ID]: { version: 2 } }), /phiên bản/);
 });
 
+test('generated Blockly event hats use G1 callbacks and timer WAIT continuations', () => {
+  const profile = getBoardProfile(FAST4WD_BOARD_ID);
+  const devices = defaultRobotDevices(profile);
+  const workspace = new Blockly.Workspace();
+  const event = (edge, button) => {
+    const block = workspace.newBlock('robot_ps4_event');
+    block.setFieldValue(edge, 'EDGE');
+    block.setFieldValue(String(button), 'BUTTON');
+    return block;
+  };
+  const pressX = event('PRESS', 0);
+  const wait = workspace.newBlock('beginner_wait');
+  wait.setFieldValue(2, 'SECONDS');
+  const stop = workspace.newBlock('robot_motor_stop');
+  stop.setFieldValue('motor-1', 'MOTOR');
+  pressX.getInput('DO').connection.connect(wait.previousConnection);
+  wait.nextConnection.connect(stop.previousConnection);
+  const releaseX = event('RELEASE', 0);
+  const releaseStop = workspace.newBlock('robot_motor_stop');
+  releaseStop.setFieldValue('motor-1', 'MOTOR');
+  releaseX.getInput('DO').connection.connect(releaseStop.previousConnection);
+  const pressO = event('PRESS', 1);
+  const runO = workspace.newBlock('robot_motor_spin');
+  runO.setFieldValue('motor-1', 'MOTOR');
+  const power = workspace.newBlock('math_number');
+  power.setFieldValue(50, 'NUM');
+  runO.getInput('POWER').connection.connect(power.outputConnection);
+  pressO.getInput('DO').connection.connect(runO.previousConnection);
+  const forever = workspace.newBlock('beginner_forever');
+  const conditional = workspace.newBlock('controls_if');
+  const truth = workspace.newBlock('logic_boolean');
+  const repeat = workspace.newBlock('controls_repeat_ext');
+  const repeatCount = workspace.newBlock('math_number');
+  const nestedWait = workspace.newBlock('beginner_wait');
+  repeatCount.setFieldValue(2, 'NUM');
+  nestedWait.setFieldValue(0.1, 'SECONDS');
+  conditional.getInput('IF0').connection.connect(truth.outputConnection);
+  conditional.getInput('DO0').connection.connect(repeat.previousConnection);
+  repeat.getInput('TIMES').connection.connect(repeatCount.outputConnection);
+  repeat.getInput('DO').connection.connect(nestedWait.previousConnection);
+  forever.getInput('DO').connection.connect(conditional.previousConnection);
+  try {
+    const out = generateArduino(workspace, profile.id, devices);
+    assert.deepEqual(out.warnings, []);
+    assert.match(out.code, /registerEventScript\([^\n]+Edge::PRESS/);
+    assert.match(out.code, /registerEventScript\([^\n]+Edge::RELEASE/);
+    assert.match(out.code, /deadlineMs = nowMs \+ 2000UL/);
+    assert.match(out.code, /WaitKind::TIMER/);
+    assert.match(out.code, /codelabScheduler\.motorWrite\(0, codelabSchedulerPower\(50\), nowMs\)/);
+    assert.doesNotMatch(out.code, /delay\(|waitForMotor|codelabRobotBlocks/);
+    assert.match(out.code, /codelabScheduler\.buttonEdge\(button, codelab::v2::Edge::PRESS, nowMs\)/);
+    assert.match(out.code, /FaultCode::LINK_LOST/);
+    assert.match(out.code, /ctx.loopCounters\[0\]/);
+    assert.match(out.code, /ctx.pc = \(true\)/);
+  } finally {
+    workspace.dispose();
+  }
+});
+
 test('configured lessons round-trip, resolve stable motor IDs and keep waiting outside the safety loop', () => {
   for (const name of ['lesson_robot_mecanum', 'lesson_robot_motor_events']) {
     const file = JSON.parse(readFileSync(`examples/beginner/${name}/${name}.codelab.json`, 'utf8'));
@@ -114,7 +181,9 @@ test('configured lessons round-trip, resolve stable motor IDs and keep waiting o
       validateProjectDeviceConfigs(project.deviceConfigs);
       const original = generateArduino(workspace, project.boardId, devices);
       assert.deepEqual(original.warnings, []);
-      assert.match(original.code, /void loop\(\) \{\s*robot4wd.beginLoop\(\);\s*codelabRobotBlocks\(\);\s*robot4wd.endLoop\(\);/);
+      assert.match(original.code, /void loop\(\) \{\s*robot4wd.beginLoop\(\);\s*codelabSchedulerLoop\(\);\s*robot4wd.endLoop\(\);/);
+      assert.match(original.code, /CodeLabV2Scheduler|Fast4wdSchedulerGate/);
+      assert.doesNotMatch(original.code, /robot4wd.waitForMotor|delay\(/);
       const saved = Blockly.serialization.workspaces.save(workspace);
       const restored = new Blockly.Workspace();
       Blockly.serialization.workspaces.load(saved, restored);
@@ -125,14 +194,18 @@ test('configured lessons round-trip, resolve stable motor IDs and keep waiting o
       }
       assert.ok(generateArduino(workspace, project.boardId).warnings.length);
       if (name === 'lesson_robot_mecanum') {
-        assert.match(original.code, /if \(robot4wd.connected\(\)\)[\s\S]*robot4wd.movePercent\(robot4wd.axis\(1\), robot4wd.axis\(2\), robot4wd.axis\(0\)\);\s*} else/);
+        assert.match(original.code, /ctx.pc = \(robot4wd.connected\(\)\)/);
+        assert.match(original.code, /codelabDrivePercent\(robot4wd.axis\(1\),robot4wd.axis\(2\),robot4wd.axis\(0\)\)/);
       } else {
-        assert.match(original.code, /buttonEdge\(0, true\)[\s\S]*spinFor\(0, 25, false, 500\);\s*if \(!robot4wd.spinFor\(1, 20, false, 300\) \|\| !robot4wd.waitForMotor\(1\)\) return;/);
-        assert.match(original.code, /buttonEdge\(0, false\)[\s\S]*stopMotor\(0\)/);
+        assert.match(original.code, /registerEventScript\([^\n]+Edge::PRESS/);
+        assert.match(original.code, /registerEventScript\([^\n]+Edge::RELEASE/);
+        assert.match(original.code, /motorRunFor\(0, codelabSchedulerPower\(25\), 500UL, nowMs\)/);
+        assert.match(original.code, /WaitKind::HANDLE/);
+        assert.match(original.code, /motorWrite\(0, 0, nowMs\)/);
         devices.motors[0].name = 'Bánh nâng';
         assert.equal(generateArduino(workspace, project.boardId, devices).code, original.code);
         [devices.motors[0].port, devices.motors[2].port] = [3, 1];
-        assert.match(generateArduino(workspace, project.boardId, devices).code, /spinFor\(2, 25, false, 500\)/);
+        assert.match(generateArduino(workspace, project.boardId, devices).code, /motorRunFor\(2, codelabSchedulerPower\(25\), 500UL, nowMs\)/);
         devices.motors[0].enabled = false;
         assert.match(generateArduino(workspace, project.boardId, devices).warnings.join(), /tắt hoặc thiếu/);
       }
