@@ -234,7 +234,7 @@ Mỗi bản đọc phải có <code>{value, valid, sampledAtMs}</code>, thiết 
 | A17v2 | <code>codelab_when_ps4_released</code> HAT / ps4 / <code>block.ps4_when_released</code> | "Khi nút [X] được thả"; <code>BUTTON=X</code>, BODY statement | <code>events.onReleased(X,scriptUID)</code> | PS4 · N · RESERVED_BUTTON | NEW/S0 |
 | DP03v2 | <code>codelab_ps4_pressed</code> BOOL / ps4 / <code>block.ps4_pressed</code> | "Nút [X] đang được nhấn?"; <code>BUTTON=X</code> | <code>ps4.pressed(X)</code> đọc snapshot đã xác minh | PS4 · N · PS4_UNAVAILABLE | NEW/S1 |
 | DP06v2 | <code>codelab_ps4_axis_percent</code> NUMBER / ps4 / <code>block.ps4_axis_percent</code> | "Cần [trái] trục [dọc] (%)"; <code>STICK=LEFT</code>, <code>AXIS=Y</code>; -100..100 | <code>ps4.axisPercent(LY)</code> (LY lên = dương) | PS4 · N · PS4_UNAVAILABLE | NEW/S1 |
-| DP02v2 | <code>codelab_ps4_connected</code> BOOL / ps4 / <code>block.ps4_connected</code> | "PS4 đã kết nối?"; không tham số | <code>ps4.connected()</code> valid+fresh+not-stale | PS4 · N · PS4_UNAVAILABLE | NEW/S1 |
+| DP02v2 | <code>codelab_v2_ps4_connected</code> BOOL / ps4 / <code>block.ps4_connected</code> | "PS4 đã kết nối?"; không tham số | <code>ps4.connected()</code> valid+fresh+not-stale | PS4 · N · PS4_UNAVAILABLE | NEW/S1 |
 
 Allowed PS4 buttons sau khi xác nhận mapping thực: <code>X, Circle, Square, Triangle, L1, R1, L2, R2, DPadUp, DPadDown, DPadLeft, DPadRight, L3, R3</code>. L2/R2 trong V0.2 chỉ được dùng như nút digital khi report hỗ trợ; không khẳng định có analog trigger. <code>Options</code>, <code>Share</code> là hệ thống, <code>PS</code> ẩn/chặn.
 
