@@ -1,196 +1,128 @@
 # Rà soát G0 — Blockly Product Spec V0.2
 
-> **Ngày:** 10/11/2026 · **Issue:** #28 · **Spec:** `docs/BLOCKLY_PRODUCT_BLOCK_CATALOG_V0.2.md` @ `3475b57` (branch `docs/blockly-product-spec`)
-> **Đối chiếu:** `main` @ `2a0705d`; tham khảo thêm nhánh chưa merge `codex/integrate-bach-ui` (fast100/Devices) vì nó chồng lấn phạm vi G2/G3.
-> **Phạm vi:** chỉ đọc và rà soát. Không sửa source, không sửa spec, không chạy test/build/phần cứng. Đây là kết quả rà soát tài liệu, **không phải** phê duyệt thay chủ dự án.
+> **Ngày rà soát ban đầu:** 10/11/2026 · **Cập nhật G0.1:** 10/11/2026  
+> **Issue:** #28 · **Spec:** `docs/BLOCKLY_PRODUCT_BLOCK_CATALOG_V0.2.md` (branch `docs/blockly-product-spec`)  
+> **Đối chiếu:** `main` @ `2a0705d`; tham khảo thêm nhánh `codex/integrate-bach-ui` (fast100/Devices).  
+> **Phạm vi:** Tài liệu đặc tả và hợp đồng interface. Không sửa source code phần mềm, không đổi firmware, không upload phần cứng.
 
-## 0. Kết luận
+---
 
-**G0_BLOCKED.** Spec đã đủ chi tiết để duyệt về hướng thiết kế: lifecycle, sự kiện, latch/handle, AUTO và migration nhìn chung nhất quán với nhau. Có hai lý do chưa thể PASS:
+## 0. Kết luận hiện tại: **G0_READY_FOR_APPROVAL**
 
-1. Theo §9, G0 chỉ qua khi chủ dự án xác nhận §10 trong Issue #28. Hiện chưa có xác nhận đó, và người rà soát không được tự phê duyệt.
-2. Còn 4 interface chưa khóa (B1–B4 ở §6), đều ảnh hưởng nhiều module. Nếu giao cho nhiều agent làm song song lúc này, mỗi agent sẽ tự hiểu theo một cách. Tất cả xử lý được bằng một bản vá tài liệu ngắn, không cần đổi code.
+- **Blockers kỹ thuật B1–B4 đã được giải quyết hoàn toàn** trong bản cập nhật đặc tả V0.2 (`docs/BLOCKLY_PRODUCT_BLOCK_CATALOG_V0.2.md`, bao gồm mục mới §12 Interface Contracts).
+- Mọi interface dùng chung giữa Scheduler, Generator, Devices và Firmware đã được đặc tả chính xác inputs/outputs, quyền sở hữu (ownership) và hành vi khi có lỗi.
+- **Để chuyển sang `G0_PASS` và bắt đầu triển khai G1:** Chủ dự án (Project Owner) cần xác nhận phê duyệt các quyết định D1–D11 trong Issue #28 (xem danh sách tại §5 bên dưới). Agent không tự ý phê duyệt thay người dùng.
+
+---
 
 ## 1. Phân loại quyết định
 
-### 1.1. Đủ rõ, có thể khóa khi chủ dự án duyệt
+### 1.1. Đã giải quyết & thống nhất trong G0.1
 
-| Chủ đề | Mục spec | Ghi chú đối chiếu main |
+| Chủ đề | Mục spec | Quyết định đã chốt trong đặc tả G0.1 |
 |---|---|---|
-| Bốn trạng thái INIT/READY/RUN/FAULT, bảng chuyển trạng thái, FAULT không chặn compile/nạp | §2.1–2.2 | Main chỉ có `DISARMED/ARMED/FAULT` (`RobotController.h:12`). V2 là lớp lifecycle mới, không đổi tên enum cũ |
-| CLEAR chỉ về READY, không bao giờ tự START | §2.2, §2.3 | Khớp quy tắc "clear không arm cùng tick" của main |
-| Options giữ ≥1 s rồi nhả mới START; nhả sớm, stale, lệch neutral hoặc có Share thì hủy; giữ từ lúc boot/reconnect không tính | §2.3 | Main và fast100 dùng rising edge (`Ps4ControlMapping.h:13`). Spec đã xếp rising edge vào Legacy |
-| Mỗi hat có tối đa 1 token pending; chỉ dispatch cạnh còn hiệu lực; thả hủy PRESS cũ; tie-break ổn định | §3.3 | Mới hoàn toàn, chưa có code |
-| Wait/vòng lặp yield, deadline an toàn khi `millis()` wrap, mỗi RUN có generation riêng | §3.1–3.2 | Main dùng `delay()` (`arduino.js` `beginner_wait`). Basic V2 cấm `delay()` (§7.1) |
-| Latch: lệnh motor giữ sau khi handler return; `Đợi` không tự dừng motor | §3.4 | — |
-| Timed motion dùng handle (WAIT/NO_WAIT), timer cũ không được dừng lệnh mới, DRIVE là nhóm nguyên tử | §3.4 | — |
-| AUTO tự hoàn thành khi hết script, pending và handle; latch không giữ RUN | §3.4 | — |
-| Giới hạn AUTO lấy từ `autoMaxRunSeconds`, mặc định 15 s, khoảng 1–60, không có chế độ vô hạn; nếu trùng lúc hoàn thành thì deadline thắng | §3.4 | Profile chưa có trường trần (xem I8) |
-| My Blocks inline tại từng chỗ gọi, đối số tính một lần, chặn đệ quy và vượt quota | §3.5 | Chưa có |
-| Devices dùng ID ổn định, đổi alias không đổi ID, xóa thiết bị thì giữ block và báo lỗi, không tự remap | §4.1, §7.1 | Phù hợp AGENTS.md (không silently remap) |
-| Basic 30 block, type `codelab_v2_*`, giữ type chuẩn khi hợp đồng không đổi | §5, §1 | Đếm lại được 6+8+5+6+3+2 = 30 |
-| Migration opt-in, tạo bản sao, giữ bản gốc, không alias legacy sang hành vi V2 | §7.1 | Main chỉ có `FILE_VERSION = 1` (`App.jsx:22`) |
-| GPIO47 trên V2 là M6 | §2.3, §4.1 | Đúng: `PINOUT.md:22` ghi M6_IN2 = GPIO47 |
-| Ngưỡng watchdog/freshness 250 ms | §2.3, §9.2 | Main: `I2CFrame.h:8`, `RobotController.h:36`. Main tính đúng 250 ms vẫn là fresh; spec nên ghi rõ biên `≤250` |
+| Bốn trạng thái INIT/READY/RUN/FAULT | §2.1–2.2 | `INIT -> READY -> RUN -> FAULT`. FAULT không chặn compile/nạp |
+| Kiến trúc Safety & Heartbeat (B1) | §2.4, §12.1 | Scheduler cooperative phát heartbeat (≤50 ms); Safety Monitor độc lập nhận và giám sát (timeout >250 ms -> FAULT `V2_LOOP_STALL`). `MotorOutputGate` chốt cứng khi khác RUN |
+| Cử chỉ START | §2.3, §12.2 | Options giữ liên tục [1.0 s, 3.0 s] rồi nhả mới START. Nhả sớm (<1s) hoặc giữ quá 3s coi như hủy |
+| Cử chỉ CLEAR | §2.3, §12.2 | Share giữ 2.0 s với link fresh/neutral/safe. Chỉ đưa về READY, **tuyệt đối không auto-start** |
+| Phân loại chẩn đoán (B2) | §7.1, §12.5 | 4 mức: `INFO`, `WARN` (không chặn), `ERROR` (chặn build + upload), `HW_BLOCKED` (chặn upload, cho phép mock host) |
+| Cập nhật Bridge (B2) | §7.2 | Tài liệu hóa yêu cầu refactor `tools/arduino-bridge.mjs` tại Phase 4: lọc theo severity thay vì chặn mọi warning string |
+| Project Schema V2 & Devices (B3) | §4.1, §12.6 | Định dạng `format: "codelab-project"`, `version: 2`. Tích hợp hai chiều trường `deviceConfigs` của nhánh `codex/integrate-bach-ui`. `scriptUid` định danh hat |
+| My Blocks & Inlining (B4) | §3.5, §5.7, §12.4 | Type `codelab_v2_proc_*`, mở rộng inline tại chỗ gọi, kiểm tra DAG (báo `V2_PROC_RECURSION` nếu đệ quy), cấp phát PC continuation cho nested wait, quota 1024 ops / 256 B frame |
+| Gán trục và dấu PS4 | §4.3, §12.2 | LY tiến (`+ = up`), LX xoay (`+ = CW/phải`), RX ngang (`+ = phải`). Chuẩn hóa một lần tại adapter |
+| Motor ramp & limits | §4.1 | Giữ nguyên slew rate 12.0 unit/s (0.012 duty/ms) từ fast100. Giới hạn = `min(profile, device, motor)` |
+| Giới hạn thời gian AUTO | §2.2, §3.4 | Chạm `autoMaxRunSeconds` (mặc định 15 s) chuyển `FAULT` (`V2_AUTO_MAX_RUNTIME`) |
+| Ngân sách scheduler G1 | §9.2 | 16 script, 1024 ops tĩnh, 256 ops/tick, 2 ms/tick, 16 KiB RAM, 64 KiB flash làm mốc benchmark tạm thời |
 
-### 1.2. Còn mâu thuẫn hoặc mơ hồ (cần sửa tài liệu hoặc chủ dự án quyết)
+---
 
-| # | Vấn đề | Vị trí | Hệ quả nếu để nguyên |
-|---|---|---|---|
-| M1 | **Safety monitor chạy thế nào chưa rõ.** §2.3 viết "tác vụ safety ưu tiên cao" (giống một task FreeRTOS chạy song song), nhưng §3.6 viết "M1=0 ngay tại lượt safety" và §5.7 viết "không block FreeRTOS" (giống một pha trong cùng vòng lặp). "Heartbeat" (§2.2, §9.2) cũng chưa nói ai phát, ai nhận | §2.2, §2.3, §3.1, §3.6, §9.2 | Agent firmware và agent scheduler/host-sim sẽ chọn hai mô hình đồng thời khác nhau, nhất là khóa cổng ghi output |
-| M2 | **Mức diagnostics chưa khớp cổng compile.** §7.2 có WARN không chặn compile (`V2_ORPHAN_STACK`, `V2_MOTOR_MULTI_WRITER`, `V2_DRIVE_OWNERSHIP`), COUNTER và "BLOCK HARDWARE RUN". Main thì chặn **mọi** warning dạng chuỗi (`arduino-bridge.mjs:90,120`; `arduino.js:761–769`) | §7.2 | Hoặc WARN thực chất thành BLOCK, hoặc phải đổi hợp đồng bridge. "BLOCK HARDWARE RUN" chưa nói có chặn upload hay chỉ để firmware từ chối RUN |
-| M3 | **Schema project v2 chưa có hình dạng cụ thể.** §4.1 mới liệt kê tên trường. §5.7 viết "Blockly JSON version 2", dễ lẫn với `languageVersion` của Blockly hoặc `version` của file project. Chưa nói migration các project trong localStorage (`codelab.projects.v1`) và `editorMode` | §4.1, §5.7, §7.1 | Generator, Devices UI và migration sẽ đọc/ghi ba schema khác nhau |
-| M4 | **Đụng với nhánh chưa merge.** `codex/integrate-bach-ui` đã có `deviceConfigs[boardId]` `{version:1, motors, drivetrain, controller}` (`robot-devices.js:21`) và vẫn ghi file `version:1`. Spec không nhắc nhánh này | §4.1, §7.1 | Merge nhánh đó trước G2 sẽ tạo thêm một schema v1 "lai" mà migration phải xử lý |
-| M5 | **fast100 tự START sau CLEAR.** Trên nhánh trên, `CodeLabFast4wd.h:270–273` dùng Options để vừa clear lỗi LINK vừa tự arm lại. Spec cấm CLEAR→START và chỉ coi fast100 là "rising edge legacy" | §2.2, §2.3 | Nguy cơ ai đó port nguyên hành vi này vào runtime V2. Cần ghi rõ đây là hành vi Legacy không được kế thừa |
-| M6 | **Gán trục PS4 và dấu khác main.** Spec (§4.3, L3, D-P07..09): tiến=−rawLY, xoay=LX, ngang=RX, và chỉ đổi dấu trong adapter. Main `RobotController.h:53`: `vx=ly` (không đảo Y), `vy=lx`, `omega=rx`, tức ngang=LX, xoay=RX, và dấu vy/omega ngược với quy ước học sinh. fast100 hoán đổi LX/RX nên khớp spec về trục, còn dấu chưa có số đo | §4.3, §7.3, §8 L3 | Nếu dùng lại `RobotController` cho V2 sẽ bị đổi dấu hai lần hoặc sai trục |
-| M7 | **Chưa định nghĩa nguồn CLEAR.** Main dùng PS rising edge để clear; spec chặn/ẩn nút PS cho học sinh và chỉ viết "CLEAR riêng / control-plane" | §2.2, §5.3, §6 D-P14 | G3 không có cử chỉ CLEAR để thử |
-| M8 | Chưa định nghĩa: nhấn Options khi đang RUN/FAULT làm gì; giữ Options có giới hạn tối đa không (kẹt nút 30 s rồi nhả vẫn START) | §2.3 | Hành vi biên do agent tự chọn |
-| M9 | J01–J04 (My Blocks) chưa có tên type. Theo quy tắc §1, ngữ nghĩa inline+wait và tham số chỉ là số là "đổi hành vi", nên không nên dùng thẳng `procedures_*` | §6, Phụ lục A | G1 spike không biết sinh code cho type nào |
-| M10 | Chưa nói lệnh motor Basic có ramp/slew hay không, và giá trị mặc định của `cfg.maxDutyPercent`. Main có ramp 1.0/s và `speedLimit=0.5` | §4.1, §3.4 | Không biết nghiệm thu "M1=50% ngay" (§3.6) hay "tăng dần" |
-| M11 | Frame I²C chỉ có sequence 7 bit, **không có session** (`I2CFrame.h:14`), trong khi §3.3 yêu cầu lọc "theo sequence và session". Ở 100 Hz, sequence quay vòng sau khoảng 1,28 s | §3.3 | Adapter phải tự sinh session (ví dụ khi `connected` 0→1 hoặc khi I²C lỗi). Cần ghi thành hợp đồng |
+## 2. Báo cáo Chi tiết Xử lý Blockers B1–B4 (G0.1)
 
-### 1.3. Cần kiểm chứng (không chặn G0/G1; chặn G3/G4)
+### 2.1. Blocker B1 — Kiến trúc An toàn (Safety Architecture)
 
-- Dấu thật của trục LY/LX/RX qua D1 và bridge: đẩy lên ra giá trị âm hay dương (§4.3 hiện chỉ là giả định).
-- Chu kỳ report/poll, xung nút ngắn bị mất, sequence wrap/reset trên đúng D1 (§3.3 mục 5).
-- Profile phần cứng chính xác của board 4WD đã thử (16 MB, PSRAM tắt, I²C 0x30): main chưa có profile nào có capability PS4 I²C, nên mọi block PS4 S1 đều bị gate trên main.
-- Truth table driver: RZ7899 (V1) và TMI8260 (V2, theo PINOUT); thời gian dừng vật lý; output khi CPU treo; watchdog/reset; công tắc ngắt nguồn động lực (§2.3 HW_VERIFY).
-- Nút START vật lý trên board: chưa chọn, BOOT/GPIO0 chưa được phép. Trần AUTO theo profile.
-- Mọi ngưỡng §9.2 (16 script, 1024 op, 256 op/tick, 2 ms, 16 KiB RAM, 64 KiB flash) mới là đề xuất, chưa benchmark.
+- **Vấn đề ban đầu:** Chưa rõ Safety Monitor chạy đa luồng hay trong cùng vòng lặp; chưa rõ ai phát/nhận heartbeat và cơ chế khóa cổng motor.
+- **Giải pháp đã thống nhất trong spec (§2.4, §12.1):**
+  1. **Quyền sở hữu cổng ra (`MotorOutputGate`):** Safety Monitor trực tiếp sở hữu và điều khiển cổng phần cứng. Khi trạng thái không phải `RUN` (hoặc khi có STOP/FAULT), gate bị khóa cứng ngay lập tức. Mọi lệnh ghi từ scheduler bị chặn trước khi cleanup script diễn ra.
+  2. **Cơ chế nhịp tim (Heartbeat):** Scheduler là bên *phát* (`safetyMonitor.heartbeat(now)` sau mỗi lát cắt thực thi ≤50 ms). Safety Monitor là bên *nhận* và giám sát. Nếu scheduler bị đơ/vòng lặp vô hạn không nhường quyền quá 250 ms, Safety Monitor ngắt cổng và chuyển sang `FAULT` (`V2_LOOP_STALL`).
+  3. **Mô hình thực thi:**
+     - *Host G1:* Mô phỏng 2 pha xác thực trên đồng hồ ảo: Pha 1 (Safety Monitor + Watchdog + Cử chỉ Control-plane) -> Pha 2 (Cooperative Scheduler dispatch).
+     - *ESP32 Hardware:* Safety Monitor chạy task FreeRTOS riêng ưu tiên cao (Core 0), Scheduler chạy trên `loop()` Arduino (Core 1). Tuyệt đối **không** tạo FreeRTOS task riêng cho từng script Blockly.
 
-## 2. API chung giữa scheduler, generator, Devices và firmware
+### 2.2. Blocker B2 — Phân cấp Chẩn đoán & Cầu nối Bridge (Diagnostics & Bridge)
 
-Các tên dưới đây là **đề xuất để khóa**, chưa có trong code.
+- **Vấn đề ban đầu:** Spec V0.2 có mức WARN không chặn compile, nhưng `tools/arduino-bridge.mjs` trên main từ chối mọi yêu cầu có `payload.warnings?.length > 0`.
+- **Giải pháp đã thống nhất trong spec (§7.1, §7.2, §12.5):**
+  1. Định nghĩa chuẩn 4 mức severity:
+     - `INFO`: Thông tin, không chặn gì.
+     - `WARN`: Cảnh báo thiết kế (code mồ côi, trùng kênh ghi). Cho phép biên dịch và nạp.
+     - `ERROR`: Lỗi cấu trúc/kiểu/đệ quy. **Chặn biên dịch và chặn nạp.**
+     - `HW_BLOCKED`: Lệnh hợp lệ cho mô phỏng host nhưng phần cứng chưa kiểm chứng (`V2_DRIVER_GATED`, `V2_PIN_RESERVED`). **Cho phép biên dịch/chạy host, nhưng CHẶN nạp xuống mạch thật.**
+  2. Quy định hợp đồng nâng cấp bridge cho Phase 4: Sửa `tools/arduino-bridge.mjs` để endpoint `/build` chỉ từ chối khi có `ERROR`, còn `/upload` từ chối khi có `ERROR` hoặc `HW_BLOCKED`. Không sửa source code bridge trong phase này.
 
-| ID | Interface | Producer → Consumer | Nội dung tối thiểu cần khóa |
-|---|---|---|---|
-| I1 | `LifecycleState` + `FaultCode` | firmware runtime → scheduler, generator (reporter), UI | Enum `INIT/READY/RUN/FAULT`; danh sách mã `V2_*` loại RUNTIME/FAULT; quy tắc CLEAR/START; tách biệt với `robot::State` cũ |
-| I2 | `ControlPlane` (StartGesture/Stop/Clear) | PS4 adapter / nút board / web → lifecycle | Đầu vào: snapshot đã kiểm freshness. Đầu ra: `startRequested`, `stopRequested`, `clearRequested`. Bao gồm cấu hình nguồn START (`OPTIONS_HOLD` / `BOARD_BUTTON` / none) và tham số giữ (≥1 s, có hay không giới hạn tối đa) |
-| I3 | `Ps4Snapshot` + `EdgeSource` | PS4 adapter → scheduler (event) + reporter | `{fresh, session, seq, pressed[btn], edgeGeneration[btn], axesStudent{forward,right,cw}}`; chỉ adapter được đổi dấu; Options/Share/PS bị tách khỏi luồng sự kiện học sinh |
-| I4 | `OutputGate` / `MotorSink` | runtime safety → motion | `lock()` phải chạy trước cleanup; `write(channel,duty)` bị từ chối khi gate khóa hoặc sai RUN generation. Host dùng mock, firmware bọc driver thật |
-| I5 | `MotionService` (owner/handle) | script đã sinh → runtime | `run/setPower/stop(channel)`, `drive(fwd,right,cw)`, `startTimed(…, WAIT|NO_WAIT) → handle`, `cancelAll()`; pool cố định; trả kết quả cho waiter (`COMPLETED/CANCELLED`); `activeHandles()` để biết AUTO đã hoàn thành chưa |
-| I6 | `Scheduler` ABI cho code sinh ra | generator → runtime | Mỗi script: `struct {pc, frame, deadline}` + `tick(now)→{YIELD,DONE,WAIT_HANDLE}`; đăng ký hat (`WHEN_RUN`, `PRESSED(btn)`, `RELEASED(btn)`) theo `scriptUid`; quota op/tick; generation; `isIdle()` |
-| I7 | `Diagnostic` | validator/generator → UI, bridge | `{code, severity: WARN|BLOCK|BLOCK_HW_RUN|RUNTIME|COUNTER, blockId?, deviceId?, message_i18n}`. Bridge chặn theo `severity`, không chặn theo việc có chuỗi hay không. Cách tương thích với `warnings[]` hiện tại |
-| I8 | `ProjectV2` + `DevicesV2` + `BoardCapabilities` | UI/migration → generator, validator, firmware config | JSON schema có version: `boardId, runMode, startSource, autoMaxRunSeconds, devices[], motorRoles, invert, limits, sensorMap, editorMode`, cùng nơi lưu `scriptUid`. Profile bổ sung capability: `ps4I2c`, `motorBackendVerified`, `autoMaxRunCeiling`, `startButton`, `statusLed` |
-| I9 | `LogSink` | script → sink | `tryLogLine` có giới hạn 128 B/dòng, queue 1 KiB, bộ đếm dropped, drain không chặn |
+### 2.3. Blocker B3 — Project Schema V2 & Tương thích `deviceConfigs`
 
-## 3. Thứ tự module và interface cần khóa trước khi giao nhiều agent
+- **Vấn đề ban đầu:** Chưa có JSON Schema cụ thể cho Project V2; có nguy cơ xung đột với trường `deviceConfigs` của nhánh `codex/integrate-bach-ui`.
+- **Giải pháp đã thống nhất trong spec (§4.1, §7.4, §12.6):**
+  1. Cung cấp đầy đủ bản nháp Draft-07 JSON Schema cho `CodeLabProjectV2` với `format: "codelab-project"`, `version: 2`.
+  2. Giữ nguyên trường `deviceConfigs` theo từng boardId tương thích 100% với cấu trúc của `robot-devices.js` trên nhánh `codex/integrate-bach-ui`.
+  3. Mỗi khối hat được định danh ổn định bằng `scriptUid`.
+  4. Quản lý lưu trữ: `codelab.projects.v1` được bảo tồn; các dự án V2 được lưu vào `codelab.projects.v2`. Khi người dùng nâng cấp từ V1, hệ thống tạo bản sao độc lập (opt-in copy), không ghi đè dự án cũ.
 
-```mermaid
-flowchart LR
-  K["Khóa I1 I4 I6 I7 I8 (doc)"] --> A["A: runtime core host<br/>lifecycle + OutputGate + Motion mock"]
-  K --> B["B: scheduler ABI + virtual clock"]
-  K --> C["C: schema v2 + Devices validator + diagnostics"]
-  A --> D["D: PS4 adapter host<br/>I2 I3 edges + StartGesture"]
-  B --> E["E: generator V2 Basic 30<br/>+ inline My Blocks"]
-  C --> E
-  D --> G1["G1 host gate"]
-  E --> G1
-  G1 --> F["F: migration UI + Devices UI (G2)"]
-  G1 --> H["H: firmware binding cho profile da duyet (G3)"]
-  H --> I["I: Drivetrain 4WD (G4)"]
-```
+### 2.4. Blocker B4 — My Blocks & Inlining State Machine
 
-1. **Khóa trước khi chia việc** (tài liệu, chỉ một người làm): I1, I4, I6, I7, I8, và mô hình safety ở M1. Không cần đợi phần cứng.
-2. **Có thể song song sau bước 1:** A (runtime core host), B (scheduler ABI/virtual clock), C (schema/validator/diagnostics). Các module này chỉ gặp nhau qua I1/I4/I6/I7/I8.
-3. **Phụ thuộc:** D cần I2/I3 (khóa trước khi bắt đầu D); E cần B và C; G1 cần A+B+D+E.
-4. **Sau G1:** F (UI và migration) và H (firmware). H bị chặn cho đến khi có profile phần cứng đã duyệt và tách khỏi code fast100.
-5. Quy tắc chung cho mọi agent: không sửa `RobotController`, `Ps4ControlMapping`, `MecanumMixer`, firmware V1/V2 hay PS4 bridge đã được nghiệm thu. Nếu cần thì tạo module V2 mới (ví dụ `firmware/libraries/CodeLabRuntimeV2/`, `src/v2/…`).
+- **Vấn đề ban đầu:** Chưa có type ổn định cho My Blocks; chưa có cơ chế hỗ trợ lệnh `Đợi` lồng nhau mà không dùng stack FreeRTOS động.
+- **Giải pháp đã thống nhất trong spec (§3.5, §5.7, §12.3, §12.4):**
+  1. Định nghĩa các type chuẩn: `codelab_v2_proc_def` (định nghĩa), `codelab_v2_proc_call` (gọi), `codelab_v2_proc_arg` (tham số số).
+  2. Kiểm tra tĩnh chống đệ quy (DAG check -> `V2_PROC_RECURSION`).
+  3. Cơ chế mở rộng inline: Toàn bộ thân thủ tục được inline tại từng chỗ gọi.
+  4. Lệnh `Đợi` bên trong thủ tục được cấp phát Program Counter (`pc`) continuation riêng biệt trong frame của script gọi, cho phép resume chính xác mà không tốn chi phí FreeRTOS task động.
+  5. Đối số được tính toán 1 lần tại lối vào thủ tục và lưu vào `frameData[]`, ngăn chặn biến bên ngoài làm sai lệch tham số khi script đang suspend.
 
-## 4. Bộ acceptance tests tối thiểu
+---
 
-Mỗi test đều phải chạy và có log thì mới được tính PASS (theo AGENTS.md).
+## 3. Thứ tự Module & Interface Đã Khóa
 
-### G1 — host, virtual clock, mock (không cần phần cứng)
+1. **Nhóm Interface cốt lõi đã khóa:**
+   - `I1`: Vòng đời & Mã lỗi (`LifecycleState`, `FaultCode`).
+   - `I2`: Cử chỉ Control-plane (`ControlPlaneDetector`: Options 1–3s START, Share 2s CLEAR).
+   - `I3`: Bộ chuyển đổi PS4 (`Ps4StudentSnapshot`: chuẩn hóa trục học sinh).
+   - `I4`: Cổng chốt motor (`IMotorOutputGate`).
+   - `I6` & `I6b`: Scheduler ABI, Context frame và My Blocks inlining state machine.
+   - `I7`: Diagnostics API có severity.
+   - `I8`: JSON Schema V2 tương thích `deviceConfigs`.
+2. **Kế hoạch triển khai song song nhiều Agent (G1):**
+   - **Agent A (Runtime Host):** Hiện thực `IMotorOutputGate` (mock) và `ISafetyMonitor` trên virtual clock.
+   - **Agent B (Scheduler Engine):** Hiện thực `ICooperativeScheduler` round-robin state-machine và phát heartbeat.
+   - **Agent C (Generator & Validator):** Sinh mã C++ từ Blockly, inlining My Blocks và kiểm tra DAG / quotas.
+   - Cả 3 agent chỉ phụ thuộc vào các interface I1–I8 đã khóa ở §12.
 
-| ID | Ca | Kỳ vọng |
+---
+
+## 4. Bộ Acceptance Tests Tối thiểu (G1–G4)
+
+- **G1 (Host Spike - 18 ca):** Kịch bản X/O độc lập (§3.6), STOP lúc 750 ms, triệt tiêu cạnh dồn 100 lần, latch motor 50%, AUTO WAIT/NO_WAIT kết thúc ở 1000 ms, AUTO forever chạm deadline 15 s vào FAULT, My Blocks inline có nested wait, bảo vệ vòng lặp vô hạn yield, wrap millis(), log drop counter.
+- **G2 (UI & Migration - 11 ca):** Roundtrip save/load Project V2, mở project V1 ở chế độ Legacy, chuyển đổi V1->V2 tạo bản sao, kiểm tra device missing, chặn `V2_RUN_MODE_MISMATCH`, kiểm tra severity bridge mới.
+- **G3 (1 Motor & PS4 Thật - 8 ca):** Cấp nguồn giữ PWM=0, Options giữ [1.0s, 3.0s] rồi nhả vào RUN, rút bridge motor dừng, Share 2s xóa lỗi về READY, đo độ rộng xung tối thiểu.
+- **G4 (4WD Drivetrain - 4 ca):** 6 hướng chuyển động mecanum khớp dấu học sinh, áp dụng min bounds công suất, STOP 4 bánh tức thì, chạy thành công các bài mẫu L1–L4.
+
+---
+
+## 5. Quyết định cần Chủ Dự Án (Project Owner) Xác nhận tại Issue #28
+
+| # | Quyết định đề xuất | Mô tả tóm tắt |
 |---|---|---|
-| G1-01 | Kịch bản X/O §3.6 | O được dispatch trước khi X resume; M1: 50% từ 0 ms, về 0 ở 2000 ms |
-| G1-02 | STOP lúc 750 ms | M1=0 ở lượt safety; sau mốc 2000 ms không còn continuation hay callback nào chạy |
-| G1-03 | X nhấn/thả/nhấn/thả ở 0/100/200/300 ms | Chỉ có 1 lệnh 50%; token PRESS lúc 200 ms bị hủy; M1=0 |
-| G1-04 | Gửi dồn 100 cạnh khi handler đang bận | Mỗi hat tối đa 1 pending, counter coalesce tăng |
-| G1-05 | Report trùng/stale/seq wrap 127→0/session mới | Không sinh cạnh giả; session mới lấy mẫu đầu làm baseline |
-| G1-06 | Latch | M1 giữ 50% sau khi handler return; RELEASE thì dừng; nút giữ sẵn lúc vào RUN không tạo cạnh |
-| G1-07 | AUTO, timed 1 s, WAIT và NO_WAIT | Về READY/0 ở 1000 ms; với NO_WAIT script đã return trước đó |
-| G1-08 | AUTO `forever` / deadline trùng lúc hoàn thành | FAULT `V2_AUTO_MAX_RUNTIME` đúng 15 s (mặc định); deadline thắng |
-| G1-09 | `autoMaxRunSeconds` = 0, 61, 1.5, thiếu trường | 0/61/1.5 bị BLOCK `V2_AUTO_RUN_LIMIT_INVALID`; thiếu trường lấy 15 (hoặc trần profile nếu thấp hơn) |
-| G1-10 | Lệnh mới ghi đè handle đang có waiter; STOP khi đang có waiter | Ghi đè: waiter resume 1 lần với kết quả CANCELLED. STOP: không resume |
-| G1-11 | DRIVE đang chạy rồi `motorRun(M1)` | Các kênh M2..M4 về 0 trước khi áp dụng lệnh mới |
-| G1-12 | Cạn handle pool | FAULT an toàn, output = 0 |
-| G1-13 | My Blocks: 2 chỗ gọi, wait lồng trong repeat→if→con | Đối số chỉ tính 1 lần, counter đúng, không lặp side effect; đệ quy và vượt quota bị BLOCK |
-| G1-14 | Vòng lặp rỗng `forever` | Script khác vẫn được chạy; mỗi tick ≤256 op |
-| G1-15 | Wrap `millis()` (bắt đầu ở 0xFFFFF000) | Deadline đúng |
-| G1-16 | Serial sink đầy/không có sink/dòng >128 B | Bỏ dòng, tăng counter dropped, STOP vẫn đạt budget |
-| G1-17 | Lệnh user được dispatch sau khi gate đã khóa | Bị từ chối; không có PWM nào thuộc generation trước |
-| G1-18 | Code sinh ra cho fixture 16 script | Build host + cross-compile ESP32-S3 PASS; có số đo RAM/flash/p99 so với §9.2 |
+| **D1** | **Phê duyệt toàn văn V0.2 (G0.1)** | Chuyển trạng thái sang `G0_PASS` để bắt đầu triển khai code G1 |
+| **D2** | **Mô hình Safety đa nhiệm trên ESP32** | Core 0: Safety Monitor Task; Core 1: Cooperative Scheduler `loop()` |
+| **D3** | **Tham số cử chỉ START & CLEAR** | Options giữ 1.0–3.0 s rồi nhả; Share giữ 2.0 s để xóa lỗi (về READY) |
+| **D4** | **AUTO timeout luôn vào FAULT** | Khi hết thời hạn `autoMaxRunSeconds` (mặc định 15 s), chuyển `FAULT` |
+| **D5** | **Chuẩn hóa trục PS4 học sinh** | LY tiến (+ lên), LX xoay (+ phải/CW), RX ngang (+ phải) |
+| **D6** | **Duy trì tốc độ Ramp 12.0 unit/s** | Giữ nguyên đặc tính bảo vệ cơ khí từ thư viện `CodeLabFast4wd` |
+| **D7** | **Mô hình phân loại chẩn đoán 4 mức** | `INFO`, `WARN`, `ERROR` (chặn build), `HW_BLOCKED` (chặn nạp thật) |
+| **D8** | **Kế hoạch cập nhật Bridge tại Phase 4** | Sửa `tools/arduino-bridge.mjs` lọc theo severity thay vì chặn mọi warning |
+| **D9** | **Tương thích `deviceConfigs`** | Duy trì trường cấu hình robot per-board của nhánh `codex/integrate-bach-ui` |
+| **D10**| **Kiến trúc My Blocks Inline** | Không dùng FreeRTOS task riêng, mở rộng inline vào state machine của script |
+| **D11**| **Chỉ số benchmark tạm thời G1 (§9.2)** | 16 scripts, 1024 ops tĩnh, 256 ops/tick, 2 ms/tick, 16 KiB RAM, 64 KiB flash |
 
-### G2 — Devices, generator, migration (host + UI smoke)
+---
 
-| ID | Ca | Kỳ vọng |
-|---|---|---|
-| G2-01 | Roundtrip `ProjectV2` save→load | Giống nhau từng byte; `scriptUid` giữ nguyên khi kéo, undo/redo |
-| G2-02 | Mở project V1 (file + localStorage) | Vẫn ở Legacy, mã sinh ra giống golden cũ |
-| G2-03 | Chuyển đổi V1→V2 | Tạo bản sao, bản gốc không đổi, có diff, kênh `"1"`→`M1` hiển thị rõ |
-| G2-04 | Xóa Device / đổi board | Block còn nguyên, có `V2_DEVICE_MISSING` / invalid channel, không remap |
-| G2-05 | AUTO có block PS4 (kể cả gọi qua My Block) | `V2_RUN_MODE_MISMATCH` BLOCK |
-| G2-06 | Hai script cùng chạy M1 / một chạy một dừng / DRIVE với kênh riêng | MULTI_WRITER WARN / không warning / chỉ hiện DRIVE_OWNERSHIP |
-| G2-07 | Hat chọn Options/Share/PS | `V2_RESERVED_BUTTON` BLOCK |
-| G2-08 | Bridge nhận diagnostics | WARN cho compile; BLOCK bị từ chối (theo I7) |
-| G2-09 | Đổi ngôn ngữ/theme | type/schema không đổi |
-| G2-10 | GPIO47 trên V2 | Không cho làm LED/PWM; `V2_PIN_RESERVED` |
-| G2-11 | `npm test`, `npm run build` | PASS, có log |
-
-### G3 — 1 motor + PS4 thật, profile đã duyệt (cần phê duyệt riêng cho từng lần upload)
-
-| ID | Ca | Kỳ vọng/ghi nhận |
-|---|---|---|
-| G3-01 | Boot, rồi giữ Options ngay từ lúc boot | READY, PWM=0 (đo bằng scope/đồng hồ đo); không START |
-| G3-02 | Options giữ 0,5 s / 1 s rồi nhả / giữ khi lệch neutral / giữ kèm Share | Chỉ trường hợp 1 s rồi nhả mới vào RUN |
-| G3-03 | L1: X nhấn chạy, X thả dừng | Có log chu kỳ report và độ trễ dừng |
-| G3-04 | Rút bridge/tắt tay cầm khi RUN | FAULT, đo thời gian đến khi motor dừng hẳn |
-| G3-05 | Share khi RUN, sau đó CLEAR | Về READY; CLEAR không tự START |
-| G3-06 | Quét độ rộng xung nút ngắn | Ghi lại độ rộng nhỏ nhất bắt được |
-| G3-07 | Watchdog/reset, CPU bị treo giả lập, công tắc ngắt nguồn | Ghi output thực tế và thời gian |
-| G3-08 | AUTO với nguồn START đã duyệt | Đúng §2.3, dừng ở deadline |
-
-Mỗi ca G3 phải ghi lại: board, firmware/toolchain, wiring, kết quả quan sát được.
-
-### G4 — Drivetrain 4WD
-
-| ID | Ca | Kỳ vọng |
-|---|---|---|
-| G4-01 | Bench 6 hướng + xoay ± + strafe ± + tổ hợp trục | Hướng vật lý khớp quy ước học sinh; ghi dấu thô của LY/LX/RX |
-| G4-02 | Giới hạn | Áp dụng min(`maxDutyPercent`, `motorLimit`, `driveLimit`); 100% là duty, không phải RPM |
-| G4-03 | STOP/FAULT/reboot khi đang chạy cả 4 bánh | Cả 4 output về 0 |
-| G4-04 | Chạy L1–L4 theo capability | PASS kèm log |
-
-## 5. Quyết định cần chủ dự án duyệt (không tự phê duyệt)
-
-| # | Quyết định | Đề xuất của người rà soát (để tham khảo) |
-|---|---|---|
-| D1 | Phê duyệt §10 nói chung (lifecycle, dispatch, AUTO, Basic 30, migration) | — |
-| D2 | Mô hình safety (M1): một vòng lặp chia pha safety→scheduler, hay task FreeRTOS riêng | G1 làm theo kiểu chia pha; giữ I4 an toàn khi chạy đa luồng để có thể chuyển sang task riêng ở G3 |
-| D3 | Options giữ 1 s: chốt con số, có giới hạn tối đa không, nhấn Options khi RUN/FAULT thì làm gì | Có giới hạn tối đa (ví dụ 3 s); bỏ qua Options khi đang RUN |
-| D4 | Nguồn CLEAR (M7): PS? giữ Share? web? | Chọn một cử chỉ riêng, không trùng START |
-| D5 | Hết deadline AUTO luôn vào FAULT, kể cả chương trình `forever` hợp lệ của học sinh (về UX: lúc nào cũng phải CLEAR) | Giữ FAULT theo spec, hoặc thêm mã READY riêng cho "hết giờ" |
-| D6 | Gán trục và dấu PS4 (M6): xoay=LX, ngang=RX như spec/fast100, hay theo binding hiện có của main | Theo spec; không dùng lại mapping trong `RobotController` cho V2 |
-| D7 | Ramp/slew cho lệnh Basic và giá trị mặc định `maxDutyPercent` (M10) | — |
-| D8 | Chính sách theo mức diagnostics và hợp đồng mới của bridge (M2), ý nghĩa của "BLOCK HARDWARE RUN" | — |
-| D9 | `ProjectV2`/`DevicesV2` thay thế hay hợp nhất với `deviceConfigs` của nhánh `codex/integrate-bach-ui` (M4) | Chốt trước khi merge nhánh đó |
-| D10 | Type cho My Blocks (M9) | `codelab_v2_proc_*` |
-| D11 | Các ngưỡng §9.2 và 15 s/1–60 s là mục tiêu G1 (chưa bench) | — |
-
-## 6. Blocker và cách xử lý ngắn nhất
-
-Chỉ cần sửa tài liệu, không đổi code. Nên thêm một mục mới "§12 Interface lock" vào spec, hoặc tạo một file `docs/BLOCKLY_V0.2_INTERFACES.md` riêng.
-
-| ID | File / mục | Cách xử lý ngắn nhất |
-|---|---|---|
-| B1 | `BLOCKLY_PRODUCT_BLOCK_CATALOG_V0.2.md` §2.3, §3.1, §3.6, §9.2 | Ghi mô hình safety đã chọn (D2) và định nghĩa heartbeat (ai phát, ai nhận, 250 ms, biên `≤`). Khóa I1 + I4 |
-| B2 | Như trên, §7.2 | Thêm cột `severity` dạng enum (I7) và một dòng về hợp đồng bridge: chặn theo severity. Định nghĩa "BLOCK HARDWARE RUN" |
-| B3 | Như trên, §4.1, §5.7, §7.1 | Đưa vào JSON schema `ProjectV2` (I8) có ví dụ; đổi chữ "Blockly JSON version 2" thành "project `version: 2`"; ghi nơi lưu `scriptUid`; thêm một câu về migration localStorage và `deviceConfigs` (D9) |
-| B4 | Như trên, §3.5, §6 J01–J04 | Chốt tên type cho My Blocks (D10) và ABI script (I6) để G1 sinh code được |
-
-Các mục còn lại (M5–M8, M10–M11) phải giải quyết **trước G3**, không chặn G1. Cần ghi chú trong spec rằng hành vi auto-arm sau CLEAR của fast100 thuộc Legacy và không được kế thừa.
-
-Khi B1–B4 đã được bổ sung **và** chủ dự án đã ghi xác nhận D1–D11 trong Issue #28, có thể đánh giá lại để chuyển sang G0_PASS.
+> **Trạng thái:** Toàn bộ công việc kỹ thuật của nhiệm vụ G0.1 đã hoàn tất. Tài liệu sẵn sàng chờ chủ dự án review và phê duyệt tại Issue #28.
