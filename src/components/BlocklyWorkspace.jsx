@@ -7,6 +7,7 @@ import '../blocks/robotics.js';
 import { editorToolbox } from '../blocks/beginner-toolbox.js';
 import '../blocks/beginner.js';
 import '../blocks/controller.js';
+import '../blocks/palette-apply.js';
 import { RENDERER, FALLBACK_RENDERER } from '../blocks/renderer.js';
 import { themes } from '../blocks/theme.js';
 
@@ -104,7 +105,7 @@ function BlocklyWorkspace({ boardId, editorMode, initialState, dark = false, onC
     };
     tagCategories();
     const toolboxObserver = new MutationObserver(tagCategories);
-    const toolboxDiv = hostRef.current.querySelector('.blocklyToolboxDiv');
+    const toolboxDiv = hostRef.current.querySelector('.blocklyToolbox, .blocklyToolboxDiv');
     if (toolboxDiv) toolboxObserver.observe(toolboxDiv, { childList: true, subtree: true });
 
     const resizeObserver = new ResizeObserver(() => Blockly.svgResize(workspace));

@@ -1,5 +1,6 @@
 import { getBoardProfile, DEFAULT_BOARD_ID } from '../boards/profiles.js';
 import { roboticsToolbox } from './robotics-toolbox.js';
+import { CATEGORIES } from './palette.js';
 
 // Missing metadata is a legacy project, which retains the advanced toolbox.
 export const projectEditorMode = project => project?.editorMode === 'beginner' ? 'beginner' : 'advanced';
@@ -23,28 +24,33 @@ export function editorToolbox(boardId, mode = 'beginner') {
     block('math_round',{inputs:{NUM:num(3.5)}}),
     block('math_constrain',{inputs:{VALUE:num(5),LOW:num(0),HIGH:num(10)}})];
   const logic = ['logic_compare','logic_operation','logic_boolean','logic_negate'].map(type=>block(type));
-  const contents = [
-    category('Bắt đầu & Điều khiển','#e79b23',controls),
-    category('Toán học','#59a34c',math),
-    category('Logic','#5c81a6',logic),
-    {kind:'category',name:'Biến',custom:'VARIABLE',colour:'#edb070'},
-    ...(Number.isInteger(p.pins.led) ? [category('Đèn','#d69a32',[block('beginner_led'),block('beginner_led',{fields:{STATE:'LOW'}}),block('beginner_blink')])] : []),
-    category('Hiển thị','#9664d6',display),
-    category('Cảm biến','#45a4ad',[block('beginner_serial_ready')]),
-    category('Tay cầm PS4 (mô phỏng)','#cf5b9b',ps4),
-  ];
+  const rawPs4=[];
   if(advanced) {
-    const rawPs4=[];
     if(p.id===DEFAULT_BOARD_ID || p.pins.uart1) rawPs4.push(block('codelab_ps4_begin_uart',{inputs:{RX:shadow('math_number',{NUM:p.pins.uart1?.rx ?? 16}),TX:shadow('math_number',{NUM:p.pins.uart1?.tx ?? 17}),BAUD:shadow('math_number',{NUM:115200})}}));
     // Legacy I2C decoder is exposed only for Generic; no new protocol claims.
     if(p.id===DEFAULT_BOARD_ID) rawPs4.push(block('codelab_ps4_begin_i2c',{inputs:{SDA:shadow('math_number',{NUM:8}),SCL:shadow('math_number',{NUM:9}),ADDRESS:shadow('math_number',{NUM:48})}}));
-    contents.push(category('Nâng cao','#68758c',[
-      ...roboticsToolbox(boardId),...rawPs4,...(p.pins.uart1 ? [block('beginner_ps4_setup')] : []),
+  }
+  const C = CATEGORIES;
+  const hardware = advanced ? roboticsToolbox(boardId) : [];
+  const controlsAll = [...controls, ...(advanced ? [block('controls_for'),block('controls_flow_statements'),...hardware.filter(b=>b.type==='codelab_delay_ms')] : [])];
+  const displayAll = [...display, ...(advanced ? [block('text_print')] : [])];
+  const ps4All = [...ps4, ...(advanced ? [...rawPs4,...(p.pins.uart1 ? [block('beginner_ps4_setup')] : []),...['codelab_ps4_connected','codelab_ps4_axis','codelab_ps4_button'].map(type=>block(type))] : [])];
+  const contents = [
+    category(C.control.name,C.control.colour,controlsAll),
+    category(C.math.name,C.math.colour,math),
+    category(C.logic.name,C.logic.colour,logic),
+    {kind:'category',name:C.variable.name,custom:'VARIABLE',colour:C.variable.colour},
+    ...(advanced ? [{kind:'category',name:C.procedure.name,custom:'PROCEDURE',colour:C.procedure.colour}] : []),
+    ...(Number.isInteger(p.pins.led) ? [category(C.led.name,C.led.colour,[block('beginner_led'),block('beginner_led',{fields:{STATE:'LOW'}}),block('beginner_blink')])] : []),
+    category(C.display.name,C.display.colour,displayAll),
+    category(C.sensor.name,C.sensor.colour,[block('beginner_serial_ready')]),
+    category(advanced ? 'Tay cầm PS4' : C.ps4.name,C.ps4.colour,ps4All),
+  ];
+  if(advanced) {
+    contents.push(category(C.advanced.name,C.advanced.colour,[
+      ...hardware.filter(b=>b.type!=='codelab_delay_ms'),
       ...(p.capabilities.motorChannels > 0 ? [block('beginner_motor'),block('beginner_motor_stop')] : []),
       ...(p.capabilities.servoChannels > 0 ? [block('beginner_servo')] : []),
-      ...['codelab_ps4_connected','codelab_ps4_axis','codelab_ps4_button','controls_whileUntil','controls_for','controls_flow_statements','math_single','math_modulo','math_random_int','text_print','text_join'].map(type=>block(type)),
-      {kind:'category',name:'Biến',custom:'VARIABLE',colour:'#edb070'},
-      {kind:'category',name:'Hàm',custom:'PROCEDURE',colour:'#ee9bb0'},
     ]));
   }
   return {kind:'categoryToolbox',contents};

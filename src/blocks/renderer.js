@@ -36,15 +36,18 @@ function buildRenderer() {
     constructor() {
       super();
       const g = this.GRID_UNIT;
-      this.CORNER_RADIUS = 14;                      
+      this.CORNER_RADIUS = 9;
       this.NOTCH_WIDTH = 10 * g;
       this.NOTCH_HEIGHT = 9;
       this.NOTCH_OFFSET_LEFT = 5 * g;
       this.STATEMENT_INPUT_NOTCH_OFFSET = this.NOTCH_OFFSET_LEFT;
-      this.MIN_BLOCK_HEIGHT = 11 * g;
+      this.MIN_BLOCK_HEIGHT = 9 * g;
       this.TOP_ROW_MIN_HEIGHT = this.CORNER_RADIUS;
       this.BOTTOM_ROW_MIN_HEIGHT = this.CORNER_RADIUS;
       this.STATEMENT_BOTTOM_SPACER = -this.NOTCH_HEIGHT;
+      this.STATEMENT_INPUT_PADDING_LEFT = 2 * g;
+      this.TOP_ROW_PRECEDES_STATEMENT_MIN_HEIGHT = this.CORNER_RADIUS;
+      this.BOTTOM_ROW_AFTER_STATEMENT_MIN_HEIGHT = this.CORNER_RADIUS + 2;
       this.FIELD_BORDER_RECT_RADIUS = 16;
       this.FIELD_DROPDOWN_SVG_ARROW = false;
       this.FIELD_TEXT_FONTSIZE = 11;
@@ -113,12 +116,102 @@ function buildRenderer() {
 
   const { RenderInfo } = Blockly.zelos;
   const { Types } = Blockly.blockRendering;
-  const EDGE_PADDING = 10;
-  const INPUT_LEFT_PADDING = 12;
+  const H_PAD = 12;
+  const EDGE_PADDING = H_PAD;
+  const INPUT_LEFT_PADDING = H_PAD;
+  const NOTCH_CLEARANCE = 5;
+  const BODY_PADDING_EXTRA = 4;
+
+  const pathBottom = (block) => {
+    const path = block?.pathObject?.svgPath;
+    if (!path || typeof path.getBBox !== 'function') return null;
+    try {
+      const box = path.getBBox();
+      return box.height > 0 ? box.y + box.height : null;
+    } catch {
+      return null;
+    }
+  };
+  const stackPathHeight = (first) => {
+    let last = first;
+    while (last.getNextBlock()) last = last.getNextBlock();
+    const bottom = pathBottom(last);
+    if (bottom === null) return null;
+    const offset = last === first ? 0 : last.getRelativeToSurfaceXY().y - first.getRelativeToSurfaceXY().y;
+    return offset + bottom;
+  };
+
+  const joinedBelow = (block) => {
+    const prev = block.getPreviousBlock && block.getPreviousBlock();
+    return !!prev && prev.getNextBlock() === block;
+  };
+  const joinedAbove = (block) => !!(block.getNextBlock && block.getNextBlock());
+  try {
+    const { TopRow, BottomRow } = Blockly.zelos;
+    const topLeft = TopRow.prototype.hasLeftSquareCorner;
+    TopRow.prototype.hasLeftSquareCorner = function (block) { return topLeft.call(this, block) || joinedBelow(block); };
+    TopRow.prototype.hasRightSquareCorner = function (block) { return joinedBelow(block); };
+    const bottomLeft = BottomRow.prototype.hasLeftSquareCorner;
+    BottomRow.prototype.hasLeftSquareCorner = function (block) { return bottomLeft.call(this, block) || joinedAbove(block); };
+    BottomRow.prototype.hasRightSquareCorner = function (block) { return joinedAbove(block); };
+  } catch (error) {
+    console.warn('codelab: không bỏ được bo góc ở chỗ nối khối.', error);
+  }
 
   class CodelabRenderInfo extends RenderInfo {
+    getSpacerRowHeight_(prev, next) {
+      const base = super.getSpacerRowHeight_(prev, next);
+      try {
+        const afterTop = !!prev && (prev.type & Types.TOP_ROW) !== 0;
+        const hasSocket = !!prev && !prev.hasStatement && (prev.elements || []).some((e) => Types.isInlineInput(e));
+        if (next?.hasStatement && !afterTop && hasSocket) {
+          return Math.max(base, this.constants_.NOTCH_HEIGHT + NOTCH_CLEARANCE + BODY_PADDING_EXTRA);
+        }
+        const nextHasSocket = !!next && !next.hasStatement && (next.elements || []).some((e) => Types.isInlineInput(e));
+        const bottomSpace = this.constants_.NOTCH_HEIGHT + NOTCH_CLEARANCE + BODY_PADDING_EXTRA;
+        const balance = Math.max(0, bottomSpace - (this.constants_.TOP_ROW_MIN_HEIGHT || 0));
+        if (afterTop && nextHasSocket && !this.outputConnection) {
+          return Math.max(base, balance);
+        }
+        const nextIsBottom = !!next && (next.type & Types.BOTTOM_ROW) !== 0;
+        if (nextIsBottom && hasSocket && !this.outputConnection) {
+          return Math.max(base, balance);
+        }
+      } catch (error) {
+        console.warn('codelab: không chỉnh được khoảng cách hàng.', error);
+      }
+      return base;
+    }
+
+    computeBounds_() {
+      super.computeBounds_();
+      try {
+        this.rows.forEach((row) => {
+          if (!row.hasStatement) return;
+          const input = row.getLastInput();
+          const child = input?.connectedBlock;
+          if (!child) return;
+          const fit = stackPathHeight(child);
+          if (fit === null) return;
+          const min = 2 * (this.constants_.INSIDE_CORNERS?.height || 0) + 1;
+          const target = Math.max(min, Math.round(fit * 100) / 100);
+          if (Math.abs(row.height - target) < 40) row.height = target;
+        });
+      } catch (error) {
+        console.warn('codelab: không khớp được miệng chữ C với khối con.', error);
+      }
+    }
+
     getInRowSpacing_(prev, next) {
       const base = super.getInRowSpacing_(prev, next);
+      if (prev && next && Types.isLeftSquareCorner(prev) && (Types.isNextConnection(next) || Types.isPreviousConnection(next))) {
+        return Math.max(0, next.notchOffset - prev.width);
+      }
+      if (!this.outputConnection) {
+        const isContent = (e) => !!e && (Types.isField(e) || Types.isIcon(e) || Types.isInlineInput(e));
+        if (!prev && isContent(next)) return H_PAD;
+        if (prev && !next && isContent(prev)) return H_PAD;
+      }
       if (base !== 0 || !this.outputConnection) return base;
       const atRight = !!prev && !next;
       const edge = atRight ? prev : next;
