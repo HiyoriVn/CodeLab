@@ -268,3 +268,22 @@ body,.code-side,.set,.blockly-host .blocklyToolboxDiv,.ws{transition:background-
 .blocklyWidgetDiv .blocklyHtmlInput::selection{background:#BBD6FF;color:#1F2340}
 .blockly-host .blocklyOutlinePath{fill:rgba(0,0,0,.16)!important;stroke:none}
 input.blocklyHtmlInput{background:#fff!important;color:#1F2340!important;-webkit-text-fill-color:#1F2340!important;color-scheme:light!important;outline:none!important}
+
+/* ---- toolbar ---- */
+.board-profile-toolbar{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:10px 18px;padding:9px 16px;background:var(--pan);border-bottom:1px solid var(--line);transition:background-color .35s ease,border-color .35s ease}
+.board-profile-toolbar label{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px;letter-spacing:.01em;color:color-mix(in srgb,var(--ink) 72%,transparent);white-space:nowrap}
+.board-profile-toolbar select{appearance:none;-webkit-appearance:none;height:36px;min-width:120px;max-width:260px;padding:0 34px 0 12px;border:1.5px solid var(--dot);border-radius:10px;background-color:var(--bg);color:var(--ink);font:600 13px 'Be Vietnam Pro','Segoe UI',system-ui,sans-serif;text-overflow:ellipsis;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);
+  background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+  transition:border-color .18s,box-shadow .2s,background-color .18s}
+.board-profile-toolbar select:hover{border-color:var(--bar)}
+.board-profile-toolbar select:focus-visible{outline:none;border-color:var(--bar);box-shadow:0 0 0 3px color-mix(in srgb,var(--bar) 25%,transparent)}
+.board-profile-toolbar select option{background:var(--bg);color:var(--ink)}
+.board-profile-toolbar small{margin-left:auto;display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 14px 0 12px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:color-mix(in srgb,var(--ink) 75%,transparent);font:600 12px 'Be Vietnam Pro','Segoe UI',system-ui,sans-serif;white-space:nowrap}
+.board-profile-toolbar small::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dot);box-shadow:0 0 0 3px color-mix(in srgb,var(--dot) 28%,transparent)}
+@media (max-width:760px){
+  .board-profile-toolbar{padding:8px 12px;gap:8px 12px}
+  .board-profile-toolbar label{width:100%;justify-content:space-between}
+  .board-profile-toolbar select{flex:1;max-width:none;min-width:0}
+  .board-profile-toolbar small{margin-left:0}
+}
