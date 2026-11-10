@@ -1,0 +1,1 @@
+{"format":"codelab-project","version":2,"project":{"id":"project-02","name":"Bad","boardId":"generic","runMode":"AUTONOMOUS","autoMaxRunSeconds":61,"workspace":{"blocks":{"languageVersion":0,"blocks":[]}},"deviceConfigs":{"generic":{"version":1,"motors":[],"drivetrain":{"wheels":["motor-1","motor-1"],"limit":120},"controller":{"enabled":false,"blink":true}}}}}

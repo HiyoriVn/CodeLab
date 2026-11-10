@@ -266,17 +266,16 @@ Diagnostics catalog được chuẩn hóa thành 4 mức độ rõ ràng:
 - `ERROR`: Lỗi cấu trúc/ngữ nghĩa/kiểu dữ liệu (như sai kiểu, thiếu device, đệ quy thủ tục, vượt hạn mức script). **Chặn biên dịch và chặn nạp.**
 - `HW_BLOCKED`: Khối lệnh hợp lệ về mặt thuật toán và có thể chạy mô phỏng host (G1), nhưng phần cứng chưa được xác minh an toàn (như motor driver chưa nghiệm thu `V2_DRIVER_GATED`, chưa cấu hình nút START `V2_SAFETY_START_UNAVAILABLE`, xung đột chân reserved `V2_PIN_RESERVED`). **Cho phép sinh mã và chạy kiểm thử host, nhưng CHẶN nạp xuống mạch thật.**
 
-### 7.2. Yêu cầu Cập nhật `tools/arduino-bridge.mjs` (Tài liệu hóa cho Phase 4)
+### 7.2. Contract endpoint compile/upload (implementation hiện tại và G1 target)
 
 Hiện tại, `tools/arduino-bridge.mjs` (dòng 90 và 120) từ chối yêu cầu nếu mảng `payload.warnings` có bất kỳ phần tử nào:
 ```javascript
 // HIỆN TẠI TRÊN MAIN (Cần refactor tại Phase 4, KHÔNG sửa trong task này):
 if (payload.warnings?.length) return send(res, 400, { error: 'Còn cảnh báo trong mã sinh; hãy xử lý trước khi biên dịch.' });
 ```
-**Hợp đồng cầu nối Arduino CLI mới (Bridge API Contract):**
-1. Endpoint `/build`: Chỉ từ chối biên dịch nếu có ít nhất một chẩn đoán có mức `severity === 'ERROR'`. Các chẩn đoán `WARN` và `INFO` được trả về trong kết quả để UI hiển thị thông tin.
-2. Endpoint `/upload`: Từ chối nạp mạch nếu có bất kỳ chẩn đoán nào có `severity === 'ERROR'` HOẶC `severity === 'HW_BLOCKED'`.
-3. Cho đến khi bridge được cập nhật ở Phase 4, các kiểm thử G1 và G2 trên host sẽ thực thi trực tiếp qua test harness mà không bị bridge chặn.
+Repository endpoint audit: `tools/arduino-bridge.mjs` implements `POST /api/compile` and `POST /api/upload` (also `GET /api/status`, `GET /api/ports`). No `/build` endpoint exists. `src/components/DevicePanel.jsx` calls the two POST endpoints.
+
+Contract: `INFO` is displayed only; `WARN` is displayed and does not block compile/upload; `ERROR` blocks compile and upload; `HW_BLOCKED` permits host simulation/compile but blocks hardware upload. This contract is not yet implemented by the bridge. Upload authorization MUST be derived from server-held build metadata or a verified signed build manifest: store normalized board profile, code hash, build ID, and trusted diagnostics/build-policy result at compile time. At upload, re-check that build ID exists and is current and that submitted code and board match the stored build; reject if server-side stored policy contains ERROR/HW_BLOCKED or if the selected board is not hardware-authorized. Client-supplied `warnings`, `diagnostics`, board authorization flags, or severity values are display/input only and MUST NOT grant upload authorization. Current bridge does preserve buildId/code/board stale-build checks; keep them. Do not modify bridge implementation in G0.2. G1/G2 host tests use direct harness until its later authorized refactor.
 
 ### 7.3. Bảng mã Diagnostics V0.2 cập nhật mức độ
 
@@ -321,6 +320,23 @@ if (payload.warnings?.length) return send(res, 400, { error: 'Còn cảnh báo t
 
 ## 9. Kế hoạch Triển khai (Gate Sequence)
 
+### 9.2. G1 benchmark thresholds and reproducible workload
+
+The G1 host spike has a fixed maximum of **16 scripts**. These are acceptance ceilings, not measured claims:
+
+| Measure | Threshold | Measurement rule |
+|---|---:|---|
+| Registered scripts | 16 maximum | 17th registration rejected without corrupting registrations |
+| Static expanded operations/project | 1024 maximum | Count after My Blocks inline expansion |
+| Callback operations/script/tick | 256 maximum | Quota exhaustion returns `YIELD`; next runnable script gets a turn |
+| Scheduler tick wall time | 2 ms maximum | Host monotonic duration for full dispatch tick |
+| Static scheduler/context RAM | 16 KiB maximum | `sizeof` pool/context accounting; excludes host/test framework |
+| Generated sketch flash | 64 KiB maximum | Report text+rodata for representative build; target-toolchain baseline pending |
+| Heartbeat | 50 ms target; >250 ms fault | Virtual clock; no heartbeat while tick/callback is stalled |
+| Determinism | Identical time/event trace gives identical output trace | Compare ordered trace including equal-deadline tie order |
+
+Fixture: 16 scripts (8 runnable, 4 timer-waiting, 4 handle-waiting), bounded branches and nested inline wait; inject 100 alternating PS4 edges, STOP at 750 ms, deadlines at 1000 ms, and a separate stall beyond 250 ms. Use a deterministic virtual clock and mock gate. Record compiler/version, host, operation counts, static bytes, tick durations, and result. Any threshold failure is G1 FAIL.
+
 | Gate | Trọng tâm | Tiêu chí hoàn thành |
 |---|---|---|
 | **G0** | Rà soát & Khóa đặc tả | Giải quyết B1–B4, phê duyệt D1–D11 trong Issue #28 |
@@ -346,10 +362,17 @@ if (payload.warnings?.length) return send(res, 400, { error: 'Còn cảnh báo t
 
 ### 10.2. Quyết định cần Chủ dự án ký duyệt tại Issue #28
 
-- [ ] **D1:** Phê duyệt chính thức toàn văn đặc tả V0.2 (G0.1) để chuyển Gate sang `G0_PASS` và bắt đầu triển khai G1.
-- [ ] **D2:** Phê duyệt mô hình Safety Task độc lập trên Core 0 (ESP32) cho Phase 3.
-- [ ] **D3:** Phê duyệt cử chỉ Options (giữ 1.0 s, nhả trong 3.0 s) và Share CLEAR (giữ 2.0 s).
-- [ ] **D4:** Phê duyệt trần công suất phần cứng mặc định theo từng board profile.
+- [ ] **D1:** Phê duyệt toàn văn V0.2 để chuyển Gate sang `G0_PASS`.
+- [ ] **D2:** Safety Monitor Core 0 (FreeRTOS implementation G3 pending).
+- [ ] **D3:** Options START [1–3] s; Share CLEAR 2 s về READY.
+- [ ] **D4:** AUTO default 15 s, limit 1–60 s, expiry -> FAULT.
+- [ ] **D5:** PS4 axes LY forward, LX clockwise, RX strafe-right.
+- [ ] **D6:** Ramp 12.0 unit/s (0.012 duty/ms).
+- [ ] **D7:** INFO/WARN/ERROR/HW_BLOCKED severity policy.
+- [ ] **D8:** Phase 4 bridge policy update; no bridge change in G0.2.
+- [ ] **D9:** Preserve per-board `deviceConfigs` compatibility.
+- [ ] **D10:** My Blocks inline with DAG recursion rejection.
+- [ ] **D11:** G1 benchmark thresholds in §9.2.
 
 ---
 
@@ -423,6 +446,8 @@ class ISafetyMonitor {
 } // namespace codelab::v2
 ```
 
+**Cross-core ownership and priority:** `SafetyMonitor` is the sole writer of lifecycle state, fault code, `runGeneration`, and gate lock/unlock. State and generation are one atomic snapshot (or a short critical-section protected pair); readers must acquire a consistent pair. Scheduler motor writes carry the observed generation and are accepted only when state is `RUN`, generation matches, and the gate is unlocked. START increments generation before publishing `RUN`; STOP/FAULT has priority over START and writes: atomically publish non-RUN / invalidate generation, then hard-lock the gate, then enqueue cleanup. A stale write or cleanup from an older generation is rejected. The physical gate's hard-lock path must be idempotent. G1 uses deterministic single-thread virtual-clock mocks; no real cross-core primitive is claimed by G1. The FreeRTOS/Core 0 implementation and its memory-ordering proof is G3 pending.
+
 ### 12.2. Interface I2 & I3: Control-Plane & PS4 Adapter
 
 ```cpp
@@ -465,15 +490,19 @@ Mỗi script Blockly được biên dịch thành một state-machine C++ có c�
 namespace codelab::v2 {
 
 enum class StepResult : uint8_t {
-  YIELD = 0,         // Script tự nguyện nhường quyền hoặc hết quota lượt này
-  DONE = 1,          // Script hoàn thành toàn bộ công việc
-  WAITING_HANDLE = 2 // Script đang chờ một timed motion handle hoàn tất
+  YIELD = 0, // Còn runnable; xếp lại cuối vòng round-robin
+  DONE = 1,  // Hoàn tất; scheduler giải phóng script context
+  WAIT = 2   // Chưa runnable; đọc waitKind/deadline/handleId từ context
 };
+
+enum class WaitKind : uint8_t { NONE, TIMER, HANDLE };
 
 struct ScriptContext {
   uint32_t scriptUid = 0;
   uint16_t pc = 0;                   // Program counter (nhãn continuation)
   uint32_t deadlineMs = 0;           // Dùng cho wait_seconds
+  uint32_t handleId = 0;
+  WaitKind waitKind = WaitKind::NONE;
   uint32_t loopCounters[4] = {};     // Bộ đếm vòng lặp repeat_n lồng nhau
   uint32_t runGeneration = 0;
   bool active = false;
@@ -484,7 +513,8 @@ class ICooperativeScheduler {
  public:
   virtual ~ICooperativeScheduler() = default;
   // Đăng ký script được sinh từ generator
-  virtual bool registerScript(uint32_t scriptUid, void (*stepFunc)(ScriptContext&, uint32_t nowMs)) = 0;
+  virtual bool registerScript(uint32_t scriptUid,
+      StepResult (*stepFunc)(ScriptContext& ctx, uint32_t nowMs)) = 0;
   // Lập lịch kích hoạt sự kiện
   virtual void queueEvent(uint32_t scriptUid, uint32_t eventData) = 0;
   // Thực thi một tick scheduler: round-robin các script runnable
@@ -496,13 +526,17 @@ class ICooperativeScheduler {
 } // namespace codelab::v2
 ```
 
+**ABI semantics:** callbacks return exactly one `StepResult`; they never mutate scheduler-owned registration or heartbeat state. For `YIELD`, the scheduler keeps the context runnable and advances round-robin. For `DONE`, it marks the script complete. For `WAIT`, it reads `ctx.waitKind`: `TIMER` is runnable when `(int32_t)(nowMs - ctx.deadlineMs) >= 0`; `HANDLE` is runnable when the registered handle is complete or canceled. A callback entering a wait must set `waitKind`, continuation `pc`, and timer deadline or handle ID before returning. On resume, generated code clears `waitKind` to `NONE` before the next return. A zero-duration timer still yields until the next scheduler tick. The fixed pool is at most **16 scripts**; registration beyond that fails with `V2_SCRIPT_LIMIT`.
+
+Heartbeat is emitted once after each scheduler tick, including an idle tick, only after that tick returns to the scheduler loop. Target cadence is at most 50 ms. The monitor compares its own monotonic clock with the last accepted heartbeat; age greater than 250 ms hard-locks outputs and latches `V2_LOOP_STALL`. A scheduler stall cannot refresh its own heartbeat. G1 uses one deterministic virtual-clock driver: the safety phase advances/checks watchdog first, then the scheduler phase runs, then heartbeat is recorded on return. A virtual-clock test explicitly advances time without calling scheduler to model a stall.
+
 ### 12.4. Interface I6b: My Blocks Inlining & Continuation
 
 Ví dụ đoạn mã C++ được sinh ra từ một My Block `quay_va_cho(goc, thoi_gian)` chứa lệnh `Đợi`:
 
 ```cpp
 // Minh họa mã sinh ra của Script chứa My Block inline:
-void script_when_run_step(ScriptContext& ctx, uint32_t now) {
+StepResult script_when_run_step(ScriptContext& ctx, uint32_t now) {
   switch (ctx.pc) {
     case 0:
       // [Chỗ gọi My Block #1]: Đánh giá đối số 1 lần và gán vào frame slot
@@ -511,25 +545,29 @@ void script_when_run_step(ScriptContext& ctx, uint32_t now) {
       // Bắt đầu thân thủ tục inlined:
       robot.driveDirection(TurnRight, 50);
       ctx.deadlineMs = now + ctx.frameData[1];
+      ctx.waitKind = WaitKind::TIMER;
       ctx.pc = 1; // Điểm continuation sau lệnh Đợi lồng bên trong My Block
-      return;
+      return StepResult::WAIT;
 
     case 1:
       // Tiếp tục thực thi bên trong My Block sau khi hết hạn đợi:
-      if ((int32_t)(now - ctx.deadlineMs) < 0) return; // Chưa hết hạn -> yield tiếp
+      if ((int32_t)(now - ctx.deadlineMs) < 0) return StepResult::WAIT;
+      ctx.waitKind = WaitKind::NONE;
       robot.driveStop();
       // Kết thúc My Block #1, chuyển sang lệnh kế tiếp của script cha:
       ctx.pc = 2;
-      return;
+      return StepResult::YIELD;
 
     case 2:
       // Lệnh kế tiếp của script cha...
       ctx.pc = 0;
       ctx.active = false;
-      return;
+      return StepResult::DONE;
   }
 }
 ```
+
+The example's wait setup also sets `ctx.waitKind = WaitKind::TIMER`; on resume it clears it to `NONE`. (The abbreviated body above illustrates PC transitions only.)
 
 ### 12.5. Interface I7: Structured Diagnostics Model
 
@@ -552,6 +590,8 @@ export interface ValidationResult {
 ```
 
 ### 12.6. Interface I8: Project Schema V2 JSON Definition
+
+Canonical complete Draft-07 schema and fixtures: [`docs/blockly-v0.2/project-v2.schema.json`](blockly-v0.2/project-v2.schema.json). The inline JSON example below is retained as an abbreviated illustration only; it is not normative. The canonical schema models Blockly serialization (`blocks.languageVersion`, recursive `inputs`/`next`, variables/plugins), stable device IDs, and actual `deviceConfigs` fields from `codex/integrate-bach-ui`: `version`, motor `id/name/port/reversed/enabled`, drivetrain `wheels/limit`, controller `enabled/blink`. JSON Schema checks shape; semantic validation must also enforce unique device IDs and `scriptUid` values across event hats, wheel references to enabled motors, and profile-specific ports. Each event hat requires a stable `scriptUid` in its `fields`; import preserves it, explicit copy migration generates new IDs. V1 files without these fields remain V1. Current `src/App.jsx` import/export and localStorage are V1; do not rewrite V1 files or `codelab.projects.v1` automatically. V2 remains specified, not implemented.
 
 ```json
 {
@@ -619,4 +659,22 @@ export interface ValidationResult {
 
 ## Phụ lục A. Đối chiếu Danh mục Khối V0.1 → V0.2
 
-(Giữ nguyên toàn bộ bảng đối chiếu ánh xạ 126 khối từ V0.1 sang V0.2 như bản tài liệu gốc).
+V0.1 giữ nguyên legacy Blockly types và serialization; các ID ở cột trái là danh tính sản phẩm từ danh mục V0.1. V0.2 IDs mới chỉ áp dụng cho block có đổi semantics/schema. `—` nghĩa là ngoài Basic 30 hoặc chưa có tương đương V0.2; không được xóa block legacy khỏi project khi mở/chuyển đổi.
+
+| V0.1 IDs (all entries) | V0.2 mapping / disposition |
+|---|---|
+| Configuration D01–D11 | Project metadata/device decisions, not Blockly blocks: board, motor identity, wheel role, reversal, groups, drivetrain, controller, servo, sensors, brake/duty, editor mode. Preserve legacy data on import. |
+| A01–A16 | A01→`codelab_v2_when_run`; A02→`codelab_v2_forever`; A03/A04 retain standard types; A06→`codelab_v2_repeat_n`; A08→`codelab_v2_wait_seconds`; A05,A07,A09–A16 remain legacy/Advanced pending explicit V2 mapping. |
+| B01–B16 | Motor/device commands retain legacy loadability; V2 types in §5.2 where runtime/safety semantics changed. No channel remapping. |
+| C01–C10 | Drive candidates map to §5.3 types where present; unsupported channel values remain intact with diagnostics. |
+| D-P01–D-P16 | Controller candidates map to §5.4 where present; legacy UART/I2C serialization is not reinterpreted. |
+| E01–E08 | Keep legacy block types and serialized fields; no unlisted V2 equivalent asserted. |
+| F01–F05 | Keep legacy block types and serialized fields. |
+| G01–G15 | Keep legacy types; transport blocks remain Advanced and retain wire behavior. |
+| H01–H14 | Keep legacy types, variable IDs and field/input shape. |
+| I01–I10 | Keep legacy types; device operations require validation and HW_BLOCKED until verified. |
+| J01–J04 | Preserve V1 procedures in V1 projects. V2 types are `codelab_v2_proc_def`, `_call`, `_arg`; convert only in opt-in copy migration. |
+| K01–K12 | Keep legacy advanced GPIO/Serial/I2C types and pins; never infer/remap GPIO. |
+
+These rows cover every catalog ID listed in V0.1: D01–D11, A01–A16, B01–B16, C01–C10, D-P01–D-P16, E01–E08, F01–F05, G01–G15, H01–H14, I01–I10, J01–J04, and K01–K12 (137 entries including configuration IDs). The former “126” count was not supported by the source catalog and is corrected here.
+Mapping được đối chiếu theo các family và IDs được liệt kê trong `BLOCKLY_PRODUCT_BLOCK_CATALOG_V0.1.md`; các family không có bảng tương đương một-một phải được bảo toàn như legacy, không suy diễn ánh xạ từ số thứ tự.

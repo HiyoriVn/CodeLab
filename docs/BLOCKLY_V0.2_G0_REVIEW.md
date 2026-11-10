@@ -7,9 +7,9 @@
 
 ---
 
-## 0. Kết luận hiện tại: **G0_READY_FOR_APPROVAL**
+## 0. Kết luận hiện tại: **G0_READY_FOR_APPROVAL (G0.2 blockers resolved; owner approval pending)**
 
-- **Blockers kỹ thuật B1–B4 đã được giải quyết hoàn toàn** trong bản cập nhật đặc tả V0.2 (`docs/BLOCKLY_PRODUCT_BLOCK_CATALOG_V0.2.md`, bao gồm mục mới §12 Interface Contracts).
+- **B1–B4 được xử lý trong bản G0.2**: consistent callback ABI and wait state, atomic ownership/STOP priority, real endpoints and trusted upload policy, full schema and fixtures. Bridge and production code remain unchanged.
 - Mọi interface dùng chung giữa Scheduler, Generator, Devices và Firmware đã được đặc tả chính xác inputs/outputs, quyền sở hữu (ownership) và hành vi khi có lỗi.
 - **Để chuyển sang `G0_PASS` và bắt đầu triển khai G1:** Chủ dự án (Project Owner) cần xác nhận phê duyệt các quyết định D1–D11 trong Issue #28 (xem danh sách tại §5 bên dưới). Agent không tự ý phê duyệt thay người dùng.
 
@@ -32,7 +32,7 @@
 | Gán trục và dấu PS4 | §4.3, §12.2 | LY tiến (`+ = up`), LX xoay (`+ = CW/phải`), RX ngang (`+ = phải`). Chuẩn hóa một lần tại adapter |
 | Motor ramp & limits | §4.1 | Giữ nguyên slew rate 12.0 unit/s (0.012 duty/ms) từ fast100. Giới hạn = `min(profile, device, motor)` |
 | Giới hạn thời gian AUTO | §2.2, §3.4 | Chạm `autoMaxRunSeconds` (mặc định 15 s) chuyển `FAULT` (`V2_AUTO_MAX_RUNTIME`) |
-| Ngân sách scheduler G1 | §9.2 | 16 script, 1024 ops tĩnh, 256 ops/tick, 2 ms/tick, 16 KiB RAM, 64 KiB flash làm mốc benchmark tạm thời |
+| Ngân sách scheduler G1 | §9.2 | Restored acceptance ceilings and deterministic fixture: 16 scripts, 1024 static expanded ops, 256 ops/script/tick, 2ms, 16KiB, 64KiB |
 
 ---
 
@@ -57,7 +57,7 @@
      - `WARN`: Cảnh báo thiết kế (code mồ côi, trùng kênh ghi). Cho phép biên dịch và nạp.
      - `ERROR`: Lỗi cấu trúc/kiểu/đệ quy. **Chặn biên dịch và chặn nạp.**
      - `HW_BLOCKED`: Lệnh hợp lệ cho mô phỏng host nhưng phần cứng chưa kiểm chứng (`V2_DRIVER_GATED`, `V2_PIN_RESERVED`). **Cho phép biên dịch/chạy host, nhưng CHẶN nạp xuống mạch thật.**
-  2. Quy định hợp đồng nâng cấp bridge cho Phase 4: Sửa `tools/arduino-bridge.mjs` để endpoint `/build` chỉ từ chối khi có `ERROR`, còn `/upload` từ chối khi có `ERROR` hoặc `HW_BLOCKED`. Không sửa source code bridge trong phase này.
+  2. G0.2 ghi rõ hợp đồng cho đúng `POST /api/compile` và `POST /api/upload`; server-held build policy quyết định quyền nạp. Diagnostics từ client không thể cấp quyền nạp. Implementation bridge được giữ nguyên trong task này.
 
 ### 2.3. Blocker B3 — Project Schema V2 & Tương thích `deviceConfigs`
 
