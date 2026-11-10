@@ -26,6 +26,17 @@ function resolveEdgeButton(raw) {
   return EDGE_BUTTONS[raw] ?? 0;
 }
 
+function driveDirectionArgs(dir, speed) {
+  switch (dir) {
+    case 'BACKWARD': return `-(${speed}),0,0`;
+    case 'STRAFE_LEFT': return `0,${speed},0`;
+    case 'STRAFE_RIGHT': return `0,-(${speed}),0`;
+    case 'TURN_LEFT': return `0,0,${speed}`;
+    case 'TURN_RIGHT': return `0,0,-(${speed})`;
+    default: return `${speed},0,0`;
+  }
+}
+
 function compileHat(block, gen) {
   const cases = [];
   let nextPc = 1;
@@ -79,6 +90,11 @@ function compileHat(block, gen) {
         action = `codelabScheduler.motorWrite(${port}, ${sign}codelabSchedulerPower(${power}), nowMs);`;
         break;
       }
+      case 'robot_motor_power': {
+        const port = motorPort(b, gen), power = value(b, 'POWER');
+        action = `codelabScheduler.motorWrite(${port}, codelabSchedulerPower(${power}), nowMs);`;
+        break;
+      }
       case 'robot_motor_for': {
         const port = motorPort(b, gen), power = value(b, 'POWER');
         const sign = b.getFieldValue('DIRECTION') === 'REVERSE' ? '-' : '';
@@ -90,6 +106,7 @@ function compileHat(block, gen) {
         break;
       }
       case 'robot_motor_stop': action = `codelabScheduler.motorWrite(${motorPort(b, gen)}, 0, nowMs);`; break;
+      case 'robot_motor_stop_all': action = 'codelabStopAllMotors(nowMs);'; break;
       case 'robot_motor_release': action = `robot4wd.releaseMotor(${motorPort(b, gen)});`; break;
       case 'fast4wd_drive': action = 'codelabDriveFromPs4();'; break;
       case 'fast4wd_stop': action = 'codelabScheduler.stop(nowMs); return codelab::v2::StepResult::DONE;'; break;
@@ -100,6 +117,20 @@ function compileHat(block, gen) {
         break;
       }
       case 'robot_mecanum': action = `codelabDrivePercent(${['FORWARD','LEFT','TURN'].map(n => value(b,n)).join(',')});`; break;
+      case 'robot_drive_direction': {
+        const args = driveDirectionArgs(b.getFieldValue('DIRECTION'), value(b, 'SPEED'));
+        action = `codelabDrivePercent(${args});`;
+        break;
+      }
+      case 'robot_drive_stop': action = 'codelabDriveStop();'; break;
+      case 'robot_drive_for_time': {
+        const args = driveDirectionArgs(b.getFieldValue('DIRECTION'), value(b, 'SPEED'));
+        const ms = Math.max(0, Math.round(Number(b.getFieldValue('SECONDS')) * 1000));
+        action = b.getFieldValue('WAIT') === 'YES'
+          ? `codelabDriveForTime(${args}, ${ms}UL, nowMs); ctx.pc = ${continuation}; ctx.deadlineMs = nowMs + ${ms}UL; ctx.waitKind = codelab::v2::WaitKind::TIMER; return codelab::v2::StepResult::WAIT;`
+          : `codelabDriveForTime(${args}, ${ms}UL, nowMs);`;
+        break;
+      }
       case 'variables_set': {
         const id = b.getFieldValue('VAR');
         if (gen.invalidVariableIds_.has(id) || gen.variableTypes_.get(id) !== 'number') throw new Error('G1_INVALID_VARIABLE:' + id);
@@ -171,13 +202,14 @@ export function generateV2Scheduler(workspace, gen) {
       `static codelab::v2::Scheduler codelabScheduler(codelabSchedulerGate);\n` +
       `static bool codelabSchedulerRegistered = true;\n` +
       `static uint8_t codelabDriveMode = 0; static float codelabDriveValues[3] = {};\n` +
+      `static bool codelabDriveTimed = false; static uint32_t codelabDriveDeadlineMs = 0;\n` +
       `static uint32_t codelabRunGeneration = 0;\n` +
       `static constexpr size_t CODELAB_LOG_CAPACITY = 8;\n` +
       `static constexpr size_t CODELAB_LOG_MAX_LEN = 128;\n` +
       `static char codelabLogQueue[CODELAB_LOG_CAPACITY][CODELAB_LOG_MAX_LEN] = {};\n` +
       `static uint8_t codelabLogHead = 0, codelabLogTail = 0, codelabLogCount = 0;\n` +
       `static uint32_t codelabLogDrops = 0;\n` +
-      `static void codelabResetRunState(uint32_t generation) { if (codelabRunGeneration == generation) return; codelabRunGeneration = generation; ${resetVars ? resetVars + ' ' : ''}codelabLogHead = 0; codelabLogTail = 0; codelabLogCount = 0; codelabLogDrops = 0; }\n` +
+      `static void codelabResetRunState(uint32_t generation) { if (codelabRunGeneration == generation) return; codelabRunGeneration = generation; ${resetVars ? resetVars + ' ' : ''}codelabDriveMode = 0; codelabDriveTimed = false; codelabDriveDeadlineMs = 0; codelabLogHead = 0; codelabLogTail = 0; codelabLogCount = 0; codelabLogDrops = 0; }\n` +
       `[[maybe_unused]] static bool codelabLogMessage(const char* message) {\n` +
       `  if (!message) return false;\n` +
       `  size_t len = 0;\n` +
@@ -206,9 +238,13 @@ export function generateV2Scheduler(workspace, gen) {
       `  --codelabLogCount;\n` +
       `  return true;\n` +
       `}\n` +
-      `[[maybe_unused]] static void codelabDriveFromPs4() { codelabDriveMode = 1; }\n` +
-      `[[maybe_unused]] static void codelabDrive(float forward, float left, float turn) { codelabDriveMode = 2; codelabDriveValues[0] = forward; codelabDriveValues[1] = left; codelabDriveValues[2] = turn; }\n` +
+      `[[maybe_unused]] static void codelabDriveFromPs4() { codelabDriveTimed = false; codelabDriveMode = 1; }\n` +
+      `[[maybe_unused]] static void codelabDrive(float forward, float left, float turn) { codelabDriveTimed = false; codelabDriveMode = 2; codelabDriveValues[0] = forward; codelabDriveValues[1] = left; codelabDriveValues[2] = turn; }\n` +
       `[[maybe_unused]] static void codelabDrivePercent(double forward, double left, double turn) { codelabDrive(isfinite(forward) ? (float)(forward / 100.0) : 0.0f, isfinite(left) ? (float)(left / 100.0) : 0.0f, isfinite(turn) ? (float)(turn / 100.0) : 0.0f); }\n` +
+      `[[maybe_unused]] static void codelabDriveStop() { codelabDrive(0.0f, 0.0f, 0.0f); }\n` +
+      `[[maybe_unused]] static void codelabDriveForTime(double forward, double left, double turn, uint32_t durationMs, uint32_t nowMs) { if (durationMs == 0) { codelabDriveStop(); return; } codelabDrivePercent(forward, left, turn); codelabDriveTimed = true; codelabDriveDeadlineMs = nowMs + durationMs; }\n` +
+      `[[maybe_unused]] static void codelabStopAllMotors(uint32_t nowMs) { for (uint8_t port = 0; port < 4; ++port) codelabScheduler.motorWrite(port, 0, nowMs); codelabDriveStop(); }\n` +
+      `[[maybe_unused]] static void codelabUpdateTimedDrive(uint32_t nowMs) { if (codelabDriveTimed && (int32_t)(nowMs - codelabDriveDeadlineMs) >= 0) codelabDriveStop(); }\n` +
       `[[maybe_unused]] static void codelabApplyDrive() { if (codelabDriveMode == 1) robot4wd.driveFromPs4(); else if (codelabDriveMode == 2) robot4wd.move(codelabDriveValues[0], codelabDriveValues[1], codelabDriveValues[2]); }\n` +
       `[[maybe_unused]] static uint32_t codelabSchedulerRepeatCount(double n) { return !isfinite(n) || n <= 0 ? 0 : (n >= UINT32_MAX ? UINT32_MAX : (uint32_t)n); }\n` +
       `[[maybe_unused]] static int16_t codelabSchedulerPower(double n) { return !isfinite(n) ? 0 : (int16_t)(n < 0 ? -1 : 1) * (int16_t)(n < 0 ? (n < -100 ? 100 : -n) : (n > 100 ? 100 : n)); }\n` +
@@ -216,17 +252,18 @@ export function generateV2Scheduler(workspace, gen) {
     setup: scripts.map(script => script.registration).join('\n') + '\n',
     loop: `static void codelabSchedulerLoop() {\n` +
       `  const uint32_t nowMs = millis();\n` +
-      `  const bool shareEdge = robot4wd.buttonEdge(8, true);
-  if (shareEdge || (codelabScheduler.state() == codelab::v2::LifecycleState::RUN && !robot4wd.controllerArmed())) codelabScheduler.stop(nowMs);\n` +
+      `  const bool shareEdge = robot4wd.buttonEdge(8, true);\n` +
+      `  if (shareEdge || (codelabScheduler.state() == codelab::v2::LifecycleState::RUN && !robot4wd.controllerArmed())) codelabScheduler.stop(nowMs);\n` +
       `  if (codelabScheduler.state() == codelab::v2::LifecycleState::RUN && !robot4wd.connected()) codelabScheduler.fault(codelab::v2::FaultCode::LINK_LOST, nowMs);\n` +
       `  if (robot4wd.buttonEdge(12, true)) codelabScheduler.clearFault();\n` +
       `  if (!shareEdge && codelabSchedulerRegistered && codelabScheduler.state() == codelab::v2::LifecycleState::READY && robot4wd.controllerArmed()) codelabScheduler.startController(nowMs);\n` +
-      `  if (codelabScheduler.state() != codelab::v2::LifecycleState::RUN) codelabDriveMode = 0;\n` +
+      `  if (codelabScheduler.state() != codelab::v2::LifecycleState::RUN) { codelabDriveMode = 0; codelabDriveTimed = false; }\n` +
       `  if (codelabScheduler.state() == codelab::v2::LifecycleState::RUN) {\n` +
+      `    codelabUpdateTimedDrive(nowMs);\n` +
       `    codelabApplyDrive();\n` +
       `    for (uint8_t button = 0; button < 17; ++button) {\n` +
       `      if (robot4wd.buttonEdge(button, true)) codelabScheduler.buttonEdge(button, codelab::v2::Edge::PRESS, nowMs);\n` +
       `      if (robot4wd.buttonEdge(button, false)) codelabScheduler.buttonEdge(button, codelab::v2::Edge::RELEASE, nowMs);\n` +
-      `    }\n    codelabScheduler.tick(nowMs);\n    if (codelabScheduler.state() != codelab::v2::LifecycleState::RUN) codelabDriveMode = 0;\n  }\n}`,
+      `    }\n    codelabScheduler.tick(nowMs);\n    codelabUpdateTimedDrive(nowMs);\n    if (codelabScheduler.state() != codelab::v2::LifecycleState::RUN) { codelabDriveMode = 0; codelabDriveTimed = false; }\n    else codelabApplyDrive();\n  }\n}`,
   };
 }

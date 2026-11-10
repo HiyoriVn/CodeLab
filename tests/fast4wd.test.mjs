@@ -216,25 +216,237 @@ test('configured lessons round-trip, resolve stable motor IDs and keep waiting o
   }
 });
 
-test('fast100 toolbox exposes IF/ELSE, arithmetic, numeric variables, nonblocking message and safe RUN start hat', () => {
+test('V0.2 Basic 30-block catalog coverage matrix: all 30 blocks accounted for, visible, connectable, serializable and generating valid C++', () => {
   const profile = getBoardProfile(FAST4WD_BOARD_ID);
   const devices = defaultRobotDevices(profile);
   const toolbox = editorToolbox(FAST4WD_BOARD_ID, 'beginner', devices);
-  const controlCat = toolbox.contents.find(c => c.name === 'Bắt đầu & Điều khiển');
-  assert.ok(controlCat);
-  assert.ok(controlCat.contents.some(b => b.type === 'beginner_start'));
-  assert.ok(controlCat.contents.some(b => b.type === 'controls_if' && !b.extraState));
-  assert.ok(controlCat.contents.some(b => b.type === 'controls_if' && b.extraState?.hasElse === true));
-  assert.ok(controlCat.contents.some(b => b.type === 'beginner_message'));
+  const flatBlocks = toolbox.contents.flatMap(c => c.contents || []);
+  const hasEntry = pred => flatBlocks.some(pred);
 
-  const logicCat = toolbox.contents.find(c => c.name === 'Logic');
-  assert.ok(logicCat);
-  assert.ok(logicCat.contents.some(b => b.type === 'math_arithmetic'));
-  assert.ok(logicCat.contents.some(b => b.type === 'text'));
+  // 30-item V0.2 Basic Block Coverage Matrix (6 Control + 8 Movement + 5 PS4 + 6 Logic/Math + 3 Variables + 2 Display/LED = 30)
+  const matrix = [
+    // Control (6)
+    { id: 'A01v2', group: 'Control', type: 'beginner_start', status: 'AVAILABLE', match: b => b.type === 'beginner_start' },
+    { id: 'A02v2', group: 'Control', type: 'beginner_forever', status: 'AVAILABLE', match: b => b.type === 'beginner_forever' },
+    { id: 'A03', group: 'Control', type: 'controls_if', status: 'AVAILABLE', match: b => b.type === 'controls_if' && !b.extraState },
+    { id: 'A04', group: 'Control', type: 'controls_if', status: 'IMPLEMENTED', match: b => b.type === 'controls_if' && b.extraState?.hasElse === true },
+    { id: 'A06v2', group: 'Control', type: 'controls_repeat_ext', status: 'AVAILABLE', match: b => b.type === 'controls_repeat_ext' },
+    { id: 'A08v2', group: 'Control', type: 'beginner_wait', status: 'AVAILABLE', match: b => b.type === 'beginner_wait' },
+    // Motor / Movement (8)
+    { id: 'B02v2', group: 'Movement', type: 'robot_motor_spin', status: 'AVAILABLE', match: b => b.type === 'robot_motor_spin' },
+    { id: 'B03v2', group: 'Movement', type: 'robot_motor_power', status: 'IMPLEMENTED', match: b => b.type === 'robot_motor_power' },
+    { id: 'B04v2', group: 'Movement', type: 'robot_motor_stop', status: 'AVAILABLE', match: b => b.type === 'robot_motor_stop' },
+    { id: 'B05v2', group: 'Movement', type: 'robot_motor_stop_all', status: 'IMPLEMENTED', match: b => b.type === 'robot_motor_stop_all' },
+    { id: 'C02v2', group: 'Movement', type: 'robot_drive_direction', status: 'IMPLEMENTED', match: b => b.type === 'robot_drive_direction' },
+    { id: 'C06v2', group: 'Movement', type: 'robot_mecanum', status: 'AVAILABLE', match: b => b.type === 'robot_mecanum' },
+    { id: 'C08v2', group: 'Movement', type: 'robot_drive_stop', status: 'IMPLEMENTED', match: b => b.type === 'robot_drive_stop' },
+    { id: 'C10v2', group: 'Movement', type: 'robot_drive_for_time', status: 'IMPLEMENTED', match: b => b.type === 'robot_drive_for_time' },
+    // PS4 (5)
+    { id: 'A14v2', group: 'PS4', type: 'robot_ps4_event', status: 'AVAILABLE', match: b => b.type === 'robot_ps4_event' && b.fields?.EDGE === 'PRESS' },
+    { id: 'A17v2', group: 'PS4', type: 'robot_ps4_event', status: 'AVAILABLE', match: b => b.type === 'robot_ps4_event' && b.fields?.EDGE === 'RELEASE' },
+    { id: 'DP03v2', group: 'PS4', type: 'robot_ps4_button', status: 'AVAILABLE', match: b => b.type === 'robot_ps4_button' },
+    { id: 'DP06v2', group: 'PS4', type: 'robot_ps4_axis', status: 'AVAILABLE', match: b => b.type === 'robot_ps4_axis' },
+    { id: 'DP02v2', group: 'PS4', type: 'fast4wd_connected', status: 'AVAILABLE', match: b => b.type === 'fast4wd_connected' },
+    // Logic / Math (6)
+    { id: 'H01', group: 'Logic/Math', type: 'logic_boolean', status: 'AVAILABLE', match: b => b.type === 'logic_boolean' },
+    { id: 'H02', group: 'Logic/Math', type: 'logic_compare', status: 'AVAILABLE', match: b => b.type === 'logic_compare' },
+    { id: 'H03', group: 'Logic/Math', type: 'logic_operation', status: 'AVAILABLE', match: b => b.type === 'logic_operation' },
+    { id: 'H04', group: 'Logic/Math', type: 'logic_negate', status: 'AVAILABLE', match: b => b.type === 'logic_negate' },
+    { id: 'H05', group: 'Logic/Math', type: 'math_number', status: 'AVAILABLE', match: b => b.type === 'math_number' },
+    { id: 'H06v2', group: 'Logic/Math', type: 'math_arithmetic', status: 'IMPLEMENTED', match: b => b.type === 'math_arithmetic' },
+    // Variables (3)
+    { id: 'I02v2', group: 'Variables', type: 'variables_set', status: 'IMPLEMENTED', match: b => b.type === 'variables_set' },
+    { id: 'I03v2', group: 'Variables', type: 'math_change', status: 'IMPLEMENTED', match: b => b.type === 'math_change' },
+    { id: 'I04v2', group: 'Variables', type: 'variables_get', status: 'IMPLEMENTED', match: b => b.type === 'variables_get' },
+    // Display / LED (2)
+    { id: 'E05v2', group: 'Display/LED', type: 'beginner_message', status: 'IMPLEMENTED', match: b => b.type === 'beginner_message' },
+    { id: 'E01v2', group: 'Display/LED', type: 'beginner_led', status: 'HARDWARE_GATED', match: b => b.type === 'beginner_led' },
+  ];
 
-  const varCat = toolbox.contents.find(c => c.custom === 'VARIABLE');
-  assert.ok(varCat);
-  assert.deepEqual(varCat.contents.map(b => b.type), ['variables_set', 'math_change', 'variables_get']);
+  assert.equal(matrix.length, 30);
+  assert.equal(matrix.filter(m => m.group === 'Control').length, 6);
+  assert.equal(matrix.filter(m => m.group === 'Movement').length, 8);
+  assert.equal(matrix.filter(m => m.group === 'PS4').length, 5);
+  assert.equal(matrix.filter(m => m.group === 'Logic/Math').length, 6);
+  assert.equal(matrix.filter(m => m.group === 'Variables').length, 3);
+  assert.equal(matrix.filter(m => m.group === 'Display/LED').length, 2);
+
+  for (const item of matrix) {
+    assert.ok(Blockly.Blocks[item.type], 'Missing Blockly definition for ' + item.id + ' (' + item.type + ')');
+    assert.ok(hasEntry(item.match), 'Missing toolbox entry for ' + item.id + ' (' + item.type + ')');
+  }
+
+  // Verify E01v2 (beginner_led) is hardware-gated on fast100 (where GPIO47 is reserved for system safety/PS4 status)
+  // and on boards without a user LED (e.g. steam-mainboard-v2), while usable on newmania-starter-v1.
+  const ledWs = new Blockly.Workspace();
+  const start = ledWs.newBlock('beginner_start');
+  const led = ledWs.newBlock('beginner_led');
+  start.getInput('DO').connection.connect(led.previousConnection);
+  try {
+    const fastOut = generateArduino(ledWs, FAST4WD_BOARD_ID, devices);
+    assert.equal(fastOut.code, '');
+    assert.match(fastOut.warnings.join(), /HW_BLOCKED/);
+    const v2Out = generateArduino(ledWs, 'steam-mainboard-v2');
+    assert.ok(v2Out.warnings.length);
+    const v1Out = generateArduino(ledWs, 'newmania-starter-v1');
+    assert.deepEqual(v1Out.warnings, []);
+    assert.ok(v1Out.code.includes('digitalWrite(47, HIGH)'));
+  } finally {
+    ledWs.dispose();
+  }
+});
+
+test('motor_power, motor_stop_all, drive_direction, drive_stop and drive_for_time (WAIT and NO_WAIT) execute with non-DISARM scheduler semantics', () => {
+  const profile = getBoardProfile(FAST4WD_BOARD_ID);
+  const devices = defaultRobotDevices(profile);
+  const workspace = new Blockly.Workspace();
+  try {
+    const num = n => {
+      const b = workspace.newBlock('math_number');
+      b.setFieldValue(n, 'NUM');
+      return b;
+    };
+
+    // Start hat:
+    // 1) robot_drive_for_time FORWARD 50% for 0.2s WAIT
+    // 2) robot_drive_direction STRAFE_RIGHT 40%
+    // 3) robot_drive_stop (must stop drivetrain without DISARM)
+    // 4) robot_drive_for_time TURN_LEFT 60% for 0.1s NO_WAIT
+    const startHat = workspace.newBlock('beginner_start');
+    const timedWait = workspace.newBlock('robot_drive_for_time');
+    timedWait.setFieldValue('FORWARD', 'DIRECTION');
+    timedWait.setFieldValue(0.2, 'SECONDS');
+    timedWait.setFieldValue('YES', 'WAIT');
+    timedWait.getInput('SPEED').connection.connect(num(50).outputConnection);
+
+    const dirRight = workspace.newBlock('robot_drive_direction');
+    dirRight.setFieldValue('STRAFE_RIGHT', 'DIRECTION');
+    dirRight.getInput('SPEED').connection.connect(num(40).outputConnection);
+
+    const driveStop = workspace.newBlock('robot_drive_stop');
+
+    const timedNoWait = workspace.newBlock('robot_drive_for_time');
+    timedNoWait.setFieldValue('TURN_LEFT', 'DIRECTION');
+    timedNoWait.setFieldValue(0.1, 'SECONDS');
+    timedNoWait.setFieldValue('NO', 'WAIT');
+    timedNoWait.getInput('SPEED').connection.connect(num(60).outputConnection);
+
+    startHat.getInput('DO').connection.connect(timedWait.previousConnection);
+    timedWait.nextConnection.connect(dirRight.previousConnection);
+    dirRight.nextConnection.connect(driveStop.previousConnection);
+    driveStop.nextConnection.connect(timedNoWait.previousConnection);
+
+    // Event hat PRESS X (button 0): set motor-1 power to -40%
+    const pressX = workspace.newBlock('robot_ps4_event');
+    pressX.setFieldValue('PRESS', 'EDGE');
+    pressX.setFieldValue('0', 'BUTTON');
+    const motorPower = workspace.newBlock('robot_motor_power');
+    motorPower.setFieldValue('motor-1', 'MOTOR');
+    motorPower.getInput('POWER').connection.connect(num(-40).outputConnection);
+    pressX.getInput('DO').connection.connect(motorPower.previousConnection);
+
+    // Event hat RELEASE X (button 0): stop all motors (must keep RUN state!)
+    const releaseX = workspace.newBlock('robot_ps4_event');
+    releaseX.setFieldValue('RELEASE', 'EDGE');
+    releaseX.setFieldValue('0', 'BUTTON');
+    const stopAll = workspace.newBlock('robot_motor_stop_all');
+    releaseX.getInput('DO').connection.connect(stopAll.previousConnection);
+
+    // Verify lossless serialization round-trip of all new movement blocks
+    const saved = Blockly.serialization.workspaces.save(workspace);
+    const restored = new Blockly.Workspace();
+    Blockly.serialization.workspaces.load(saved, restored);
+    const out = generateArduino(restored, profile.id, devices);
+    restored.dispose();
+
+    assert.deepEqual(out.warnings, []);
+    assert.ok(out.code.includes('codelabDriveForTime(50,0,0, 200UL, nowMs)'));
+    assert.ok(out.code.includes('codelabDrivePercent(0,-(40),0)'));
+    assert.ok(out.code.includes('codelabDriveStop()'));
+    assert.ok(out.code.includes('codelabDriveForTime(0,0,60, 100UL, nowMs)'));
+    assert.ok(out.code.includes('codelabScheduler.motorWrite(0, codelabSchedulerPower(-40), nowMs)'));
+    assert.ok(out.code.includes('codelabStopAllMotors(nowMs)'));
+
+    const dir = resolve('firmware/tests/build-output/fast4wd');
+    mkdirSync(join(dir, 'driver'), { recursive: true });
+    const harness = `${out.code}
+#include <cassert>
+#include <cmath>
+
+static uint8_t nextSeq = 0;
+static void sendFrame(uint32_t nowMs, uint32_t buttons = 0) {
+  clockMs = nowMs;
+  auto& frame = Wire.report;
+  frame.connected = true;
+  frame.sequence = (uint8_t)((++nextSeq) & 127U);
+  frame.buttons = buttons;
+  loop();
+}
+
+int main() {
+  Wire.report = {};
+  clockMs = 2000;
+  setup();
+  sendFrame(2310);
+  sendFrame(2330);
+  sendFrame(2350, 1U << 9);
+  sendFrame(2370);
+  // Enter RUN at 2390: step 1 starts timed drive FORWARD 50% for 200ms (WAIT until 2590)
+  sendFrame(2390);
+  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
+  assert(codelabDriveMode == 2 && codelabDriveTimed);
+  assert(std::fabs(codelabDriveValues[0] - 0.5f) < 0.001f);
+
+  // During the 200ms wait (at 2500), drive remains active
+  sendFrame(2500);
+  assert(codelabDriveTimed && std::fabs(codelabDriveValues[0] - 0.5f) < 0.001f);
+
+  // At 2600, WAIT completes and executes step 2: STRAFE_RIGHT 40% (left = -0.4)
+  sendFrame(2600);
+  assert(!codelabDriveTimed);
+  assert(std::fabs(codelabDriveValues[0]) < 0.001f && std::fabs(codelabDriveValues[1] + 0.4f) < 0.001f);
+
+  // Next tick (2620) executes step 3: drive_stop -> zeroes drive values, stays in RUN!
+  sendFrame(2620);
+  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
+  assert(robot4wd.controllerArmed());
+  assert(codelabDriveValues[0] == 0.0f && codelabDriveValues[1] == 0.0f && codelabDriveValues[2] == 0.0f);
+
+  // Next tick (2640) executes step 4: timed drive TURN_LEFT 60% for 100ms NO_WAIT (deadline 2740)
+  sendFrame(2640);
+  assert(codelabDriveTimed && std::fabs(codelabDriveValues[2] - 0.6f) < 0.001f);
+
+  // At 2750, nonblocking timed drive expires automatically and zeroes drivetrain while remaining in RUN
+  sendFrame(2750);
+  assert(!codelabDriveTimed && codelabDriveValues[2] == 0.0f);
+  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
+
+  // Press X (bit 0) at 2770 -> motor_power sets motor 0 to -40%
+  sendFrame(2770, 1U << 0);
+  sendFrame(2790, 1U << 0);
+  assert(robot4wd.motorPwm(0) < 0.0f);
+
+  // Release X at 2810 -> motor_stop_all zeroes motor 0 and drivetrain without leaving RUN
+  sendFrame(2810, 0);
+  sendFrame(2830, 0);
+  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
+  assert(robot4wd.controllerArmed());
+  assert(robot4wd.motorPwm(0) == 0.0f);
+  return 0;
+}
+`;
+    const harnessCpp = join(dir, 'movement_blocks_harness.cpp');
+    const harnessExe = join(dir, 'movement_blocks_harness.exe');
+    writeFileSync(harnessCpp, harness);
+    const compiler = process.env.CXX || 'g++';
+    const flags = ['-std=c++17', '-Wall', '-Wextra', '-Werror',
+      '-I' + dir, '-I' + resolve('tests/fixtures'),
+      ...['CodeLabFast4wd', 'CodeLabPs4I2C', 'CodeLabRobot'].map(lib => '-I' + resolve('firmware/libraries', lib, 'src'))];
+    execFileSync(compiler, [...flags, harnessCpp, resolve('firmware/libraries/CodeLabFast4wd/src/CodeLabV2Scheduler.cpp'), '-o', harnessExe]);
+    execFileSync(harnessExe);
+  } finally {
+    workspace.dispose();
+  }
 });
 
 test('nested if/else, arithmetic, numeric variables across Wait, nonblocking message and RUN start hat execute in V2 scheduler', () => {

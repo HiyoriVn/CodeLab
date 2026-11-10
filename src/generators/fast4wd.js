@@ -12,10 +12,12 @@ const actions = {
   fast4wd_stop: 'robot4wd.stop();\n',
 };
 const axes = ['fast4wd_forward', 'fast4wd_strafe', 'fast4wd_turn'];
-const motorBlocks = new Set(['robot_motor_spin', 'robot_motor_for', 'robot_motor_stop', 'robot_motor_release', 'robot_motor_pwm']);
+const motorTargetBlocks = new Set(['robot_motor_spin', 'robot_motor_power', 'robot_motor_for', 'robot_motor_stop', 'robot_motor_release', 'robot_motor_pwm']);
+const motorBlocks = new Set([...motorTargetBlocks, 'robot_motor_stop_all']);
+const driveBlocks = new Set(['robot_mecanum', 'robot_drive_direction', 'robot_drive_stop', 'robot_drive_for_time']);
 const controllerBlocks = new Set(['robot_ps4_axis', 'robot_ps4_button']);
 const numericValueBlocks = new Set(['math_number', 'math_arithmetic', 'variables_get', 'robot_ps4_axis', 'robot_motor_pwm']);
-const usesDrivetrain = type => type === 'fast4wd_drive' || type === 'robot_mecanum' || axes.includes(type);
+const usesDrivetrain = type => type === 'fast4wd_drive' || driveBlocks.has(type) || axes.includes(type);
 
 function inStartup(block) {
   for (let parent = block.getParent(); parent; parent = parent.getParent()) {
@@ -60,6 +62,8 @@ export function fast4wdConfig(workspace, profile, devices) {
     } else if (type === 'beginner_start' || type === 'beginner_forever' || type === 'robot_ps4_event') {
       if (block.getParent()) warnings.add('Đặt Khi bắt đầu, Lặp lại mãi mãi và sự kiện PS4 ở ngoài cùng.');
       if (type === 'robot_ps4_event' && !devices) warnings.add('Lưu Cấu hình robot trước khi thêm sự kiện PS4.');
+    } else if (type === 'beginner_led' || type === 'beginner_blink') {
+      warnings.add('Đèn LED GPIO47 trên fast100 được giữ cho trạng thái kết nối PS4 / an toàn hệ thống (HW_BLOCKED).');
     } else if (Object.hasOwn(actions, type) || usesDrivetrain(type) || type === 'fast4wd_connected' ||
         logicBlocks.has(type) || motorBlocks.has(type) || controllerBlocks.has(type)) {
       if ((type === 'beginner_wait' || type === 'controls_if' || type === 'controls_repeat_ext' ||
@@ -83,7 +87,7 @@ export function fast4wdConfig(workspace, profile, devices) {
       }
       // The loop can contain only bounded logic so each iteration services the motor watchdog.
       if (type.startsWith('robot_') && !devices) warnings.add('Lưu Cấu hình robot trước khi dùng các khối mới.');
-      if (devices && motorBlocks.has(type) && !devices.motors.some(motor => motor.id === block.getFieldValue('MOTOR') && motor.enabled)) {
+      if (devices && motorTargetBlocks.has(type) && !devices.motors.some(motor => motor.id === block.getFieldValue('MOTOR') && motor.enabled)) {
         warnings.add('Khối Motor đang chọn thiết bị bị tắt hoặc thiếu trong Cấu hình robot.');
       }
       if (devices && usesDrivetrain(type) && !devices.drivetrain.wheels.length) warnings.add('Cần bật drivetrain và gán đủ bốn bánh.');
@@ -105,6 +109,17 @@ export function fast4wdConfig(workspace, profile, devices) {
   };
 }
 
+const driveDirectionArgs = (dir, speed) => {
+  switch (dir) {
+    case 'BACKWARD': return `-(${speed}), 0, 0`;
+    case 'STRAFE_LEFT': return `0, ${speed}, 0`;
+    case 'STRAFE_RIGHT': return `0, -(${speed}), 0`;
+    case 'TURN_LEFT': return `0, 0, ${speed}`;
+    case 'TURN_RIGHT': return `0, 0, -(${speed})`;
+    default: return `${speed}, 0, 0`;
+  }
+};
+
 export function registerFast4wdBlocks(generator) {
   for (const type of setupBlocks) generator.forBlock[type] = () => '';
   for (const [type, code] of Object.entries(actions)) generator.forBlock[type] = () => code;
@@ -124,6 +139,10 @@ export function registerFast4wdBlocks(generator) {
   const power = (block, gen) => value(block, gen, 'POWER') + ', ' + (block.getFieldValue('DIRECTION') === 'REVERSE');
   generator.forBlock.robot_motor_spin = (block, gen) =>
     `robot4wd.spin(${channel(block, gen)}, ${power(block, gen)});\n`;
+  generator.forBlock.robot_motor_power = (block, gen) => {
+    const p = value(block, gen, 'POWER');
+    return `robot4wd.spin(${channel(block, gen)}, (${p}) < 0 ? -(${p}) : (${p}), (${p}) < 0);\n`;
+  };
   generator.forBlock.robot_motor_for = (block, gen) => {
     const motor = channel(block, gen);
     const start = `robot4wd.spinFor(${motor}, ${power(block, gen)}, ${block.getFieldValue('MS')})`;
@@ -132,10 +151,17 @@ export function registerFast4wdBlocks(generator) {
       : start + ';\n';
   };
   generator.forBlock.robot_motor_stop = (block, gen) => `robot4wd.stopMotor(${channel(block, gen)});\n`;
+  generator.forBlock.robot_motor_stop_all = () =>
+    'for (uint8_t port = 0; port < 4; ++port) robot4wd.stopMotor(port); robot4wd.move(0, 0, 0);\n';
   generator.forBlock.robot_motor_release = (block, gen) => `robot4wd.releaseMotor(${channel(block, gen)});\n`;
   generator.forBlock.robot_motor_pwm = (block, gen) => [`robot4wd.motorPwm(${channel(block, gen)})`, 0];
   generator.forBlock.robot_mecanum = (block, gen) =>
     `robot4wd.movePercent(${['FORWARD', 'LEFT', 'TURN'].map(name => value(block, gen, name)).join(', ')});\n`;
+  generator.forBlock.robot_drive_direction = (block, gen) =>
+    `robot4wd.movePercent(${driveDirectionArgs(block.getFieldValue('DIRECTION'), value(block, gen, 'SPEED'))});\n`;
+  generator.forBlock.robot_drive_stop = () => 'robot4wd.move(0, 0, 0);\n';
+  generator.forBlock.robot_drive_for_time = (block, gen) =>
+    `robot4wd.movePercent(${driveDirectionArgs(block.getFieldValue('DIRECTION'), value(block, gen, 'SPEED'))});\n`;
   generator.forBlock.robot_ps4_axis = block => [`robot4wd.axis(${block.getFieldValue('AXIS')})`, 0];
   generator.forBlock.robot_ps4_button = block => [`robot4wd.button(${block.getFieldValue('BUTTON')})`, 0];
   generator.forBlock.robot_ps4_event = (block, gen) =>
