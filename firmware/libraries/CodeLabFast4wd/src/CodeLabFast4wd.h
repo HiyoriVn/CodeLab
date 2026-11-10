@@ -7,6 +7,7 @@
 #include <esp_efuse.h>
 #include <esp_efuse_table.h>
 #include "QuadMotors.h"
+#include "CodeLabV2Scheduler.hpp"
 
 #if !CONFIG_IDF_TARGET_ESP32S3 || defined(BOARD_HAS_PSRAM)
 #error "CodeLabFast4wd requires ESP32-S3 with PSRAM disabled."
