@@ -25,9 +25,13 @@ inline int esp_efuse_read_field_blob(int field, uint8_t* value, int bits) {
 }
 inline int serialCapacity = 64;
 inline std::string serialOutput;
+inline std::string serialInput;
+inline size_t serialInputOffset = 0;
 inline struct {
   void begin(unsigned baud) { assert(baud == 115200); }
   void println(const char*) {}
+  int available() const { return static_cast<int>(serialInput.size() - serialInputOffset); }
+  int read() { return available() ? static_cast<unsigned char>(serialInput[serialInputOffset++]) : -1; }
   int availableForWrite() const { return serialCapacity; }
   size_t write(uint8_t byte) { if (serialCapacity <= 0) return 0; serialOutput += char(byte); return 1; }
   template<typename... Args> void printf(const char*, Args...) {}

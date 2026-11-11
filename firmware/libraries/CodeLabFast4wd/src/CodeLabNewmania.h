@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Fast4wdSchedulerGate.h"
+#include "NewmaniaSupport.h"
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -105,6 +106,28 @@ class Board {
   static uint32_t repeatCount(double count) {
     return !std::isfinite(count) || count <= 0 ? 0 : count >= UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>(count);
   }
+  int serialAvailable() const { const int n = Serial.available(); return n < 0 ? 0 : n; }
+  int serialRead() { return serialAvailable() > 0 ? Serial.read() : -1; }
+  bool beginFor(ForLoop& loop, double& variable, Bounds bounds) {
+    const bool valid = loop.begin(variable, bounds);
+    if (!valid) message("Buoc lap phai khac 0 va cac gioi han phai huu han.");
+    return valid;
+  }
+  double modulo(Pair values) {
+    if (!std::isfinite(values.first) || !std::isfinite(values.second) || values.second == 0) {
+      if (!arithmeticErrors_++) message("Khong the chia du voi so chia 0 hoac gia tri khong huu han.");
+      return 0;
+    }
+    return std::fmod(values.first, values.second);
+  }
+  int32_t randomInt(Pair bounds) {
+    int32_t low = Math::integer(bounds.first), high = Math::integer(bounds.second);
+    if (low > high) { const auto tmp = low; low = high; high = tmp; }
+    // One bounded PRNG step, no rejection loop in a cooperative callback.
+    randomState_ ^= randomState_ << 13; randomState_ ^= randomState_ >> 17; randomState_ ^= randomState_ << 5;
+    const uint64_t span = uint64_t(int64_t(high) - int64_t(low)) + 1;
+    return static_cast<int32_t>(int64_t(low) + int64_t((uint64_t(randomState_) * span) >> 32));
+  }
 
   bool button(Button which, ButtonState mode, ButtonCursor& cursor) const {
     const auto bit = static_cast<uint8_t>(which);
@@ -193,14 +216,26 @@ class Board {
   // Bounded nonblocking messages. A future integration consumes popMessage();
   // these helpers never flush Serial or wait for a USB reader.
   bool message(const char* text) {
+    return serialPrint(text, true);
+  }
+  bool serialPrint(const char* text, bool newline = true) {
     if (!text) return false;
     size_t n = 0;
     while (n < kMessageLength && text[n]) ++n;
     if (n == kMessageLength || messageCount_ == kMessages) { ++messageDrops_; return false; }
     std::memcpy(messages_[messageHead_], text, n + 1);
+    messageNewline_[messageHead_] = newline;
     messageHead_ = (messageHead_ + 1) % kMessages;
     ++messageCount_;
     return true;
+  }
+  bool message(const Text& text) { return serialPrint(text, true); }
+  bool serialPrint(const Text& text, bool newline = true) {
+    if (!text.valid()) { ++messageDrops_; return false; }
+    return serialPrint(text.data(), newline);
+  }
+  template<class Value> bool serialPrint(const Value& value, bool newline = true) {
+    return serialPrint(Text::from(value), newline);
   }
   bool message(double number) {
     if (!std::isfinite(number)) { ++messageDrops_; return false; }
@@ -243,6 +278,7 @@ class Board {
     messageHead_ = messageTail_ = messageCount_ = 0;
     messageOffset_ = 0;
     messageDrops_ = 0;
+    arithmeticErrors_ = 0;
     ps4Requested_ = false;
   }
   void clearEdges() {
@@ -258,8 +294,11 @@ class Board {
   void serviceMessages() {
     // Bounded work; never flush or wait for a USB reader. Keep safety in update().
     for (unsigned budget = 0; budget < 32 && messageCount_; ++budget) {
-      if (Serial.availableForWrite() <= 0) break;
       const char next = messages_[messageTail_][messageOffset_];
+      if (!next && !messageNewline_[messageTail_]) {
+        messageTail_ = (messageTail_ + 1) % kMessages; --messageCount_; messageOffset_ = 0; continue;
+      }
+      if (Serial.availableForWrite() <= 0) break;
       if (Serial.write(static_cast<uint8_t>(next ? next : '\n')) != 1) break;
       if (next) ++messageOffset_;
       else { messageTail_ = (messageTail_ + 1) % kMessages; --messageCount_; messageOffset_ = 0; }
@@ -276,9 +315,11 @@ class Board {
   bool begun_ = false, ps4Requested_ = false, driveActive_ = false, driveTimed_ = false;
   float drive_[3]{};
   char messages_[kMessages][kMessageLength]{};
+  bool messageNewline_[kMessages]{};
   size_t messageHead_ = 0, messageTail_ = 0, messageCount_ = 0;
   size_t messageOffset_ = 0;
   uint32_t messageDrops_ = 0;
+  uint32_t randomState_ = 0x6d2b79f5U, arithmeticErrors_ = 0;
 };
 
 } }

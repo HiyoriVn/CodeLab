@@ -1,5 +1,5 @@
 import * as Blockly from 'blockly';
-import 'blockly/blocks';
+import { loops } from 'blockly/blocks';
 import './beginner.js';
 import './controller.js';
 import './robotics.js';
@@ -8,6 +8,7 @@ import { editorToolbox } from './beginner-toolbox.js';
 import { FAST4WD_BOARD_ID } from '../boards/profiles.js';
 
 export const TYPES = Object.freeze({ root: 'newmania_design_program', forever: 'newmania_design_forever', connect: 'newmania_design_ps4_connect', button: 'newmania_design_ps4_button' });
+loops.loopTypes.add(TYPES.forever);
 const field = (name, options) => ({ type: 'field_dropdown', name, options });
 Blockly.defineBlocksWithJsonArray([
   { type:TYPES.root, message0:'Khi bắt đầu chương trình %1 %2', args0:[{type:'input_dummy'},{type:'input_statement',name:'DO'}], colour:'#e79b23', tooltip:'Chạy một lần mỗi lượt RUN. Đây là khối gốc duy nhất của chương trình.' },
@@ -46,10 +47,9 @@ for (const {group,title,...definition} of robotBlocks.filter(b=>b.group==='motor
   previewMotorTypes.set(definition.type,type);
 }
 
-export const unsupported = new Map([
-  ...['controls_whileUntil','controls_for','controls_flow_statements','math_modulo','math_single','math_random_int','math_round','math_constrain','text_join','text_print','beginner_serial_ready','codelab_serial_print','codelab_serial_available','codelab_serial_read'].map(type=>[type,'Chưa hỗ trợ đầy đủ trong generator Newmania; giữ block cũ, chưa cho kéo thêm.']),
-  ...['beginner_led','beginner_blink'].map(type=>[type,'Chưa sử dụng: LED trên board đang dành cho trạng thái hệ thống.']),
-]);
+export const unsupported = new Map(
+  ['beginner_led','beginner_blink'].map(type=>[type,'GPIO47 đang dành cho kết nối/an toàn; block LED học sinh tiếp tục bị khóa.']),
+);
 
 export const workspaceOptions = { maxInstances:{ [TYPES.root]:1, [TYPES.forever]:1, [TYPES.connect]:1 } };
 export function designToolbox() {
@@ -69,7 +69,7 @@ export function designToolbox() {
       return [copy];
     });
     if(category.name==='Tay cầm PS4')category.contents.unshift({kind:'block',type:TYPES.connect});
-    if(category.contents.some(b=>b.disabled))category.contents.push({kind:'label',text:'Mục mờ: chưa hỗ trợ, không kéo được'});
+    if(category.contents.some(b=>b.disabled))category.contents.push({kind:'label',text:'LED hệ thống: đang dùng cho kết nối/an toàn'});
   }
   return toolbox;
 }

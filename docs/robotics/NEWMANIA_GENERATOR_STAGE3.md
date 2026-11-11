@@ -29,6 +29,10 @@ code generation/compile opening is blocked until a complete project is opened.
 
 ## Block support
 
+Historical stage-three counts below precede the follow-up implementation in
+[Newmania toolbox completion](NEWMANIA_TOOLBOX_COMPLETION.md), which unlocks
+14 software entries and retains the three system LED entries as locked.
+
 Eight categories contain 48 block entries (including three variable entries,
 which Blockly renders dynamically). 31 entries are unlocked and 17 are visibly
 disabled. The root is pre-created and not a toolbox entry. Motor has seven

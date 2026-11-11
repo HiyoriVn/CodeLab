@@ -72,8 +72,8 @@ test('detached, nested loop and nested setup produce diagnostics without deletin
 test('unsupported entries are locked; existing blocks remain registered and diagnosed',()=>{
   const entries=designToolbox().contents.flatMap(c=>c.contents),w=new Blockly.Workspace();
   for(const [type] of unsupported){assert.ok(Blockly.Blocks[type],type);assert.ok(entries.filter(e=>e.type===type).every(e=>e.disabled===true),type);}
-  initializeDesign(w);const unsupportedBlock=w.newBlock('controls_for');
-  assert.ok(designDiagnostics(w).some(i=>i.id===unsupportedBlock.id&&i.message.includes('Chưa hỗ trợ')));
+  initializeDesign(w);const unsupportedBlock=w.newBlock('beginner_led');
+  assert.ok(designDiagnostics(w).some(i=>i.id===unsupportedBlock.id&&i.message.includes('kết nối/an toàn')));
   w.dispose();
 });
 

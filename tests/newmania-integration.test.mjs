@@ -129,7 +129,7 @@ test('all unlocked toolbox entries produce valid C++ and disabled blocks refuse 
   assert.ok(sketches.length>20);
   execFileSync(cxx,[...flags,'-fsyntax-only',fileFor('catalog','#include <CodeLabNewmania.h>\n'+sketches.join('\n'))],{stdio:'pipe'});
   const w=loadDesign(exampleDesign('hold')),loop=w.getBlocksByType(TYPES.forever)[0];loop.getInputTargetBlock('DO').dispose(false);
-  const unsupportedBlock=w.newBlock('controls_for');loop.getInput('DO').connection.connect(unsupportedBlock.previousConnection);
+  const unsupportedBlock=w.newBlock('beginner_led');loop.getInput('DO').connection.connect(unsupportedBlock.previousConnection);
   assert.ok(unsupported.has(unsupportedBlock.type));assert.equal(generateArduino(w,FAST4WD_BOARD_ID).code,'');w.dispose();
 });
 
