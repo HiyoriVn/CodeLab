@@ -12,10 +12,11 @@ import '../blocks/controller.js';
 import '../blocks/palette-apply.js';
 import { RENDERER, FALLBACK_RENDERER } from '../blocks/renderer.js';
 import { themes } from '../blocks/theme.js';
+import { NEWMANIA_MODEL, designToolbox, workspaceOptions, initializeDesign, designDiagnostics, protectNewmaniaRoots } from '../blocks/newmania.js';
 
 Blockly.setLocale(Vietnamese);
 
-function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
+function BlocklyWorkspace({ boardId, editorMode, programModel, robotDevices, initialState, dark = false, onChange, onCodeChange, workspaceRef }) {
   const hostRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const onCodeChangeRef = useRef(onCodeChange);
@@ -25,6 +26,8 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
   boardIdRef.current = boardId;
   const robotDevicesRef = useRef(robotDevices);
   robotDevicesRef.current = robotDevices;
+  const modelRef = useRef(programModel);
+  modelRef.current = programModel;
   const modeRef = useRef(editorMode);
   modeRef.current = editorMode;
 
@@ -36,7 +39,8 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
   useEffect(() => {
     if (!hostRef.current) return undefined;
     const options = {
-      toolbox: boardIdRef.current === FAST4WD_BOARD_ID ? editorToolbox(boardIdRef.current, modeRef.current, robotDevicesRef.current) : { kind: 'categoryToolbox', contents: [] },
+      ...(modelRef.current === NEWMANIA_MODEL ? workspaceOptions : {}),
+      toolbox: boardIdRef.current === FAST4WD_BOARD_ID ? (modelRef.current === NEWMANIA_MODEL ? designToolbox() : editorToolbox(boardIdRef.current, modeRef.current, robotDevicesRef.current)) : { kind: 'categoryToolbox', contents: [] },
       sounds: false,
       trashcan: false,
       move: { scrollbars: true, drag: true, wheel: true },
@@ -53,6 +57,7 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
       workspace = Blockly.inject(hostRef.current, { ...options, renderer: FALLBACK_RENDERER });
     }
     workspace.codelabBoardId=boardIdRef.current;
+    workspace.codelabProgramModel=modelRef.current;
     workspace.codelabRobotDevices = robotDevicesRef.current;
     if (workspace.getFlyout()) {
       workspace.getFlyout().getWorkspace().codelabBoardId = boardIdRef.current;
@@ -67,21 +72,34 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
       flyout.getWorkspace().scale = flyoutScale;
     }
 
+    let loadFailed = false;
     if (initialStateRef.current) {
       try {
         Blockly.serialization.workspaces.load(initialStateRef.current, workspace);
-      } catch {
-        workspace.clear();
+      } catch (error) {
+        loadFailed = true;
+        onCodeChangeRef.current?.({ code: '', boardId: boardIdRef.current, warnings: ['Không mở được toàn bộ workspace; dữ liệu gốc được giữ nguyên. ' + error.message] });
       }
+    } else if (modelRef.current === NEWMANIA_MODEL) {
+      const root = initializeDesign(workspace); root.initSvg(); root.render(); root.moveBy(40,40);
     }
+    workspace.codelabLoadFailed = loadFailed;
+    if (modelRef.current === NEWMANIA_MODEL) protectNewmaniaRoots(workspace);
+    workspace.clearUndo();
 
     let saveTimer;
-    const save = () => {
+    const save = (event) => {
+      if (loadFailed || event?.isUiEvent || (event?.type === Blockly.Events.BLOCK_CHANGE && event.element === 'warning')) return;
       window.clearTimeout(saveTimer);
       saveTimer = window.setTimeout(() => {
         if (workspace.isDragging()) { save(); return; }
+        if (modelRef.current === NEWMANIA_MODEL) {
+          protectNewmaniaRoots(workspace);
+          const issues = designDiagnostics(workspace);
+          for (const block of workspace.getAllBlocks(false)) block.setWarningText(issues.filter(i => i.id === block.id).map(i => i.message).join('\n') || null, 'newmania');
+        }
         onChangeRef.current(Blockly.serialization.workspaces.save(workspace));
-        onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current, robotDevicesRef.current));
+        if (!loadFailed) onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current, robotDevicesRef.current));
       }, 250);
     };
     workspace.addChangeListener(save);
@@ -102,7 +120,7 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
     };
     workspace.addChangeListener(scheduleTag);
     tagStacks();
-    onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current, robotDevicesRef.current));
+    if (!loadFailed) onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current, robotDevicesRef.current));
 
     const tagCategories = () => {
       hostRef.current?.querySelectorAll('.blocklyToolboxCategory').forEach((row, index) => {
@@ -133,17 +151,18 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
     const workspace=workspaceRef.current;
     if(workspace) {
       workspace.codelabBoardId=boardId;
+      workspace.codelabProgramModel=programModel;
       workspace.codelabRobotDevices = robotDevices;
       const flyout = workspace.getFlyout()?.getWorkspace();
       if (flyout) {
         flyout.codelabBoardId = boardId;
         flyout.codelabRobotDevices = robotDevices;
       }
-      workspace.updateToolbox(boardId === FAST4WD_BOARD_ID ? editorToolbox(boardId, editorMode, robotDevices) : { kind: 'categoryToolbox', contents: [] });
+      workspace.updateToolbox(boardId === FAST4WD_BOARD_ID ? (programModel === NEWMANIA_MODEL ? designToolbox() : editorToolbox(boardId, editorMode, robotDevices)) : { kind: 'categoryToolbox', contents: [] });
       refreshRobotMotorLabels(workspace);
-      onCodeChangeRef.current?.(generateArduino(workspace, boardId, robotDevices));
+      if (!workspace.codelabLoadFailed) onCodeChangeRef.current?.(generateArduino(workspace, boardId, robotDevices));
     }
-  }, [boardId, editorMode, robotDevices, workspaceRef]);
+  }, [boardId, editorMode, programModel, robotDevices, workspaceRef]);
 
   useEffect(() => {
     darkRef.current = dark;

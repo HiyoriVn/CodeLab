@@ -3,6 +3,8 @@ import { getBoardProfile, DEFAULT_BOARD_ID, validatePin } from '../boards/profil
 import { startupCode } from '../boards/startup.js';
 import { fast4wdConfig, fast4wdConstructor, registerFast4wdBlocks } from './fast4wd.js';
 import { generateV2Scheduler } from './v2-scheduler.js';
+import { hasNewmaniaBlocks } from '../blocks/newmania.js';
+import { generateNewmania } from './newmania.js';
 
 const ATOMIC = 0;
 
@@ -756,6 +758,7 @@ function registerBlocks(generator) {
 }
 
 export function generateArduino(workspace, boardId = DEFAULT_BOARD_ID, devices) {
+  if (hasNewmaniaBlocks(workspace)) return generateNewmania(workspace, boardId, devices);
   const profile = getBoardProfile(boardId);
   const fast4wd = fast4wdConfig(workspace, profile, devices);
   if (fast4wd?.warnings.length) return { code: '', warnings: fast4wd.warnings, boardId };

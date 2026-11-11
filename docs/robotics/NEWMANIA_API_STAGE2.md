@@ -1,5 +1,7 @@
 # Newmania API — stage 2
 
+> Stage-two API snapshot before generator integration. See [stage 3](NEWMANIA_GENERATOR_STAGE3.md) for current routing and bounded Serial delivery.
+
 Stage 1 was committed separately as
 `48f656d06da3f66bdf347fd68f443891bb3a57d1`. Stage 2 adds the opt-in header
 `firmware/libraries/CodeLabFast4wd/src/CodeLabNewmania.h` to the existing library,

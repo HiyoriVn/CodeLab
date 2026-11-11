@@ -94,6 +94,7 @@ class Board {
     }
     if (!running()) { driveActive_ = driveTimed_ = false; clearEdges(); }
     robot_.endLoop(); // Poll/control/STOP/freshness watchdog remain serviced.
+    serviceMessages();
   }
 
   bool running() const { return scheduler_.state() == v2::LifecycleState::RUN; }
@@ -101,6 +102,9 @@ class Board {
   v2::FaultCode faultCode() const { return scheduler_.faultCode(); }
   uint32_t runGeneration() const { return scheduler_.runGeneration(); }
   uint32_t heartbeatAt() const { return scheduler_.heartbeatAt(); }
+  static uint32_t repeatCount(double count) {
+    return !std::isfinite(count) || count <= 0 ? 0 : count >= UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>(count);
+  }
 
   bool button(Button which, ButtonState mode, ButtonCursor& cursor) const {
     const auto bit = static_cast<uint8_t>(which);
@@ -214,6 +218,7 @@ class Board {
     while (text[n] && n + 1 < capacity) { out[n] = text[n]; ++n; }
     out[n] = '\0';
     messageTail_ = (messageTail_ + 1) % kMessages;
+    messageOffset_ = 0;
     --messageCount_;
     return true;
   }
@@ -236,6 +241,7 @@ class Board {
     driveActive_ = driveTimed_ = false;
     clearEdges();
     messageHead_ = messageTail_ = messageCount_ = 0;
+    messageOffset_ = 0;
     messageDrops_ = 0;
     ps4Requested_ = false;
   }
@@ -249,6 +255,16 @@ class Board {
     if (driveTimed_ && static_cast<int32_t>(now - driveDeadline_) >= 0) stopDrive();
   }
   void applyDrive() { if (driveActive_) robot_.move(drive_[0], drive_[1], drive_[2]); }
+  void serviceMessages() {
+    // Bounded work; never flush or wait for a USB reader. Keep safety in update().
+    for (unsigned budget = 0; budget < 32 && messageCount_; ++budget) {
+      if (Serial.availableForWrite() <= 0) break;
+      const char next = messages_[messageTail_][messageOffset_];
+      if (Serial.write(static_cast<uint8_t>(next ? next : '\n')) != 1) break;
+      if (next) ++messageOffset_;
+      else { messageTail_ = (messageTail_ + 1) % kMessages; --messageCount_; messageOffset_ = 0; }
+    }
+  }
 
   fast4wd::Robot robot_;
   fast4wd::SchedulerGate gate_;
@@ -261,6 +277,7 @@ class Board {
   float drive_[3]{};
   char messages_[kMessages][kMessageLength]{};
   size_t messageHead_ = 0, messageTail_ = 0, messageCount_ = 0;
+  size_t messageOffset_ = 0;
   uint32_t messageDrops_ = 0;
 };
 

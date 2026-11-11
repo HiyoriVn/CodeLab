@@ -1,5 +1,7 @@
 # Blockly redesign — stage 1
 
+> Historical stage-one preview/acceptance snapshot. Production integration is now described in [stage 3](robotics/NEWMANIA_GENERATOR_STAGE3.md).
+
 Development-only editor: run `npm run dev` and open `/blockly-design.html`.
 This is a real Blockly workspace for reviewing drag/drop, shapes, dropdowns,
 structure diagnostics and save/reopen. It does not execute programs, generate

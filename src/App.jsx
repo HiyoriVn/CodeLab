@@ -13,7 +13,10 @@ import TopBar from './ui/TopBar.jsx';
 import Modal from './ui/Modal.jsx';
 import ZoomControls from './ui/ZoomControls.jsx';
 import { applyBar, readBar, readTheme, saveBar, saveTheme } from './ui/prefs.js';
-import { clearOldProjectsOnce, projectRobotDevices, newmaniaCopy, newmaniaCompatibility } from './ui/project-storage.js';
+import { NEWMANIA_MODEL, newmaniaWorkspace, usesNewmaniaProgram } from './blocks/newmania.js';
+import { copyToNewmaniaProgram } from './ui/newmania-project.js';
+import mecanumLesson from '../examples/newmania/mecanum/mecanum.codelab.json';
+import { clearOldProjectsOnce, projectRobotDevices } from './ui/project-storage.js';
 
 const STORAGE_KEY = 'codelab.projects.v1';
 const LEGACY_KEY = 'codelab.workspace.v1';
@@ -23,9 +26,9 @@ const emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } };
 function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = FAST4WD_BOARD_ID, editorMode = 'beginner', deviceConfigs) {
   return { id: crypto.randomUUID(), name, workspace, boardId, editorMode, deviceConfigs, updatedAt: new Date().toISOString() };
 }
-function makeNewProject(name, workspace = emptyWorkspace) {
+function makeNewProject(name, workspace = newmaniaWorkspace()) {
   const devices = defaultRobotDevices(getBoardProfile(FAST4WD_BOARD_ID));
-  return makeProject(name, workspace, FAST4WD_BOARD_ID, 'beginner', { [FAST4WD_BOARD_ID]: devices });
+  return { ...makeProject(name, workspace, FAST4WD_BOARD_ID, 'beginner', { [FAST4WD_BOARD_ID]: devices }), programModel: NEWMANIA_MODEL };
 }
 function readProjects() {
   try {
@@ -59,6 +62,7 @@ function App() {
   const boardId = projectBoardId(project);
   const robotDevices = useMemo(() => projectRobotDevices(project), [boardId, project.deviceConfigs]);
   const legacyBoard = boardId !== FAST4WD_BOARD_ID;
+  const legacyProgram = !legacyBoard && !usesNewmaniaProgram(project);
   const [compatibility, setCompatibility] = useState([]);
   const editorMode = projectEditorMode(project);
   const showToast = useCallback((message) => {
@@ -92,7 +96,7 @@ function App() {
 
   // Capture immediately: Blockly autosave is debounced and may still be pending.
   const snapshotProjects = () => projectStore.projects.map((item) => item.id === project.id
-    ? { ...item, workspace: workspaceRef.current ? Blockly.serialization.workspaces.save(workspaceRef.current) : item.workspace, updatedAt: new Date().toISOString() }
+    ? { ...item, workspace: workspaceRef.current && !workspaceRef.current.codelabLoadFailed ? Blockly.serialization.workspaces.save(workspaceRef.current) : item.workspace, updatedAt: new Date().toISOString() }
     : item);
   const switchProject = (id) => {
     if (id === project.id || !projectStore.projects.some((item) => item.id === id)) return;
@@ -100,13 +104,9 @@ function App() {
   };
   const convertProject = () => {
     const projects = snapshotProjects();
-    const copy = newmaniaCopy(projects.find(item => item.id === project.id), crypto.randomUUID());
-    const check = new Blockly.Workspace();
-    try {
-      Blockly.serialization.workspaces.load(copy.workspace, check);
-      setCompatibility(newmaniaCompatibility(check, projectRobotDevices(copy)));
-    } finally { check.dispose(); }
-    persist({ activeId: copy.id, projects: [...projects, copy] });
+    const result = copyToNewmaniaProgram(projects.find(item => item.id === project.id), crypto.randomUUID());
+    setCompatibility(result.issues);
+    if (result.project) persist({ activeId: result.project.id, projects: [...projects, result.project] });
     setDialog('compatibility');
   };
   const createProject = () => {
@@ -116,17 +116,17 @@ function App() {
   };
   const openLesson = (event) => {
     if (event.target.value !== 'mecanum') return;
-    const nextProject = makeNewProject('Robot mecanum 4 bánh bằng PS4');
+    const nextProject = makeNewProject('Robot mecanum 4 bánh bằng PS4', structuredClone(mecanumLesson.project.workspace));
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
-    showToast('Đã mở bài mẫu trống');
+    showToast('Đã mở bài mẫu mecanum');
   };
   const renameProject = (event) => {
     const name = event.target.value;
     setProjectStore((current) => ({ ...current, projects: current.projects.map((item) => item.id === current.activeId ? { ...item, name } : item) }));
   };
   const saveProjectFile = () => {
-    const state = workspaceRef.current ? Blockly.serialization.workspaces.save(workspaceRef.current) : project.workspace;
-    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state, boardId, editorMode, deviceConfigs: project.deviceConfigs } };
+    const state = workspaceRef.current && !workspaceRef.current.codelabLoadFailed ? Blockly.serialization.workspaces.save(workspaceRef.current) : project.workspace;
+    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state, boardId, editorMode, deviceConfigs: project.deviceConfigs, programModel: usesNewmaniaProgram(project) ? NEWMANIA_MODEL : project.programModel } };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url; link.download = `${project.name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'codelab-project'}.codelab.json`; link.click(); URL.revokeObjectURL(url);
     showToast('Đã tải tệp dự án xuống');
@@ -139,6 +139,7 @@ function App() {
       const content = payload.format === FILE_TYPE && payload.version === FILE_VERSION ? payload.project : payload.format === 'codelab-workspace' && payload.version === 1 ? { name: file.name.replace(/\.codelab\.json$|\.json$/i, ''), workspace: payload.workspace } : null;
       if (!content?.workspace) throw new Error('Tệp không đúng định dạng hoặc phiên bản chưa được hỗ trợ.');
       validateProjectDeviceConfigs(content.deviceConfigs);
+      if (content.programModel && content.programModel !== NEWMANIA_MODEL) throw new Error('Phiên bản cấu trúc chương trình chưa được hỗ trợ.');
       // Validate in isolation before replacing the visible workspace or saved projects.
       const validationWorkspace = new Blockly.Workspace();
       try {
@@ -146,7 +147,7 @@ function App() {
       } finally {
         validationWorkspace.dispose();
       }
-      const imported = makeProject(content.name || file.name, content.workspace, projectBoardId(content), projectEditorMode(content), content.deviceConfigs);
+      const imported = { ...content, ...makeProject(content.name || file.name, content.workspace, projectBoardId(content), projectEditorMode(content), content.deviceConfigs), ...(usesNewmaniaProgram(content) ? { programModel: NEWMANIA_MODEL } : {}) };
       persist({ activeId: imported.id, projects: [...snapshotProjects(), imported] });
       showToast(`Đã mở ${file.name}`);
     } catch (error) { window.alert(error.message || 'Không thể mở dự án.'); }
@@ -155,6 +156,7 @@ function App() {
 
   const openDevice = () => {
     if (legacyBoard) return;
+    if (workspaceRef.current?.codelabLoadFailed) { showToast('Workspace mở chưa đầy đủ; giữ bản gốc và chưa biên dịch.'); return; }
     if (workspaceRef.current) handleCodeChange(generateArduino(workspaceRef.current, boardId, robotDevices));
     setTerminalOpen(false);
     setCodeOpen(false);
@@ -207,12 +209,12 @@ function App() {
           <option value="mecanum">Robot mecanum 4 bánh bằng PS4</option>
         </select></label>
       </div>
-      {legacyBoard && <div role="alert">Dự án cũ dùng board {boardId}. Chưa chuyển sang Newmania; giữ nguyên dữ liệu và board gốc.
+      {(legacyBoard || legacyProgram) && <div role="alert">{legacyBoard ? `Dự án cũ dùng board ${boardId}. Chưa chuyển sang Newmania; giữ nguyên dữ liệu và board gốc.` : 'Dự án dùng cấu trúc cũ; giữ nguyên các luồng và cách sinh mã hiện có.'}
         <button className="btn" onClick={() => setDialog('convert')}>Tạo bản sao Newmania…</button>
       </div>}
       <div className="main">
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
-          <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode="beginner" robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
+          <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode="beginner" programModel={usesNewmaniaProgram(project) ? NEWMANIA_MODEL : undefined} robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
           <ZoomControls workspaceRef={workspaceRef} />
           <div className="workspace-status"><span><i className="status-dot" />Sẵn sàng chỉnh sửa</span><span>{blockCount} khối đang dùng</span></div>
         </div>
@@ -230,12 +232,12 @@ function App() {
       </section>
 
       <Modal open={dialog === 'convert'} onClose={closeDialog} title="Tạo bản sao Newmania?">
-        <p>Bản gốc giữ nguyên board và dữ liệu. Bản sao giữ mọi block, biến; block không tương thích được báo để bạn sửa trước khi biên dịch.</p>
+        <p>Bản gốc giữ nguyên board và dữ liệu. Bản sao dùng một luồng mới, khởi tạo lại theo mỗi RUN sau Options ARM. Nếu có block hoặc sự kiện không thể chuyển đúng hành vi, hệ thống báo rõ và không tạo bản sao chuyển đổi một phần.</p>
         <button className="btn p" onClick={convertProject}>Xác nhận tạo bản sao</button>
         <button className="btn" onClick={closeDialog}>Hủy</button>
       </Modal>
-      <Modal open={dialog === 'compatibility'} onClose={closeDialog} title="Kiểm tra bản sao Newmania">
-        {compatibility.length ? <ul>{compatibility.map(item => <li key={item.id}>{item.type} ({item.id}): {item.warnings.join(' ')}</li>)}</ul> : <p>Không phát hiện block không tương thích.</p>}
+      <Modal open={dialog === 'compatibility'} onClose={closeDialog} title={compatibility.length ? "Chưa thể chuyển dự án" : "Kiểm tra bản sao Newmania"}>
+        {compatibility.length ? <ul>{compatibility.map(item => <li key={item.id}>{item.type} ({item.id}): {item.warnings.join(' ')}</li>)}</ul> : <p>Đã tạo bản sao Newmania mới; block và biến đã được kiểm tra.</p>}
         <button className="btn" onClick={closeDialog}>Đóng</button>
       </Modal>
       <Modal open={dialog === 'help'} onClose={closeDialog} title="Hướng dẫn nhanh">

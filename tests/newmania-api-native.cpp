@@ -291,6 +291,20 @@ void testHeldOptionsDoesNotStart() {
   expectStopped();
 }
 
+void testBlockedSerialDoesNotBlockControl() {
+  Board board; setupFixture(board, Mode::Idle); arm(board);
+  serialOutput.clear(); serialCapacity = 0;
+  assert(board.message("ready"));
+  for (unsigned i = 0; i < 20; ++i) fresh(board);
+  assert(board.running() && board.connected() && serialOutput.empty());
+  assert(uint32_t(clockMs - board.heartbeatAt()) < 10);
+  serialCapacity = 64; fresh(board);
+  assert(serialOutput == "ready\n");
+  assert(Board::repeatCount(-1) == 0 && Board::repeatCount(3.9) == 3);
+  assert(Board::repeatCount(std::numeric_limits<double>::infinity()) == 0);
+  fresh(board, share); expectStopped();
+}
+
 int main() {
   testBootAndIndependentEdges();
   testWaitDropsEdgesAndRestarts();
@@ -299,5 +313,6 @@ int main() {
   testDelayedReaders();
   testMessagesAndStaleContexts();
   testHeldOptionsDoesNotStart();
+  testBlockedSerialDoesNotBlockControl();
   std::puts("PASS: boot/ARM, independent edges, wait/STOP/link/wrap, ownership, messages and stale generations");
 }

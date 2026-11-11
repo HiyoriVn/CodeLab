@@ -15,7 +15,7 @@ test('Newmania facade uses real existing receiver, scheduler and motor backend o
   execFileSync(process.env.CXX||'g++',[...flags,'-fsyntax-only','-x','c++',resolve('tests/fixtures/newmania-api-example.ino')],{stdio:'pipe'});
 });
 
-test('new facade remains opt-in and production generator still uses existing runtime',()=>{
-  assert.doesNotMatch(readFileSync('src/generators/arduino.js','utf8')+readFileSync('src/generators/v2-scheduler.js','utf8'),/CodeLabNewmania/);
+test('legacy scheduler generator keeps its existing runtime while facade wraps the same Robot',()=>{
+  assert.doesNotMatch(readFileSync('src/generators/v2-scheduler.js','utf8'),/CodeLabNewmania/);
   assert.match(readFileSync('firmware/libraries/CodeLabFast4wd/src/CodeLabNewmania.h','utf8'),/fast4wd::Robot robot_/);
 });
