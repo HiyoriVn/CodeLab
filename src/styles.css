@@ -122,6 +122,11 @@ dialog ol{padding-left:20px;line-height:1.7;margin:0 0 16px}
 .device-actions{display:flex;flex-direction:column;gap:10px}
 .device-actions label{display:flex;flex-direction:column;gap:6px;font-size:13px}
 .device-actions select{width:100%}
+.robot-device-config fieldset{display:grid;gap:8px;margin:0 0 12px;border:1px solid currentColor;border-radius:8px;min-width:0}
+.robot-device-config label{display:flex;align-items:center;gap:6px;font-size:13px}
+.robot-device-config input:not([type=checkbox]),.robot-device-config select{min-width:0;max-width:100%}
+.robot-device-row{display:flex;flex-wrap:wrap;gap:6px 12px;padding:6px 0}
+.robot-device-row label:first-child input{width:12ch}
 
 /* ---- toast ---- */
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1F2340;color:#fff;padding:10px 18px;border-radius:10px;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}

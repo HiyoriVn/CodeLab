@@ -46,11 +46,25 @@ const v1Opi = {
   adc: [], digital: [47],
   reserved: Array.from({length:49}, (_,i)=>i).filter(pin=>pin!==47),
 };
+export const FAST4WD_BOARD_ID = 'newmania-fast100-4wd';
+const fast4wd = {
+  id: FAST4WD_BOARD_ID,
+  name: 'Newmania 4WD fast100 (16 MB, PSRAM tắt)',
+  mcu: 'ESP32-S3 (bo đã xác minh GPIO35–37)',
+  flashMB: 16, psramMB: null, psramType: 'Disabled; GPIO35–37 must be free of memory',
+  startupPolicy: 'no-board-gpio',
+  build: { core: 'esp32:esp32', version: '3.3.7', fqbn: baseFqbn + ':FlashSize=16M,PartitionScheme=default_8MB,PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=cdc' },
+  pins: { motors: [[35,36],[37,38],[39,40],[41,42]], servos: [], encoders: [],
+    led: 47, i2c: {sda:8,scl:9}, strapping: [0,3,45,46], usb: [19,20] },
+  capabilities: { fast4wd: true, digital: false, adc: false, pwm: false,
+    motorChannels: 4, servoChannels: 0, motorControl: false, servoControl: false },
+  adc: [], digital: [], reserved: Array.from({length:49}, (_,i)=>i),
+};
 function freeze(value) {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
   return value;
 }
-export const BOARD_PROFILES = freeze([generic,v1,v2,v1Opi]);
+export const BOARD_PROFILES = freeze([generic,v1,v2,v1Opi,fast4wd]);
 export const DEFAULT_BOARD_ID = generic.id;
 export function getBoardProfile(id=DEFAULT_BOARD_ID) {
   const profile=BOARD_PROFILES.find(p=>p.id===id);

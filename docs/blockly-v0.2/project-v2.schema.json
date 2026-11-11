@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://codelab.invalid/schemas/project-v2.json",
+  "title": "CodeLab Project V2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "project"],
+  "properties": {
+    "format": { "const": "codelab-project" },
+    "version": { "const": 2 },
+    "project": { "$ref": "#/definitions/project" }
+  },
+  "definitions": {
+    "project": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "boardId", "runMode", "workspace"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 }, "name": { "type": "string", "minLength": 1 },
+        "boardId": { "type": "string", "minLength": 1 }, "editorMode": { "enum": ["beginner", "advanced"] },
+        "runMode": { "enum": ["CONTROLLER", "AUTONOMOUS"] },
+        "startSource": { "enum": ["OPTIONS_HOLD", "PHYSICAL_BUTTON", "NONE"] },
+        "autoMaxRunSeconds": { "type": "integer", "minimum": 1, "maximum": 60, "default": 15 },
+        "devices": { "type": "array", "items": { "$ref": "#/definitions/device" } },
+        "deviceConfigs": { "type": "object", "propertyNames": { "minLength": 1 }, "additionalProperties": { "$ref": "#/definitions/boardConfig" } },
+        "workspace": { "$ref": "#/definitions/workspace" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "device": { "type": "object", "additionalProperties": false, "required": ["id", "type"], "properties": {
+      "id": { "type": "string", "pattern": "^(motor-[1-6]|drivetrain|ps4_controller|sensor-[A-Za-z0-9_-]+|led-[A-Za-z0-9_-]+)$" },
+      "type": { "enum": ["motor", "drivetrain", "ps4_controller", "sensor", "led"] }, "name": { "type": "string" }, "port": { "type": "integer", "minimum": 0 }, "reversed": { "type": "boolean" }, "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+    } },
+    "boardConfig": { "type": "object", "additionalProperties": false, "required": ["version", "motors", "drivetrain", "controller"], "properties": {
+      "version": { "const": 1 },
+      "motors": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "name", "port", "reversed", "enabled"], "properties": { "id": { "type": "string", "pattern": "^motor-[1-6]$" }, "name": { "type": "string", "minLength": 1, "maxLength": 40 }, "port": { "type": "integer", "minimum": 1, "maximum": 6 }, "reversed": { "type": "boolean" }, "enabled": { "type": "boolean" } } } },
+      "drivetrain": { "type": "object", "additionalProperties": false, "required": ["wheels", "limit"], "properties": { "wheels": { "type": "array", "items": { "type": "string", "pattern": "^motor-[1-6]$" }, "uniqueItems": true, "minItems": 0, "maxItems": 4 }, "limit": { "type": "integer", "minimum": 1, "maximum": 100 } } },
+      "controller": { "type": "object", "additionalProperties": false, "required": ["enabled", "blink"], "properties": { "enabled": { "type": "boolean" }, "blink": { "type": "boolean" } } }
+    } },
+    "workspace": { "type": "object", "required": ["blocks"], "properties": {
+      "blocks": { "type": "object", "required": ["languageVersion", "blocks"], "properties": { "languageVersion": { "const": 0 }, "blocks": { "type": "array", "items": { "$ref": "#/definitions/block" } } } },
+      "variables": { "type": "array" }, "plugins": { "type": "object" }, "extraState": { "type": "object" }
+    } },
+    "block": { "type": "object", "required": ["type"], "properties": {
+      "type": { "type": "string", "minLength": 1 }, "id": { "type": "string" }, "x": { "type": "number" }, "y": { "type": "number" },
+      "fields": { "type": "object" }, "inputs": { "type": "object" }, "next": { "$ref": "#/definitions/next" }, "extraState": { "type": "object" }, "data": { "type": "string" }, "icons": { "type": "array" }, "comment": { "type": "object" }, "disabled": { "type": "boolean" }, "collapsed": { "type": "boolean" }, "inline": { "type": "boolean" }, "enabled": { "type": "boolean" }
+    } },
+    "next": { "type": "object", "required": ["block"], "properties": { "block": { "$ref": "#/definitions/block" }, "shadow": { "$ref": "#/definitions/block" } } }
+  }
+}

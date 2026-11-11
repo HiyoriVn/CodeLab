@@ -1,0 +1,3 @@
+# Keep the tested reference byte-for-byte, including its original line endings.
+*.h -text
+*.ino -text

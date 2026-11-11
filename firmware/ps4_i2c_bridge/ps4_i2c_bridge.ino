@@ -13,7 +13,7 @@
 #define CODELAB_PS4_I2C_ADDRESS 0x30
 #endif
 static_assert(CODELAB_PS4_I2C_ADDRESS>=0x08&&CODELAB_PS4_I2C_ADDRESS<=0x77,"Invalid 7-bit slave address");
-constexpr int dataSda=22,dataScl=21;
+constexpr int dataSda = 16, dataScl = 17;
 portMUX_TYPE frameMux=portMUX_INITIALIZER_UNLOCKED;
 uint8_t sharedFrame[codelab::ps4i2c::frameSize]={};
 uint32_t sharedReportAt=0;
