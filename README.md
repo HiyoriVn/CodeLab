@@ -51,3 +51,5 @@ NewmaniaCodeLab is a separate design reference, not the CodeLab repository. Its 
 - **Planned:** not yet present in source.
 
 The integration branch includes Bách's refreshed editor, light/dark mode, menu colors, a right-side code preview, a bottom serial panel, and a device dialog. Use **Tập tin** to switch between browser-local projects or import/export files. Projects remain in the current browser profile unless exported. The serial monitor uses Web Serial where supported. See [UI integration](docs/UI-INTEGRATION.md) for provenance and verification limits.
+
+[Cloudflare Pages and browser USB firmware](docs/CLOUDFLARE_PAGES.md) — precompiled packages only; Arduino CLI compilation remains separate.

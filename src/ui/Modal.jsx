@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-function Modal({ open, onClose, title, children }) {
+function Modal({ open, onClose, title, children, locked = false }) {
   const ref = useRef(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -12,8 +12,9 @@ function Modal({ open, onClose, title, children }) {
     <dialog
       ref={ref}
       aria-label={title}
-      onClose={onClose}
-      onClick={(event) => { if (event.target === ref.current) onClose(); }}
+      onClose={() => { if (!locked) onClose(); }}
+      onCancel={(event) => { if (locked) event.preventDefault(); }}
+      onClick={(event) => { if (!locked && event.target === ref.current) onClose(); }}
     >
       {open && <><h3>{title}</h3>{children}</>}
     </dialog>

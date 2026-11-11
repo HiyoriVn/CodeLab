@@ -1,3 +1,5 @@
+import BrowserFlasher from './components/BrowserFlasher.jsx';
+import { useDeviceOperation } from './device/useDeviceOperation.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
 import { DEFAULT_BOARD_ID, FAST4WD_BOARD_ID, getBoardProfile, projectBoardId } from './boards/profiles.js';
@@ -54,6 +56,8 @@ function App() {
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(() => Math.round(Math.min(300, window.innerHeight * 0.42)));
   const [dialog, setDialog] = useState(null);
+  const deviceOperation = useDeviceOperation();
+  const deviceBusy = deviceOperation.busy;
   const [toast, setToast] = useState('');
   const [theme, setTheme] = useState(readTheme);
   const [barColor, setBarColor] = useState(readBar);
@@ -99,10 +103,12 @@ function App() {
     ? { ...item, workspace: workspaceRef.current && !workspaceRef.current.codelabLoadFailed ? Blockly.serialization.workspaces.save(workspaceRef.current) : item.workspace, updatedAt: new Date().toISOString() }
     : item);
   const switchProject = (id) => {
+    if (deviceOperation.isBusy()) return;
     if (id === project.id || !projectStore.projects.some((item) => item.id === id)) return;
     persist({ activeId: id, projects: snapshotProjects() });
   };
   const convertProject = () => {
+    if (deviceOperation.isBusy()) return;
     const projects = snapshotProjects();
     const result = copyToNewmaniaProgram(projects.find(item => item.id === project.id), crypto.randomUUID());
     setCompatibility(result.issues);
@@ -110,11 +116,13 @@ function App() {
     setDialog('compatibility');
   };
   const createProject = () => {
+    if (deviceOperation.isBusy()) return;
     const nextProject = makeNewProject();
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
     setDialog(null); showToast('Đã tạo dự án mới');
   };
   const openLesson = (event) => {
+    if (deviceOperation.isBusy()) return;
     if (event.target.value !== 'mecanum') return;
     const nextProject = makeNewProject('Robot mecanum 4 bánh bằng PS4', structuredClone(mecanumLesson.project.workspace));
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
@@ -131,11 +139,16 @@ function App() {
     const link = document.createElement('a'); link.href = url; link.download = `${project.name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'codelab-project'}.codelab.json`; link.click(); URL.revokeObjectURL(url);
     showToast('Đã tải tệp dự án xuống');
   };
-  const pickProjectFile = () => { setDialog(null); fileInputRef.current?.click(); };
+  const pickProjectFile = () => {
+    if (deviceOperation.isBusy()) return;
+    setDialog(null);
+    fileInputRef.current?.click();
+  };
   const openProjectFile = async (event) => {
     const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
     try {
       const payload = JSON.parse(await file.text());
+      if (deviceOperation.isBusy()) { showToast('Đang thao tác thiết bị; hãy mở lại tệp sau khi hoàn tất.'); return; }
       const content = payload.format === FILE_TYPE && payload.version === FILE_VERSION ? payload.project : payload.format === 'codelab-workspace' && payload.version === 1 ? { name: file.name.replace(/\.codelab\.json$|\.json$/i, ''), workspace: payload.workspace } : null;
       if (!content?.workspace) throw new Error('Tệp không đúng định dạng hoặc phiên bản chưa được hỗ trợ.');
       validateProjectDeviceConfigs(content.deviceConfigs);
@@ -152,10 +165,10 @@ function App() {
       showToast(`Đã mở ${file.name}`);
     } catch (error) { window.alert(error.message || 'Không thể mở dự án.'); }
   };
-  const closeDialog = useCallback(() => setDialog(null), []);
+  const closeDialog = useCallback(() => { if (!deviceOperation.isBusy()) setDialog(null); }, [deviceOperation.isBusy]);
 
   const openDevice = () => {
-    if (legacyBoard) return;
+    if (deviceOperation.isBusy() || legacyBoard) return;
     if (workspaceRef.current?.codelabLoadFailed) { showToast('Workspace mở chưa đầy đủ; giữ bản gốc và chưa biên dịch.'); return; }
     if (workspaceRef.current) handleCodeChange(generateArduino(workspaceRef.current, boardId, robotDevices));
     setTerminalOpen(false);
@@ -163,11 +176,13 @@ function App() {
     setDialog('connect');
   };
   const toggleTerminal = () => {
+    if (deviceOperation.isBusy()) return;
     const next = !terminalOpen;
     setTerminalOpen(next);
     if (next) { setCodeOpen(false); setDialog(null); }
   };
   const toggleCode = () => {
+    if (deviceOperation.isBusy()) return;
     const next = !codeOpen;
     setCodeOpen(next);
     if (next) { setTerminalOpen(false); setDialog(null); }
@@ -252,10 +267,11 @@ function App() {
         </details>
         <button className="btn p" onClick={closeDialog}>Đã hiểu</button>
       </Modal>
-      <Modal open={dialog === 'connect'} onClose={closeDialog} title="Kết nối thiết bị">
+      <Modal open={dialog === 'connect'} locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
-        <DevicePanel key={project.id + boardId} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
-        <div className="dialog-actions"><button className="btn" onClick={closeDialog}>Đóng</button></div>
+        <DevicePanel key={project.id + boardId} operation={deviceOperation} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
+        <BrowserFlasher boardId={boardId} operation={deviceOperation} />
+        <div className="dialog-actions"><button className="btn" disabled={deviceBusy} onClick={closeDialog}>Đóng</button></div>
       </Modal>
       <div className={`toast ${toast ? 'on' : ''}`} role="status">{toast}</div>
     </div>
