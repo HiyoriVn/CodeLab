@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly';
+import './ps4-axis-fields.js';
 import { motorIds } from '../boards/robot-devices.js';
 
 const colours = { motor: '#3c82bc', drive: '#488459', ps4: '#bd4d86' };
@@ -15,7 +16,10 @@ const buttons = field('BUTTON', [
   ['X', '0'], ['Tròn', '1'], ['Vuông', '2'], ['Tam giác', '3'], ['L1', '4'], ['R1', '5'],
   ['L2', '6'], ['R2', '7'], ['L3', '10'], ['R3', '11'], ['Lên', '13'], ['Xuống', '14'], ['Trái', '15'], ['Phải', '16'],
 ]);
-const axes = field('AXIS', [['trái X', '0'], ['trái Y', '1'], ['phải X', '2'], ['phải Y', '3']]);
+const axes = [
+  { type: 'field_ps4_stick', name: 'STICK' },
+  { type: 'field_ps4_axis_direction', name: 'AXIS' },
+];
 const block = (group, type, title, message0, tooltip, args0, shape = 'statement') => ({
   group, title, type: 'robot_' + type, message0, tooltip, args0, colour: colours[group],
   ...(shape === 'statement' ? { previousStatement: null, nextStatement: null } :
@@ -51,8 +55,8 @@ export const robotBlocks = [
     'Di chuyển theo hướng chọn trong thời gian 0–60 giây rồi tự dừng drivetrain. Có thể chọn đợi hoặc không đợi.',
     [driveDirection, number('SPEED'), { type: 'field_number', name: 'SECONDS', value: 1, min: 0, max: 60 },
       field('WAIT', [['và đợi', 'YES'], ['không chờ', 'NO']])]),
-  block('ps4', 'ps4_axis', 'Đọc trục PS4', 'trục PS4 %1 (%%)',
-    'Trả về −100 đến 100 từ báo cáo còn mới. Trả 0 khi mất kết nối.', [axes], 'Number'),
+  block('ps4', 'ps4_axis', 'Độ nghiêng cần', 'Độ nghiêng cần %1 theo %2',
+    'Giá trị từ -100 đến 100; cần ở giữa là 0. Ví dụ: chọn Trái và Dọc để đọc độ nghiêng lên/xuống của cần trái. Ngang đọc trái/phải. Trả 0 khi mất kết nối.', axes, 'Number'),
   block('ps4', 'ps4_button', 'Đọc nút PS4', 'nút PS4 %1 đang nhấn?',
     'Đúng khi nút đang được nhấn trong báo cáo PS4 còn mới.', [buttons], 'Boolean'),
   block('ps4', 'ps4_event', 'Khi nhấn hoặc thả nút PS4', 'khi PS4 %1 nút %2 %3',

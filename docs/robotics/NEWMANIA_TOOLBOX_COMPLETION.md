@@ -17,6 +17,11 @@ Ba mục Bật LED, Tắt LED và Nhấp nháy LED giữ khóa. Danh mục và c
 ghi rõ GPIO47 đang dành cho kết nối/an toàn. Block đã lưu vẫn được giữ;
 generator từ chối biên dịch và chỉ rõ block, không âm thầm bỏ qua hoặc đổi GPIO.
 
+Nhãn PS4 được rút gọn thành “Nút …”, “Độ nghiêng cần Trái/Phải theo
+Ngang/Dọc” và “Tay cầm PS4 đã kết nối?”, kèm tooltip có ví dụ. Hai dropdown
+của cần vẫn chỉ lưu `AXIS` 0–3 như trước; lựa chọn cần được suy ra khi mở
+project và undo/redo. Không đổi ID block, generator, API hay ánh xạ trục.
+
 ## Hành vi
 
 - Vòng lặp sinh các bước hợp tác, không sinh vòng `while` chặn cập nhật board.
