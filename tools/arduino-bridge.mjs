@@ -132,7 +132,7 @@ const server = createServer(async (req, res) => {
       if ((payload.boardId ?? DEFAULT_BOARD_ID) !== build.boardId || payload.code !== build.code) return send(res, 409, { error: 'Code/board đã đổi. Hãy biên dịch lại trước khi nạp.' });
       const fast4wd = getBoardProfile(build.boardId).capabilities.fast4wd;
       if (fast4wd && payload.hardwareConfirmed !== true) {
-        return send(res, 400, { error: 'Xác nhận đúng bo fast100, chân GPIO35–37 không dùng cho bộ nhớ và đã ngắt nguồn motor.' });
+        return send(res, 400, { error: 'Xác nhận đúng board Newmania và đã ngắt nguồn motor.' });
       }
       const list = await execute(['board', 'list', '--format', 'json'], 20_000);
       if (!list.ok) return send(res, 503, { error: 'Không thể kiểm tra lại cổng trước khi nạp.', detail: list.error });

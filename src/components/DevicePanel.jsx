@@ -90,10 +90,10 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial }) {
       <p className="device-message" style={{ whiteSpace: 'pre-wrap' }} role="status">{message}</p>
       {warnings.length > 0 && <div role="alert" className="beginner-help"><strong>Chưa thể biên dịch. Hãy sửa các mục sau:</strong><ul>{warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></div>}
       {fast4wd && <div className="beginner-help">
-        <p>Chỉ dùng bo ESP32-S3 fast100 đã xác minh, flash 16 MB. GPIO35–37 phải rảnh; bo N16R8/Octal không đủ điều kiện. Chọn cổng USB gốc của S3 sau khi đối chiếu bằng cách rút và cắm lại cáp S3.</p>
+        <p>Chọn đúng cổng USB của board Newmania ESP32S3 trước khi nạp.</p>
         <label><input type="checkbox" checked={hardwareConfirmed} disabled={busy || !port}
           onChange={(event) => setHardwareConfirmed(event.target.checked)} />
-          Tôi xác nhận đúng bo fast100, GPIO35–37 không nối bộ nhớ và nguồn động cơ đã ngắt.
+          Tôi xác nhận đúng board Newmania và nguồn động cơ đã ngắt.
         </label>
       </div>}
       <div className="device-actions">

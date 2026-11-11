@@ -22,7 +22,6 @@ inline int esp_efuse_read_field_blob(int field, uint8_t* value, int bits) {
   *value = octalFlash;
   return ESP_OK;
 }
-inline struct { uint32_t getFlashChipSize() const { return flashSize; } } ESP;
 inline struct {
   void begin(unsigned baud) { assert(baud == 115200); }
   void println(const char*) {}

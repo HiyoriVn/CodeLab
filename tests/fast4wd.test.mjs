@@ -79,6 +79,7 @@ test('real 4WD runtime drives the expected MCPWM pins and stops on Share, stop b
   const flags = ['-std=c++17', '-Wall', '-Wextra', '-Werror',
     '-I' + dir, '-I' + resolve('tests/fixtures'),
     ...['CodeLabFast4wd', 'CodeLabPs4I2C', 'CodeLabRobot'].map(lib => '-I' + resolve('firmware/libraries', lib, 'src'))];
+  execFileSync(compiler, [...flags, '-DBOARD_HAS_PSRAM', '-fsyntax-only', resolve('tests/fast4wd-native.cpp')]);
   execFileSync(compiler, [...flags, resolve('tests/fast4wd-native.cpp'), '-o', binary]);
   execFileSync(binary);
   for (const name of ['lesson_robot_mecanum', 'lesson_robot_motor_events']) {

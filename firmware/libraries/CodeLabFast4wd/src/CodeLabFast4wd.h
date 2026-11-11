@@ -3,14 +3,11 @@
 #include <Wire.h>
 #include <CodeLabRobot.h>
 #include <I2CReceiver.h>
-#include <esp_chip_info.h>
-#include <esp_efuse.h>
-#include <esp_efuse_table.h>
 #include "QuadMotors.h"
 #include "CodeLabV2Scheduler.hpp"
 
-#if !CONFIG_IDF_TARGET_ESP32S3 || defined(BOARD_HAS_PSRAM)
-#error "CodeLabFast4wd requires ESP32-S3 with PSRAM disabled."
+#if !CONFIG_IDF_TARGET_ESP32S3
+#error "CodeLabFast4wd requires ESP32-S3."
 #endif
 
 namespace codelab { namespace fast4wd {
@@ -115,17 +112,6 @@ class Robot : private robot::MotorInterface {
       connected() && !stopRequested_ && !button(8);
   }
 
-  static bool memoryCompatible() {
-    esp_chip_info_t chip = {};
-    esp_chip_info(&chip);
-    uint8_t octalFlash = 0;
-    // Reject known memory conflicts before configuring any board GPIO.
-    return chip.model == CHIP_ESP32S3 &&
-      !(chip.features & CHIP_FEATURE_EMB_PSRAM) &&
-      ESP.getFlashChipSize() == 16U * 1024 * 1024 && !psramFound() &&
-      esp_efuse_read_field_blob(ESP_EFUSE_FLASH_TYPE, &octalFlash, 1) == ESP_OK && !octalFlash;
-  }
-
   void poll(uint32_t now) {
     receiver_.watchdog(now);
     if (!busReady_ || uint32_t(now - polledAt_) < 6) return;
@@ -152,10 +138,6 @@ class Robot : private robot::MotorInterface {
 
   void begin(bool blinkOnLoss) {
     if (initialized_) return;
-    if (!memoryCompatible()) {
-      Serial.println("4WD BLOCKED: requires 16MB flash and GPIO35-37 free of flash/PSRAM.");
-      return;
-    }
     blink_ = blinkOnLoss;
     if (blink_) {
       pinMode(ledPin, OUTPUT);

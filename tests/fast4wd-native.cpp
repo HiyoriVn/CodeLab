@@ -121,18 +121,10 @@ void testIndependentMotors() {
 
 int main() {
   codelab::fast4wd::Robot robot;
+  // Memory flags no longer prevent startup of the selected board.
   embeddedPsram = true;
-  robot.begin(true);
-  assert(gpioCalls == 0);
-  embeddedPsram = false;
   octalFlash = true;
-  robot.begin(true);
-  assert(gpioCalls == 0);
-  octalFlash = false;
   flashSize /= 2;
-  robot.begin(true);
-  assert(gpioCalls == 0);
-  flashSize *= 2;
   robot.begin(true);
   assert(gpioCalls > 0);
   expectDuty({});

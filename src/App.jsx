@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
-import { DEFAULT_BOARD_ID, projectBoardId } from './boards/profiles.js';
-import { validateProjectDeviceConfigs } from './boards/robot-devices.js';
+import { DEFAULT_BOARD_ID, FAST4WD_BOARD_ID, getBoardProfile, projectBoardId } from './boards/profiles.js';
+import { defaultRobotDevices, validateProjectDeviceConfigs } from './boards/robot-devices.js';
 import { robotBlocks } from './blocks/robot-devices.js';
 import { projectEditorMode } from './blocks/beginner-toolbox.js';
 import { generateArduino } from './generators/arduino.js';
@@ -20,8 +20,12 @@ const LEGACY_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-project';
 const FILE_VERSION = 1;
 const emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } };
-function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = DEFAULT_BOARD_ID, editorMode = 'beginner', deviceConfigs) {
+function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = FAST4WD_BOARD_ID, editorMode = 'beginner', deviceConfigs) {
   return { id: crypto.randomUUID(), name, workspace, boardId, editorMode, deviceConfigs, updatedAt: new Date().toISOString() };
+}
+function makeNewProject(name, workspace = emptyWorkspace) {
+  const devices = defaultRobotDevices(getBoardProfile(FAST4WD_BOARD_ID));
+  return makeProject(name, workspace, FAST4WD_BOARD_ID, 'beginner', { [FAST4WD_BOARD_ID]: devices });
 }
 function readProjects() {
   try {
@@ -29,10 +33,10 @@ function readProjects() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved?.projects?.length) return saved;
     const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
-    const project = makeProject('Chương trình robot của tôi', legacy || emptyWorkspace, DEFAULT_BOARD_ID, legacy ? 'advanced' : 'beginner');
+    const project = legacy ? makeProject('Chương trình robot của tôi', legacy, DEFAULT_BOARD_ID, 'advanced') : makeNewProject('Chương trình robot của tôi');
     return { activeId: project.id, projects: [project] };
   } catch {
-    const project = makeProject('Chương trình robot của tôi');
+    const project = makeNewProject('Chương trình robot của tôi');
     return { activeId: project.id, projects: [project] };
   }
 }
@@ -93,13 +97,13 @@ function App() {
     persist({ activeId: id, projects: snapshotProjects() });
   };
   const createProject = () => {
-    const nextProject = makeProject();
+    const nextProject = makeNewProject();
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
     setDialog(null); showToast('Đã tạo dự án mới');
   };
   const openLesson = (event) => {
     if (event.target.value !== 'mecanum') return;
-    const nextProject = makeProject('Robot mecanum 4 bánh bằng PS4', emptyWorkspace);
+    const nextProject = makeNewProject('Robot mecanum 4 bánh bằng PS4');
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
     showToast('Đã mở bài mẫu trống');
   };
@@ -183,7 +187,7 @@ function App() {
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
       <div className="board-profile-toolbar">
-        <label>Board <select aria-label="Board profile" value="newmania" onChange={() => {}}><option value="newmania">Newmania ESP32S3 Board</option></select></label>
+        <label>Board <select aria-label="Board profile" value={boardId} onChange={() => {}}><option value={FAST4WD_BOARD_ID}>Newmania ESP32S3 Board</option>{boardId !== FAST4WD_BOARD_ID && <option value={boardId}>Board của dự án đã nhập: {boardId}</option>}</select></label>
         <label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}>
           <option value="">Chọn bài mẫu...</option>
           <option value="mecanum">Robot mecanum 4 bánh bằng PS4</option>
@@ -222,7 +226,7 @@ function App() {
       </Modal>
       <Modal open={dialog === 'connect'} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
-        <DevicePanel key={project.id + boardId} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={[...generatedCode.warnings, 'Chưa xác nhận cấu hình board để biên dịch hoặc nạp an toàn.']} onOpenSerial={toggleTerminal} />
+        <DevicePanel key={project.id + boardId} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
         <div className="dialog-actions"><button className="btn" onClick={closeDialog}>Đóng</button></div>
       </Modal>
       <div className={`toast ${toast ? 'on' : ''}`} role="status">{toast}</div>
