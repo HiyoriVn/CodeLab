@@ -93,3 +93,18 @@ export function editorToolbox(boardId, mode = 'beginner', devices) {
   }
   return {kind:'categoryToolbox',contents};
 }
+
+// Student catalogue: no advanced, simulated controller, or combined robot blocks.
+// Profile-dependent features remain limited by the existing board registry.
+export function v1StudentToolbox(boardId) {
+  const toolbox = editorToolbox(boardId, 'beginner');
+  const allowed = new Set([
+    'beginner_start','beginner_forever','beginner_wait','controls_if','controls_repeat_ext','controls_whileUntil',
+    'math_number','math_arithmetic','math_modulo','math_single','math_random_int','math_round','math_constrain',
+    'logic_compare','logic_operation','logic_boolean','logic_negate',
+    'beginner_led','beginner_message','beginner_serial_ready','text','text_join',
+  ]);
+  return { ...toolbox, contents: toolbox.contents.map(category => category.custom === 'VARIABLE' ? category : {
+    ...category, contents: (category.contents || []).filter(item => allowed.has(item.type)),
+  }).filter(category => category.custom === 'VARIABLE' || category.contents?.length) };
+}

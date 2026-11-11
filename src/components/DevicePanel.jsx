@@ -84,7 +84,7 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial }) {
   return (
     <section className="device-panel" aria-label="Biên dịch và nạp ESP32-S3">
       <div className="device-panel-heading">
-        <div><span className="code-panel-icon" aria-hidden="true">↥</span><strong>{board.name}</strong><small>{board.build.fqbn}</small></div>
+        <div><span className="code-panel-icon" aria-hidden="true">↥</span><strong>Newmania ESP32S3 Board</strong></div>
         <button className="button button-quiet" onClick={refresh} disabled={busy}>Làm mới cổng</button>
       </div>
       <p className="device-message" style={{ whiteSpace: 'pre-wrap' }} role="status">{message}</p>

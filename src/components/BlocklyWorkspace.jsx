@@ -4,7 +4,7 @@ import 'blockly/blocks';
 import * as Vietnamese from 'blockly/msg/vi';
 import { generateArduino } from '../generators/arduino.js';
 import '../blocks/robotics.js';
-import { editorToolbox } from '../blocks/beginner-toolbox.js';
+import { v1StudentToolbox } from '../blocks/beginner-toolbox.js';
 import { refreshRobotMotorLabels } from '../blocks/robot-devices.js';
 import '../blocks/beginner.js';
 import '../blocks/controller.js';
@@ -35,7 +35,7 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
   useEffect(() => {
     if (!hostRef.current) return undefined;
     const options = {
-      toolbox: editorToolbox(boardIdRef.current, modeRef.current, robotDevicesRef.current),
+      toolbox: v1StudentToolbox(boardIdRef.current),
       sounds: false,
       trashcan: false,
       move: { scrollbars: true, drag: true, wheel: true },
@@ -75,7 +75,7 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
     const save = () => {
       window.clearTimeout(saveTimer);
       saveTimer = window.setTimeout(() => {
-        if (workspace.isDragging()) return;
+        if (workspace.isDragging()) { save(); return; }
         onChangeRef.current(Blockly.serialization.workspaces.save(workspace));
         onCodeChangeRef.current?.(generateArduino(workspace, boardIdRef.current, robotDevicesRef.current));
       }, 250);
@@ -135,7 +135,7 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
         flyout.codelabBoardId = boardId;
         flyout.codelabRobotDevices = robotDevices;
       }
-      workspace.updateToolbox(editorToolbox(boardId, editorMode, robotDevices));
+      workspace.updateToolbox(v1StudentToolbox(boardId));
       refreshRobotMotorLabels(workspace);
       onCodeChangeRef.current?.(generateArduino(workspace, boardId, robotDevices));
     }

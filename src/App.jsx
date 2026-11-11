@@ -1,27 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
-import { BOARD_PROFILES, DEFAULT_BOARD_ID, getBoardProfile, projectBoardId } from './boards/profiles.js';
+import { DEFAULT_BOARD_ID, projectBoardId } from './boards/profiles.js';
 import { validateProjectDeviceConfigs } from './boards/robot-devices.js';
 import { robotBlocks } from './blocks/robot-devices.js';
 import { projectEditorMode } from './blocks/beginner-toolbox.js';
-import blinkLesson from '../examples/beginner/lesson_blink/lesson_blink.codelab.json';
-import messageLesson from '../examples/beginner/lesson_message/lesson_message.codelab.json';
-import counterLesson from '../examples/beginner/lesson_counter/lesson_counter.codelab.json';
-import randomLesson from '../examples/beginner/lesson_random/lesson_random.codelab.json';
-import ps4Lesson from '../examples/beginner/lesson_ps4_simulation/lesson_ps4_simulation.codelab.json';
-import fast4wdLesson from '../examples/beginner/lesson_ps4_4wd/lesson_ps4_4wd.codelab.json';
-import mecanumLesson from '../examples/beginner/lesson_robot_mecanum/lesson_robot_mecanum.codelab.json';
-import motorEventsLesson from '../examples/beginner/lesson_robot_motor_events/lesson_robot_motor_events.codelab.json';
 import { generateArduino } from './generators/arduino.js';
 import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
 import CodePreview from './components/CodePreview.jsx';
 import DevicePanel from './components/DevicePanel.jsx';
-import RobotDeviceConfig from './components/RobotDeviceConfig.jsx';
 import SerialMonitor from './components/SerialMonitor.jsx';
 import TopBar from './ui/TopBar.jsx';
 import Modal from './ui/Modal.jsx';
 import ZoomControls from './ui/ZoomControls.jsx';
 import { applyBar, readBar, readTheme, saveBar, saveTheme } from './ui/prefs.js';
+import { clearOldProjectsOnce } from './ui/project-storage.js';
 
 const STORAGE_KEY = 'codelab.projects.v1';
 const LEGACY_KEY = 'codelab.workspace.v1';
@@ -33,6 +25,7 @@ function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardI
 }
 function readProjects() {
   try {
+    clearOldProjectsOnce(localStorage);
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved?.projects?.length) return saved;
     const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
@@ -60,17 +53,8 @@ function App() {
   const project = projectStore.projects.find((item) => item.id === projectStore.activeId) || projectStore.projects[0];
 
   const boardId = projectBoardId(project);
-  const board = getBoardProfile(boardId);
   const robotDevices = project.deviceConfigs?.[boardId];
   const editorMode = projectEditorMode(project);
-  const changeMode = (event) => persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id ? {...item, editorMode: event.target.value} : item) });
-  const changeBoard = (event) => persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id ? {...item, boardId: event.target.value} : item) });
-  const saveRobotDevices = devices => {
-    persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id
-      ? { ...item, deviceConfigs: { ...item.deviceConfigs, [boardId]: devices } } : item) });
-    setDialog(null);
-  };
-
   const showToast = useCallback((message) => {
     setToast(message);
     window.clearTimeout(toastTimer.current);
@@ -114,15 +98,10 @@ function App() {
     setDialog(null); showToast('Đã tạo dự án mới');
   };
   const openLesson = (event) => {
-    const lesson = {
-      blink: blinkLesson, message: messageLesson, ps4: ps4Lesson, counter: counterLesson, random: randomLesson,
-      fast4wd: fast4wdLesson, mecanum: mecanumLesson, motorEvents: motorEventsLesson,
-      mecanumTemplate: { project: { ...mecanumLesson.project, name: 'Mẫu cấu hình mecanum', workspace: emptyWorkspace } },
-    }[event.target.value]?.project;
-    if (!lesson) return;
-    const nextProject = makeProject(lesson.name, lesson.workspace, lesson.boardId, 'beginner', lesson.deviceConfigs);
-    persist({activeId:nextProject.id,projects:[...snapshotProjects(),nextProject]});
-    showToast('Đã mở bài mẫu · ' + getBoardProfile(lesson.boardId).name);
+    if (event.target.value !== 'mecanum') return;
+    const nextProject = makeProject('Robot mecanum 4 bánh bằng PS4', emptyWorkspace);
+    persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
+    showToast('Đã mở bài mẫu trống');
   };
   const renameProject = (event) => {
     const name = event.target.value;
@@ -204,25 +183,15 @@ function App() {
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
       <div className="board-profile-toolbar">
-        <label>Chế độ <select aria-label="Chế độ lập trình" value={editorMode} onChange={changeMode}><option value="beginner">Cơ bản</option><option value="advanced">Nâng cao</option></select></label>
-        <label>Board <select aria-label="Board profile" value={boardId} onChange={changeBoard}>{BOARD_PROFILES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <button type="button" className="button button-quiet" onClick={() => setDialog('robot-config')}>Cấu hình robot</button>
+        <label>Board <select aria-label="Board profile" value="newmania" onChange={() => {}}><option value="newmania">Newmania ESP32S3 Board</option></select></label>
         <label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}>
-          <option value="">Chọn bài mẫu…</option>
-          <option value="blink">Đèn nhấp nháy</option>
-          <option value="message">Lời nhắn &amp; tín hiệu</option>
-          <option value="ps4">PS4 mô phỏng</option>
-          <option value="counter">Vòng lặp đếm số</option>
-          <option value="random">Điều kiện và số ngẫu nhiên</option>
-          <option value="fast4wd">Robot mecanum 4 bánh bằng PS4</option>
-          <option value="mecanum">Tự lập trình mecanum bằng PS4</option>
-          <option value="motorEvents">PS4 điều khiển từng motor</option>
-          <option value="mecanumTemplate">Mẫu cấu hình mecanum</option>
+          <option value="">Chọn bài mẫu...</option>
+          <option value="mecanum">Robot mecanum 4 bánh bằng PS4</option>
         </select></label>
       </div>
       <div className="main">
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
-          <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode={editorMode} robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
+          <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode="beginner" robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
           <ZoomControls workspaceRef={workspaceRef} />
           <div className="workspace-status"><span><i className="status-dot" />Sẵn sàng chỉnh sửa</span><span>{blockCount} khối đang dùng</span></div>
         </div>
@@ -251,12 +220,9 @@ function App() {
         </details>
         <button className="btn p" onClick={closeDialog}>Đã hiểu</button>
       </Modal>
-      <Modal open={dialog === 'robot-config'} onClose={closeDialog} title="Cấu hình robot">
-        <RobotDeviceConfig key={project.id + boardId} board={board} devices={robotDevices} onSave={saveRobotDevices} />
-      </Modal>
       <Modal open={dialog === 'connect'} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
-        <DevicePanel key={project.id + boardId} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={generatedCode.warnings} onOpenSerial={toggleTerminal} />
+        <DevicePanel key={project.id + boardId} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={[...generatedCode.warnings, 'Chưa xác nhận cấu hình board để biên dịch hoặc nạp an toàn.']} onOpenSerial={toggleTerminal} />
         <div className="dialog-actions"><button className="btn" onClick={closeDialog}>Đóng</button></div>
       </Modal>
       <div className={`toast ${toast ? 'on' : ''}`} role="status">{toast}</div>
