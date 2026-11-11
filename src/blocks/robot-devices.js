@@ -105,12 +105,13 @@ export function robotDeviceToolbox(devices, profile) {
           makeEntry(type, args0, { EDGE: 'RELEASE', BUTTON: '0' }),
         ];
       }
+      if (type === 'robot_motor_spin') return devices.motors.map(motor => makeEntry(type, args0, { MOTOR: motor.id }));
       return [makeEntry(type, args0, motorField)];
     }),
   });
   return [
     group('motor', 'Motor'),
-    ...(devices.drivetrain.wheels.length ? [group('drive', 'Drivetrain mecanum')] : []),
+    ...(devices.drivetrain.wheels.length ? [group('drive', 'Di chuyển mecanum')] : []),
     ...(devices.controller.enabled && profile.capabilities.fast4wd ? [group('ps4', 'Tay cầm PS4')] : []),
   ];
 }

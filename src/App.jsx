@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
 import { DEFAULT_BOARD_ID, FAST4WD_BOARD_ID, getBoardProfile, projectBoardId } from './boards/profiles.js';
 import { defaultRobotDevices, validateProjectDeviceConfigs } from './boards/robot-devices.js';
@@ -13,7 +13,7 @@ import TopBar from './ui/TopBar.jsx';
 import Modal from './ui/Modal.jsx';
 import ZoomControls from './ui/ZoomControls.jsx';
 import { applyBar, readBar, readTheme, saveBar, saveTheme } from './ui/prefs.js';
-import { clearOldProjectsOnce } from './ui/project-storage.js';
+import { clearOldProjectsOnce, projectRobotDevices, newmaniaCopy, newmaniaCompatibility } from './ui/project-storage.js';
 
 const STORAGE_KEY = 'codelab.projects.v1';
 const LEGACY_KEY = 'codelab.workspace.v1';
@@ -57,7 +57,9 @@ function App() {
   const project = projectStore.projects.find((item) => item.id === projectStore.activeId) || projectStore.projects[0];
 
   const boardId = projectBoardId(project);
-  const robotDevices = project.deviceConfigs?.[boardId];
+  const robotDevices = useMemo(() => projectRobotDevices(project), [boardId, project.deviceConfigs]);
+  const legacyBoard = boardId !== FAST4WD_BOARD_ID;
+  const [compatibility, setCompatibility] = useState([]);
   const editorMode = projectEditorMode(project);
   const showToast = useCallback((message) => {
     setToast(message);
@@ -95,6 +97,17 @@ function App() {
   const switchProject = (id) => {
     if (id === project.id || !projectStore.projects.some((item) => item.id === id)) return;
     persist({ activeId: id, projects: snapshotProjects() });
+  };
+  const convertProject = () => {
+    const projects = snapshotProjects();
+    const copy = newmaniaCopy(projects.find(item => item.id === project.id), crypto.randomUUID());
+    const check = new Blockly.Workspace();
+    try {
+      Blockly.serialization.workspaces.load(copy.workspace, check);
+      setCompatibility(newmaniaCompatibility(check, projectRobotDevices(copy)));
+    } finally { check.dispose(); }
+    persist({ activeId: copy.id, projects: [...projects, copy] });
+    setDialog('compatibility');
   };
   const createProject = () => {
     const nextProject = makeNewProject();
@@ -141,6 +154,7 @@ function App() {
   const closeDialog = useCallback(() => setDialog(null), []);
 
   const openDevice = () => {
+    if (legacyBoard) return;
     if (workspaceRef.current) handleCodeChange(generateArduino(workspaceRef.current, boardId, robotDevices));
     setTerminalOpen(false);
     setCodeOpen(false);
@@ -187,12 +201,15 @@ function App() {
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
       <div className="board-profile-toolbar">
-        <label>Board <select aria-label="Board profile" value={boardId} onChange={() => {}}><option value={FAST4WD_BOARD_ID}>Newmania ESP32S3 Board</option>{boardId !== FAST4WD_BOARD_ID && <option value={boardId}>Board của dự án đã nhập: {boardId}</option>}</select></label>
+        <label>Board <select aria-label="Board profile" value={FAST4WD_BOARD_ID} disabled={legacyBoard} onChange={() => {}}><option value={FAST4WD_BOARD_ID}>Newmania ESP32S3 Board</option></select></label>
         <label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}>
           <option value="">Chọn bài mẫu...</option>
           <option value="mecanum">Robot mecanum 4 bánh bằng PS4</option>
         </select></label>
       </div>
+      {legacyBoard && <div role="alert">Dự án cũ dùng board {boardId}. Chưa chuyển sang Newmania; giữ nguyên dữ liệu và board gốc.
+        <button className="btn" onClick={() => setDialog('convert')}>Tạo bản sao Newmania…</button>
+      </div>}
       <div className="main">
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
           <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode="beginner" robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
@@ -212,6 +229,15 @@ function App() {
         {terminalOpen && <SerialMonitor />}
       </section>
 
+      <Modal open={dialog === 'convert'} onClose={closeDialog} title="Tạo bản sao Newmania?">
+        <p>Bản gốc giữ nguyên board và dữ liệu. Bản sao giữ mọi block, biến; block không tương thích được báo để bạn sửa trước khi biên dịch.</p>
+        <button className="btn p" onClick={convertProject}>Xác nhận tạo bản sao</button>
+        <button className="btn" onClick={closeDialog}>Hủy</button>
+      </Modal>
+      <Modal open={dialog === 'compatibility'} onClose={closeDialog} title="Kiểm tra bản sao Newmania">
+        {compatibility.length ? <ul>{compatibility.map(item => <li key={item.id}>{item.type} ({item.id}): {item.warnings.join(' ')}</li>)}</ul> : <p>Không phát hiện block không tương thích.</p>}
+        <button className="btn" onClick={closeDialog}>Đóng</button>
+      </Modal>
       <Modal open={dialog === 'help'} onClose={closeDialog} title="Hướng dẫn nhanh">
         <ol>
           <li>Chọn nhóm block ở cột bên trái.</li>

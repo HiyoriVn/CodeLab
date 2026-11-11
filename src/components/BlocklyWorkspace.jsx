@@ -4,7 +4,8 @@ import 'blockly/blocks';
 import * as Vietnamese from 'blockly/msg/vi';
 import { generateArduino } from '../generators/arduino.js';
 import '../blocks/robotics.js';
-import { v1StudentToolbox } from '../blocks/beginner-toolbox.js';
+import { FAST4WD_BOARD_ID } from '../boards/profiles.js';
+import { editorToolbox } from '../blocks/beginner-toolbox.js';
 import { refreshRobotMotorLabels } from '../blocks/robot-devices.js';
 import '../blocks/beginner.js';
 import '../blocks/controller.js';
@@ -35,7 +36,7 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
   useEffect(() => {
     if (!hostRef.current) return undefined;
     const options = {
-      toolbox: v1StudentToolbox(boardIdRef.current),
+      toolbox: boardIdRef.current === FAST4WD_BOARD_ID ? editorToolbox(boardIdRef.current, modeRef.current, robotDevicesRef.current) : { kind: 'categoryToolbox', contents: [] },
       sounds: false,
       trashcan: false,
       move: { scrollbars: true, drag: true, wheel: true },
@@ -53,7 +54,10 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
     }
     workspace.codelabBoardId=boardIdRef.current;
     workspace.codelabRobotDevices = robotDevicesRef.current;
-    if(workspace.getFlyout()) workspace.getFlyout().getWorkspace().codelabBoardId=boardIdRef.current;
+    if (workspace.getFlyout()) {
+      workspace.getFlyout().getWorkspace().codelabBoardId = boardIdRef.current;
+      workspace.getFlyout().getWorkspace().codelabRobotDevices = robotDevicesRef.current;
+    }
     workspaceRef.current = workspace;
 
     const flyout = workspace.getFlyout();
@@ -135,7 +139,7 @@ function BlocklyWorkspace({ boardId, editorMode, robotDevices, initialState, dar
         flyout.codelabBoardId = boardId;
         flyout.codelabRobotDevices = robotDevices;
       }
-      workspace.updateToolbox(v1StudentToolbox(boardId));
+      workspace.updateToolbox(boardId === FAST4WD_BOARD_ID ? editorToolbox(boardId, editorMode, robotDevices) : { kind: 'categoryToolbox', contents: [] });
       refreshRobotMotorLabels(workspace);
       onCodeChangeRef.current?.(generateArduino(workspace, boardId, robotDevices));
     }
