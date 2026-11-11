@@ -24,6 +24,6 @@ test('I2C transports reuse canonical mapping/report gate and contain no actuator
  const callback=slave.slice(slave.indexOf('void onRequest()'),slave.indexOf('void onReceive'));
  assert.doesNotMatch(callback,/publisher.update|BP32.update|ps4::getData|Serial\./);
  assert.match(callback,/portENTER_CRITICAL/);
- assert.match(slave,/dataSda=22,dataScl=21/);
+ assert.match(slave, /dataSda\s*=\s*16\s*,\s*dataScl\s*=\s*17/);
  assert.match(readFileSync('firmware/demos/newmania_ps4_i2c/newmania_ps4_i2c.ino','utf8'),/Wire.begin\(8,9/);
 });

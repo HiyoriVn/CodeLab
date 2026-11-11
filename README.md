@@ -37,6 +37,8 @@ For editor development, use `npm install`, then run `npm run dev` and `npm run b
 
 For a standalone local build, run `npm run build` followed by `npm run bridge`, then open `http://127.0.0.1:8787`. Upload requires a successful compile, a currently detected serial port, and explicit confirmation.
 
+The **Robot mecanum 4 bánh bằng PS4** lesson generates MCPWM firmware for the dedicated Newmania fast100 board profile. See the [4WD setup, board compatibility and local upload guide](docs/robotics/PS4_FAST100_4WD.md).
+
 ## Reference archive
 
 NewmaniaCodeLab is a separate design reference, not the CodeLab repository. Its README and source describe a Blockly app and Python generator; they do not define CodeLab's PS4 receiver protocol. See [reference baseline](docs/REFERENCE-BASELINE.md).

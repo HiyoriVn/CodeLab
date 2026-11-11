@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
-import { BOARD_PROFILES, DEFAULT_BOARD_ID, projectBoardId } from './boards/profiles.js';
+import { DEFAULT_BOARD_ID, FAST4WD_BOARD_ID, getBoardProfile, projectBoardId } from './boards/profiles.js';
+import { defaultRobotDevices, validateProjectDeviceConfigs } from './boards/robot-devices.js';
+import { robotBlocks } from './blocks/robot-devices.js';
 import { projectEditorMode } from './blocks/beginner-toolbox.js';
-import blinkLesson from '../examples/beginner/lesson_blink/lesson_blink.codelab.json';
-import messageLesson from '../examples/beginner/lesson_message/lesson_message.codelab.json';
-import counterLesson from '../examples/beginner/lesson_counter/lesson_counter.codelab.json';
-import randomLesson from '../examples/beginner/lesson_random/lesson_random.codelab.json';
-import ps4Lesson from '../examples/beginner/lesson_ps4_simulation/lesson_ps4_simulation.codelab.json';
+import { generateArduino } from './generators/arduino.js';
 import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
 import CodePreview from './components/CodePreview.jsx';
 import DevicePanel from './components/DevicePanel.jsx';
@@ -15,24 +13,30 @@ import TopBar from './ui/TopBar.jsx';
 import Modal from './ui/Modal.jsx';
 import ZoomControls from './ui/ZoomControls.jsx';
 import { applyBar, readBar, readTheme, saveBar, saveTheme } from './ui/prefs.js';
+import { clearOldProjectsOnce } from './ui/project-storage.js';
 
 const STORAGE_KEY = 'codelab.projects.v1';
 const LEGACY_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-project';
 const FILE_VERSION = 1;
 const emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } };
-function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = DEFAULT_BOARD_ID, editorMode = 'beginner') {
-  return { id: crypto.randomUUID(), name, workspace, boardId, editorMode, updatedAt: new Date().toISOString() };
+function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = FAST4WD_BOARD_ID, editorMode = 'beginner', deviceConfigs) {
+  return { id: crypto.randomUUID(), name, workspace, boardId, editorMode, deviceConfigs, updatedAt: new Date().toISOString() };
+}
+function makeNewProject(name, workspace = emptyWorkspace) {
+  const devices = defaultRobotDevices(getBoardProfile(FAST4WD_BOARD_ID));
+  return makeProject(name, workspace, FAST4WD_BOARD_ID, 'beginner', { [FAST4WD_BOARD_ID]: devices });
 }
 function readProjects() {
   try {
+    clearOldProjectsOnce(localStorage);
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved?.projects?.length) return saved;
     const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
-    const project = makeProject('Chương trình robot của tôi', legacy || emptyWorkspace, DEFAULT_BOARD_ID, legacy ? 'advanced' : 'beginner');
+    const project = legacy ? makeProject('Chương trình robot của tôi', legacy, DEFAULT_BOARD_ID, 'advanced') : makeNewProject('Chương trình robot của tôi');
     return { activeId: project.id, projects: [project] };
   } catch {
-    const project = makeProject('Chương trình robot của tôi');
+    const project = makeNewProject('Chương trình robot của tôi');
     return { activeId: project.id, projects: [project] };
   }
 }
@@ -53,10 +57,8 @@ function App() {
   const project = projectStore.projects.find((item) => item.id === projectStore.activeId) || projectStore.projects[0];
 
   const boardId = projectBoardId(project);
+  const robotDevices = project.deviceConfigs?.[boardId];
   const editorMode = projectEditorMode(project);
-  const changeMode = (event) => persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id ? {...item, editorMode: event.target.value} : item) });
-  const changeBoard = (event) => persist({ ...projectStore, projects: snapshotProjects().map(item => item.id === project.id ? {...item, boardId: event.target.value} : item) });
-
   const showToast = useCallback((message) => {
     setToast(message);
     window.clearTimeout(toastTimer.current);
@@ -95,16 +97,15 @@ function App() {
     persist({ activeId: id, projects: snapshotProjects() });
   };
   const createProject = () => {
-    const nextProject = makeProject();
+    const nextProject = makeNewProject();
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
     setDialog(null); showToast('Đã tạo dự án mới');
   };
   const openLesson = (event) => {
-    const lesson = {blink:blinkLesson,message:messageLesson,ps4:ps4Lesson,counter:counterLesson,random:randomLesson}[event.target.value]?.project;
-    if (!lesson) return;
-    const nextProject = makeProject(lesson.name, lesson.workspace, lesson.boardId, 'beginner');
-    persist({activeId:nextProject.id,projects:[...snapshotProjects(),nextProject]});
-    showToast('Đã mở bài mẫu trên profile Newmania OPI; chưa nạp lên mạch.');
+    if (event.target.value !== 'mecanum') return;
+    const nextProject = makeNewProject('Robot mecanum 4 bánh bằng PS4');
+    persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
+    showToast('Đã mở bài mẫu trống');
   };
   const renameProject = (event) => {
     const name = event.target.value;
@@ -112,7 +113,7 @@ function App() {
   };
   const saveProjectFile = () => {
     const state = workspaceRef.current ? Blockly.serialization.workspaces.save(workspaceRef.current) : project.workspace;
-    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state, boardId, editorMode } };
+    const payload = { format: FILE_TYPE, version: FILE_VERSION, project: { name: project.name, workspace: state, boardId, editorMode, deviceConfigs: project.deviceConfigs } };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url; link.download = `${project.name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'codelab-project'}.codelab.json`; link.click(); URL.revokeObjectURL(url);
     showToast('Đã tải tệp dự án xuống');
@@ -124,6 +125,7 @@ function App() {
       const payload = JSON.parse(await file.text());
       const content = payload.format === FILE_TYPE && payload.version === FILE_VERSION ? payload.project : payload.format === 'codelab-workspace' && payload.version === 1 ? { name: file.name.replace(/\.codelab\.json$|\.json$/i, ''), workspace: payload.workspace } : null;
       if (!content?.workspace) throw new Error('Tệp không đúng định dạng hoặc phiên bản chưa được hỗ trợ.');
+      validateProjectDeviceConfigs(content.deviceConfigs);
       // Validate in isolation before replacing the visible workspace or saved projects.
       const validationWorkspace = new Blockly.Workspace();
       try {
@@ -131,14 +133,19 @@ function App() {
       } finally {
         validationWorkspace.dispose();
       }
-      const imported = makeProject(content.name || file.name, content.workspace, projectBoardId(content), projectEditorMode(content));
+      const imported = makeProject(content.name || file.name, content.workspace, projectBoardId(content), projectEditorMode(content), content.deviceConfigs);
       persist({ activeId: imported.id, projects: [...snapshotProjects(), imported] });
       showToast(`Đã mở ${file.name}`);
     } catch (error) { window.alert(error.message || 'Không thể mở dự án.'); }
   };
   const closeDialog = useCallback(() => setDialog(null), []);
 
-  const openDevice = () => { setTerminalOpen(false); setCodeOpen(false); setDialog('connect'); };
+  const openDevice = () => {
+    if (workspaceRef.current) handleCodeChange(generateArduino(workspaceRef.current, boardId, robotDevices));
+    setTerminalOpen(false);
+    setCodeOpen(false);
+    setDialog('connect');
+  };
   const toggleTerminal = () => {
     const next = !terminalOpen;
     setTerminalOpen(next);
@@ -179,10 +186,16 @@ function App() {
         onLanguage={() => showToast('Chưa có bản dịch, hiện chỉ có Tiếng Việt')}
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
-      <div className="board-profile-toolbar"><label>Chế độ <select aria-label="Chế độ lập trình" value={editorMode} onChange={changeMode}><option value="beginner">Cơ bản</option><option value="advanced">Nâng cao</option></select></label><label>Board <select aria-label="Board profile" value={boardId} onChange={changeBoard}>{BOARD_PROFILES.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}</select></label><label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}><option value="">Chọn bài (Newmania OPI)…</option><option value="blink">Đèn nhấp nháy</option><option value="message">Lời nhắn &amp; tín hiệu</option><option value="ps4">PS4 mô phỏng</option><option value="counter">Vòng lặp đếm số</option><option value="random">Điều kiện và số ngẫu nhiên</option></select></label><small>Chưa nạp chương trình lên mạch</small></div>
+      <div className="board-profile-toolbar">
+        <label>Board <select aria-label="Board profile" value={boardId} onChange={() => {}}><option value={FAST4WD_BOARD_ID}>Newmania ESP32S3 Board</option>{boardId !== FAST4WD_BOARD_ID && <option value={boardId}>Board của dự án đã nhập: {boardId}</option>}</select></label>
+        <label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}>
+          <option value="">Chọn bài mẫu...</option>
+          <option value="mecanum">Robot mecanum 4 bánh bằng PS4</option>
+        </select></label>
+      </div>
       <div className="main">
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
-          <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode={editorMode} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
+          <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode="beginner" robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
           <ZoomControls workspaceRef={workspaceRef} />
           <div className="workspace-status"><span><i className="status-dot" />Sẵn sàng chỉnh sửa</span><span>{blockCount} khối đang dùng</span></div>
         </div>
@@ -206,11 +219,14 @@ function App() {
           <li>Thả khối gần đáy khối khác để nối thành chuỗi.</li>
           <li>Bấm nút code để xem code text.</li>
         </ol>
+        <details><summary>Help các khối cấu hình robot</summary>
+          <dl>{robotBlocks.map(({ type, title, tooltip }) => <div key={type}><dt><strong>{title}</strong></dt><dd>{tooltip}</dd></div>)}</dl>
+        </details>
         <button className="btn p" onClick={closeDialog}>Đã hiểu</button>
       </Modal>
       <Modal open={dialog === 'connect'} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
-        <DevicePanel key={project.id} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={generatedCode.warnings} />
+        <DevicePanel key={project.id + boardId} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
         <div className="dialog-actions"><button className="btn" onClick={closeDialog}>Đóng</button></div>
       </Modal>
       <div className={`toast ${toast ? 'on' : ''}`} role="status">{toast}</div>

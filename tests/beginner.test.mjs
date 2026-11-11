@@ -37,6 +37,14 @@ test('mode and board switching only change toolbox; unsupported channels/old GPI
 test('toolbox is compact, profile-aware and raw hardware appears only in Advanced',()=>{
   for(const board of BOARD_PROFILES) {
     const basic=editorToolbox(board.id,'beginner'),advanced=editorToolbox(board.id,'advanced');
+    if (board.capabilities.fast4wd) {
+      assert.deepEqual(basic, advanced);
+      assert.ok(types(basic).includes('fast4wd_drive'));
+      assert.ok(types(basic).includes('beginner_wait'));
+      assert.ok(types(basic).includes('controls_repeat_ext'));
+      assert.ok(!types(advanced).includes('codelab_gpio_write'));
+      continue;
+    }
     assert.ok(!types(basic).includes('codelab_gpio_write'));assert.ok(types(advanced).includes('codelab_gpio_write'));
     assert.equal(types(basic).includes('beginner_led'),Number.isInteger(board.pins.led));
     assert.ok(!types(basic).includes('beginner_motor'));
