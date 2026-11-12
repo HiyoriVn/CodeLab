@@ -57,7 +57,7 @@ test('C++ presentation removes only generated comments and preserves safety and 
   assert.equal(previewCpp(source),'case 2: {\nnewmania.update(); const char* s = "// robot_mecanum · block-3";\n');
 });
 
-function native(id,body) {
+function native(id,body,boot='fresh(); fresh(); settle(); assert(newmania.running());') {
   const source=join(directory,id+'.cpp'), binary=join(directory,id+'.exe');
   writeFileSync(source,sources.get(id)+`
 #include <cassert>
@@ -65,16 +65,16 @@ static void fresh(uint32_t buttons=0,int16_t lx=0,int16_t ly=0,int16_t rx=0) {
   clockMs+=20; Wire.report.connected=true; Wire.report.sequence=(Wire.report.sequence+1)&127;
   Wire.report.buttons=buttons; Wire.report.axes[0]=lx; Wire.report.axes[1]=ly; Wire.report.axes[2]=rx; loop();
 }
-static void settle(uint32_t buttons=0,int16_t lx=0,int16_t ly=0,int16_t rx=0) { for(int i=0;i<220;++i) fresh(buttons,lx,ly,rx); }
-static void output(float a,float b,float c,float d) {
+[[maybe_unused]] static void settle(uint32_t buttons=0,int16_t lx=0,int16_t ly=0,int16_t rx=0) { for(int i=0;i<220;++i) fresh(buttons,lx,ly,rx); }
+[[maybe_unused]] static void output(float a,float b,float c,float d) {
   const float expected[]={a,b,c,d}; for(int i=0;i<4;++i) {
     const float actual=newmania.motorPwm(static_cast<Motor>(i));
     if(std::fabs(actual-expected[i])>=1.1f) std::fprintf(stderr,"M%d expected %.2f actual %.2f at %u\\n",i+1,expected[i],actual,clockMs);
     assert(std::fabs(actual-expected[i])<1.1f);
   }
 }
-int main(){ setup(); fresh(); fresh(); fresh(1U<<9); settle(); assert(newmania.running()); ${body}
-  fresh(1U<<8); output(0,0,0,0); assert(!newmania.running());
+int main(){ setup(); ${boot} ${body}
+  const bool wasRunning=newmania.running(); fresh(1U<<8); assert(newmania.running()==wasRunning);
 }
 `);
   execFileSync(process.env.CXX||'g++',['-std=c++17','-Wall','-Wextra','-Werror','-I'+directory,'-I'+resolve('tests/fixtures'),
@@ -83,6 +83,24 @@ int main(){ setup(); fresh(); fresh(); fresh(1U<<9); settle(); assert(newmania.r
   execFileSync(binary,{stdio:'pipe'});
 }
 
+test('lesson 01 counts and prints without any PS4 report',()=>{
+  native('serial_counter',`
+    assert(newmania.running() && !newmania.connected());
+    assert(student_var_0>=3 && student_var_0<=4);
+    assert(serialOutput.find("1\\n")!=std::string::npos);
+    assert(serialOutput.find("2\\n")!=std::string::npos);
+  `,'for(int i=0;i<100;++i){clockMs+=20;loop();}');
+});
+test('lesson 02 logs disconnect/connect/disconnect while logic continues',()=>{
+  native('ps4_connection',`
+    assert(serialOutput.find("PS4 DISCONNECTED")!=std::string::npos);
+    settle(1); assert(serialOutput.find("PS4 CONNECTED")!=std::string::npos);
+    const auto first=serialOutput.find("PS4 DISCONNECTED");
+    for(int i=0;i<60;++i){clockMs+=20;loop();}
+    assert(newmania.running() && !newmania.connected());
+    assert(serialOutput.find("PS4 DISCONNECTED",first+1)!=std::string::npos);
+  `,'for(int i=0;i<30;++i){clockMs+=20;loop();}');
+});
 test('lesson 03 generated native code tests individual channels, release and single L1 edge',()=>{
   native('motor_test',`
     settle(1U<<13); output(50,0,0,0); settle(); output(0,0,0,0);

@@ -14,7 +14,7 @@ export default function RobotDeviceConfig({ board, devices, onSave }) {
 
   if (!draft.motors.length) return <p>Profile này chưa có cổng motor dành cho Cấu hình robot.</p>;
   return <form className="robot-device-config" onSubmit={event => { event.preventDefault(); if (!warnings.length) onSave(draft); }}>
-    <p>{board.name} · {physical ? 'PWM có điều kiện phần cứng và ARM qua PS4.' : 'Cấu hình theo sơ đồ. PWM vật lý chưa được xác minh.'}</p>
+    <p>{board.name} · {physical ? 'PWM có kiểm tra phần cứng; dự án dùng PS4 dừng motor khi mất link.' : 'Cấu hình theo sơ đồ. PWM vật lý chưa được xác minh.'}</p>
     <fieldset>
       <legend>Motor</legend>
       {draft.motors.map((motor, i) => <div className="robot-device-row" key={motor.id}>

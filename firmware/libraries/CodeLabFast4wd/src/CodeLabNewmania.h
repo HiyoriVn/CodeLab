@@ -33,9 +33,10 @@ class Board {
   Board(const Board&) = delete;
   Board& operator=(const Board&) = delete;
 
-  void begin(bool blinkOnLoss = true) {
+  void begin(bool blinkOnLoss = true, bool usesPs4 = false, uint32_t buttons = 0x1fcffU, uint8_t axes = 7) {
     if (begun_) return;
     Serial.begin(115200);
+    robot_.configureBlockly(usesPs4, buttons, axes);
     robot_.begin(blinkOnLoss); // Existing wiring, frequency, startup and safety.
     begun_ = true;
   }
@@ -44,6 +45,7 @@ class Board {
   // runs from begin()/update(), including before ARM. Never calls Wire.begin.
   bool connectPs4() {
     if (!begun_) return false;
+    robot_.requirePs4();
     if (!ps4Requested_) { clearEdges(); ps4Requested_ = true; }
     return true; // Enables student reads; pairing/link availability is separate.
   }
@@ -62,17 +64,19 @@ class Board {
     if (!begun_) return;
     robot_.beginLoop();
     const uint32_t now = millis();
-    const bool share = robot_.button(static_cast<uint8_t>(Button::Share));
-    if (share) scheduler_.stop(now);
-    else if (running() && !connected()) scheduler_.fault(v2::FaultCode::LINK_LOST, now);
-    else if (running() && !robot_.controllerArmed()) scheduler_.stop(now);
+    if (motionEpoch_ != robot_.motionEpoch()) {
+      motionEpoch_ = robot_.motionEpoch();
+      driveActive_ = driveTimed_ = false;
+      scheduler_.cancelMotions(now);
+      clearEdges();
+    }
     scheduler_.safetyPhase(now);
-    if (!share && robot_.buttonEdge(static_cast<uint8_t>(Button::Home), true)) scheduler_.clearFault();
 
     bool started = false;
-    if (!share && mainUid_ && scheduler_.state() == v2::LifecycleState::READY && robot_.controllerArmed()) {
-      started = scheduler_.startController(now);
+    if (!started_ && mainUid_ && scheduler_.state() == v2::LifecycleState::READY) {
+      started = scheduler_.startProgram(now);
       if (started) {
+        started_ = true;
         resetRun();
         if (reset_) reset_(); // Before the first student statement, every RUN.
       }
@@ -176,7 +180,7 @@ class Board {
   bool motionActive(uint32_t handle) const { return scheduler_.handleActive(handle); }
 
   void mecanum(double forward, double left, double counterclockwise) {
-    if (!running()) return;
+    if (!running() || !robot_.motionAllowed()) return;
     driveTimed_ = false;
     driveActive_ = true;
     drive_[0] = finitePercent(forward);
@@ -204,7 +208,7 @@ class Board {
   }
   Step waitMotion(Context& ctx, uint32_t handle, uint16_t nextPc) {
     if (!validContext(ctx)) return Step::DONE;
-    if (!handle) { scheduler_.fault(v2::FaultCode::INLINE_LIMIT, millis()); return Step::DONE; }
+    if (!handle) { ctx.pc=nextPc; return Step::YIELD; } // Refused motor command is never queued for reconnect.
     clearEdges();
     ctx.pc = nextPc;
     ctx.handleId = handle;
@@ -267,7 +271,7 @@ class Board {
   }
   static float finitePercent(double n) { return std::isfinite(n) ? static_cast<float>(n / 100.0) : 0; }
   bool canCommand(Motor motor) const {
-    return port(motor) < 4 && running() && connected() && robot_.controllerArmed() && !robot_.button(static_cast<uint8_t>(Button::Share));
+    return port(motor) < 4 && running() && robot_.motionAllowed();
   }
   bool validContext(const Context& ctx) const {
     return running() && ctx.scriptUid == mainUid_ && ctx.runGeneration == runGeneration();
@@ -290,7 +294,7 @@ class Board {
   void updateDriveTimer(uint32_t now) {
     if (driveTimed_ && static_cast<int32_t>(now - driveDeadline_) >= 0) stopDrive();
   }
-  void applyDrive() { if (driveActive_) robot_.move(drive_[0], drive_[1], drive_[2]); }
+  void applyDrive() { if (driveActive_ && robot_.motionAllowed()) robot_.move(drive_[0], drive_[1], drive_[2]); }
   void serviceMessages() {
     // Bounded work; never flush or wait for a USB reader. Keep safety in update().
     for (unsigned budget = 0; budget < 32 && messageCount_; ++budget) {
@@ -308,11 +312,11 @@ class Board {
   fast4wd::Robot robot_;
   fast4wd::SchedulerGate gate_;
   v2::Scheduler scheduler_;
-  uint32_t mainUid_ = 0, driveDeadline_ = 0;
+  uint32_t mainUid_ = 0, driveDeadline_ = 0, motionEpoch_ = 0;
   uint64_t edgeEpoch_ = 1;
   uint64_t pressed_[17]{}, released_[17]{};
   Reset reset_ = nullptr;
-  bool begun_ = false, ps4Requested_ = false, driveActive_ = false, driveTimed_ = false;
+  bool begun_ = false, started_ = false, ps4Requested_ = false, driveActive_ = false, driveTimed_ = false;
   float drive_[3]{};
   char messages_[kMessages][kMessageLength]{};
   bool messageNewline_[kMessages]{};

@@ -164,7 +164,8 @@ test('generated Blockly event hats use G1 callbacks and timer WAIT continuations
     assert.match(out.code, /codelabScheduler\.motorWrite\(0, codelabSchedulerPower\(50\), nowMs\)/);
     assert.doesNotMatch(out.code, /delay\(|waitForMotor|codelabRobotBlocks/);
     assert.match(out.code, /codelabScheduler\.buttonEdge\(button, codelab::v2::Edge::PRESS, nowMs\)/);
-    assert.match(out.code, /FaultCode::LINK_LOST/);
+    assert.match(out.code, /codelabScheduler\.cancelMotions\(nowMs\)/);
+    assert.doesNotMatch(out.code, /shareEdge|controllerArmed\(\)/);
     assert.match(out.code, /ctx.loopCounters\[0\]/);
     assert.match(out.code, /ctx.pc = \(true\)/);
   } finally {
@@ -387,54 +388,30 @@ static void sendFrame(uint32_t nowMs, uint32_t buttons = 0) {
 }
 
 int main() {
-  Wire.report = {};
-  clockMs = 2000;
-  setup();
-  sendFrame(2310);
-  sendFrame(2330);
-  sendFrame(2350, 1U << 9);
-  sendFrame(2370);
-  // Enter RUN at 2390: step 1 starts timed drive FORWARD 50% for 200ms (WAIT until 2590)
-  sendFrame(2390);
-  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
-  assert(codelabDriveMode == 2 && codelabDriveTimed);
-  assert(std::fabs(codelabDriveValues[0] - 0.5f) < 0.001f);
 
-  // During the 200ms wait (at 2500), drive remains active
-  sendFrame(2500);
-  assert(codelabDriveTimed && std::fabs(codelabDriveValues[0] - 0.5f) < 0.001f);
-
-  // At 2600, WAIT completes and executes step 2: STRAFE_RIGHT 40% (left = -0.4)
-  sendFrame(2600);
-  assert(!codelabDriveTimed);
-  assert(std::fabs(codelabDriveValues[0]) < 0.001f && std::fabs(codelabDriveValues[1] + 0.4f) < 0.001f);
-
-  // Next tick (2620) executes step 3: drive_stop -> zeroes drive values, stays in RUN!
-  sendFrame(2620);
-  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
-  assert(robot4wd.controllerArmed());
-  assert(codelabDriveValues[0] == 0.0f && codelabDriveValues[1] == 0.0f && codelabDriveValues[2] == 0.0f);
-
-  // Next tick (2640) executes step 4: timed drive TURN_LEFT 60% for 100ms NO_WAIT (deadline 2740)
-  sendFrame(2640);
-  assert(codelabDriveTimed && std::fabs(codelabDriveValues[2] - 0.6f) < 0.001f);
-
-  // At 2750, nonblocking timed drive expires automatically and zeroes drivetrain while remaining in RUN
-  sendFrame(2750);
-  assert(!codelabDriveTimed && codelabDriveValues[2] == 0.0f);
-  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
-
-  // Press X (bit 0) at 2770 -> motor_power sets motor 0 to -40%
-  sendFrame(2770, 1U << 0);
-  sendFrame(2790, 1U << 0);
-  assert(robot4wd.motorPwm(0) < 0.0f);
-
-  // Release X at 2810 -> motor_stop_all zeroes motor 0 and drivetrain without leaving RUN
-  sendFrame(2810, 0);
-  sendFrame(2830, 0);
-  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
-  assert(robot4wd.controllerArmed());
-  assert(robot4wd.motorPwm(0) == 0.0f);
+  clockMs=2000; Wire.report={}; setup();
+  uint32_t time=clockMs;
+  for(int i=0;i<80;++i)sendFrame(time+=20);
+  assert(codelabScheduler.state()==codelab::v2::LifecycleState::RUN);
+  // Startup motion before the first valid control action was discarded.
+  assert(robot4wd.motorPwm(0)==0);
+  sendFrame(time+=20,1);sendFrame(time+=20,1);sendFrame(time+=20);
+  sendFrame(time+=20);assert(robot4wd.motionAllowed());
+  codelabDriveForTime(50,0,0,200,time);
+  sendFrame(time+=20);assert(codelabDriveTimed && codelabDriveMode==2);
+  assert(std::fabs(codelabDriveValues[0]-0.5f)<0.001f);
+  for(int i=0;i<12;++i)sendFrame(time+=20);
+  assert(!codelabDriveTimed && codelabDriveValues[0]==0);
+  codelabDrivePercent(0,-40,0);sendFrame(time+=20);
+  assert(std::fabs(codelabDriveValues[1]+0.4f)<0.001f);
+  codelabDriveStop();sendFrame(time+=20);assert(codelabDriveValues[1]==0);
+  sendFrame(time+=20,1);sendFrame(time+=20,1);assert(robot4wd.motorPwm(0)<0);
+  sendFrame(time+=20,1|(1U<<8)|(1U<<9));assert(robot4wd.motorPwm(0)<0);
+  sendFrame(time+=20);sendFrame(time+=20);assert(robot4wd.motorPwm(0)==0);
+  codelabDriveForTime(0,0,60,1000,time);sendFrame(time+=20);
+  for(int i=0;i<14;++i){clockMs=time+=20;loop();}
+  assert(codelabScheduler.state()==codelab::v2::LifecycleState::RUN);
+  assert(codelabDriveMode==0 && !codelabDriveTimed && robot4wd.motorPwm(0)==0);
   return 0;
 }
 `;
@@ -599,81 +576,25 @@ static void sendFrame(uint32_t nowMs, uint32_t buttons = 0, bool connected = tru
 }
 
 int main() {
-  Wire.report = {};
-  clockMs = 2000;
-  setup();
-  // During setup() and before PS4 ARM, startHat must NOT have executed:
-  assert(codelabScheduler.state() == codelab::v2::LifecycleState::READY);
-  assert(speed == 0);
-  assert(steps == 0);
-  assert(codelabLogCount == 0);
 
-  // Frame 1 (2310): baselineSeen_; Frame 2 (2330): first accepted neutral frame (links Ps4ControlMapping);
-  // Frame 3 (2350): OPTIONS rising edge clears startup link fault; Frame 4 (2370): armAfterClear_ arms RobotController;
-  // Frame 5 (2390): codelabSchedulerLoop sees controllerArmed() and enters RUN, executing step 1 of startHat!
-  sendFrame(2310);
-  sendFrame(2330);
-  sendFrame(2350, 1U << 9);
-  sendFrame(2370);
-  sendFrame(2390);
-  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
-  assert(speed == 50);
-
-  // Next tick runs step 2 of startHat (logs "boot")
-  char msg[64] = {};
-  sendFrame(2410);
-  assert(codelabPopLogMessage(msg, sizeof(msg)));
-  assert(std::strcmp(msg, "boot") == 0);
-  assert(!codelabPopLogMessage(msg, sizeof(msg)));
-
-  // Next tick runs step 3 of startHat (200ms timer WAIT starting at 2430 -> deadline 2630)
-  sendFrame(2430);
-  // Before 200ms elapses (at t=2550ms), speed is still 50 across ticks
-  sendFrame(2550);
-  assert(speed == 50);
-
-  // At t=2640ms, timer WAIT finishes: speed += 10 -> 60; next tick logs "60"
-  sendFrame(2640);
-  assert(speed == 60);
-  sendFrame(2660);
-  assert(codelabPopLogMessage(msg, sizeof(msg)));
-  assert(std::strcmp(msg, "60") == 0);
-
-  // Press CROSS (bit 0): outer condition (speed / 2 > 25 => 30 > 25) is true, inner (steps == 0) is true -> steps = 1, motor 0 runs at 60%
-  sendFrame(2680, 1U << 0);
-  sendFrame(2700, 1U << 0);
-  sendFrame(2720, 1U << 0);
-  sendFrame(2740, 1U << 0);
-  sendFrame(2760, 0);
-  assert(steps == 1);
-
-  // Press CROSS again: inner (steps == 0) is false -> else branch runs: steps += 10 -> 11, motor 0 runs at 30%
-  sendFrame(2780, 1U << 0);
-  sendFrame(2800, 1U << 0);
-  sendFrame(2820, 1U << 0);
-  sendFrame(2840, 1U << 0);
-  sendFrame(2860, 0);
-  assert(steps == 11);
-
-  // Verify bounded logging drops after CODELAB_LOG_CAPACITY (8) without blocking
-  for (size_t i = 0; i < 10; ++i) codelabLogMessage("msg");
-  assert(codelabLogCount == CODELAB_LOG_CAPACITY);
-  assert(codelabLogDrops == 2);
-
-  // Stop via SHARE (bit 8) -> returns to READY; then re-arm with OPTIONS (bit 9) -> new RUN resets variables and log queue!
-  sendFrame(2880, 1U << 8);
-  assert(codelabScheduler.state() == codelab::v2::LifecycleState::READY);
-  sendFrame(2900, 0);
-  sendFrame(2920, 1U << 9);
-  sendFrame(2940, 0);
-  assert(codelabScheduler.state() == codelab::v2::LifecycleState::RUN);
-  // On the new RUN, steps was reset to 0 and startHat ran its first statement (setting speed = 50)
-  assert(steps == 0);
-  assert(speed == 50);
-  assert(codelabLogDrops == 0);
-  sendFrame(2960, 0);
-  assert(codelabPopLogMessage(msg, sizeof(msg)));
-  assert(std::strcmp(msg, "boot") == 0);
+  clockMs=2000; Wire.report={}; setup(); uint32_t time=clockMs;
+  assert(speed==0 && steps==0);
+  for(int i=0;i<40;++i)sendFrame(time+=20);
+  assert(speed==60 && steps==0);
+  char msg[64]={};assert(codelabPopLogMessage(msg,sizeof(msg)) && std::strcmp(msg,"boot")==0);
+  assert(codelabPopLogMessage(msg,sizeof(msg)) && std::strcmp(msg,"60")==0);
+  for(int i=0;i<5;++i)sendFrame(time+=20,1);
+  sendFrame(time+=20);assert(steps==1);
+  for(int i=0;i<5;++i)sendFrame(time+=20,1);
+  sendFrame(time+=20);assert(steps==11);
+  for(size_t i=0;i<10;++i)codelabLogMessage("msg");
+  assert(codelabLogCount==CODELAB_LOG_CAPACITY && codelabLogDrops==2);
+  sendFrame(time+=20,(1U<<8)|(1U<<9));
+  assert(codelabScheduler.state()==codelab::v2::LifecycleState::RUN && speed==60 && steps==11);
+  assert(codelabLogDrops==2);
+  for(int i=0;i<14;++i){clockMs=time+=20;loop();}
+  assert(codelabScheduler.state()==codelab::v2::LifecycleState::RUN && speed==60 && steps==11);
+  assert(robot4wd.motorPwm(0)==0);
   return 0;
 }
 `;

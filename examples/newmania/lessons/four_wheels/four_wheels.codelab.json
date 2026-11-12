@@ -1,0 +1,579 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Bài 04 — Di chuyển 4 bánh cơ bản",
+    "boardId": "newmania-fast100-4wd",
+    "programModel": "newmania-v1",
+    "editorMode": "beginner",
+    "deviceConfigs": {
+      "newmania-fast100-4wd": {
+        "version": 1,
+        "motors": [
+          {
+            "id": "motor-1",
+            "name": "Motor 1",
+            "port": 1,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-2",
+            "name": "Motor 2",
+            "port": 2,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-3",
+            "name": "Motor 3",
+            "port": 3,
+            "reversed": false,
+            "enabled": true
+          },
+          {
+            "id": "motor-4",
+            "name": "Motor 4",
+            "port": 4,
+            "reversed": false,
+            "enabled": true
+          }
+        ],
+        "drivetrain": {
+          "wheels": [
+            "motor-1",
+            "motor-2",
+            "motor-3",
+            "motor-4"
+          ],
+          "limit": 100
+        },
+        "controller": {
+          "enabled": true,
+          "blink": true
+        }
+      }
+    },
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "newmania_design_program",
+            "id": "four_wheels-50",
+            "fields": {},
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "newmania_design_ps4_connect",
+                  "id": "four_wheels-48",
+                  "fields": {},
+                  "next": {
+                    "block": {
+                      "type": "newmania_design_forever",
+                      "id": "four_wheels-49",
+                      "fields": {},
+                      "inputs": {
+                        "DO": {
+                          "block": {
+                            "type": "controls_if",
+                            "id": "four_wheels-47",
+                            "fields": {},
+                            "inputs": {
+                              "IF0": {
+                                "block": {
+                                  "type": "newmania_design_ps4_button",
+                                  "id": "four_wheels-0",
+                                  "fields": {
+                                    "BUTTON": "13",
+                                    "STATE": "HELD"
+                                  }
+                                }
+                              },
+                              "DO0": {
+                                "block": {
+                                  "type": "newmania_design_robot_motor_power",
+                                  "id": "four_wheels-2",
+                                  "fields": {
+                                    "MOTOR": "motor-1"
+                                  },
+                                  "inputs": {
+                                    "POWER": {
+                                      "block": {
+                                        "type": "math_number",
+                                        "id": "four_wheels-1",
+                                        "fields": {
+                                          "NUM": 30
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "next": {
+                                    "block": {
+                                      "type": "newmania_design_robot_motor_power",
+                                      "id": "four_wheels-4",
+                                      "fields": {
+                                        "MOTOR": "motor-2"
+                                      },
+                                      "inputs": {
+                                        "POWER": {
+                                          "block": {
+                                            "type": "math_number",
+                                            "id": "four_wheels-3",
+                                            "fields": {
+                                              "NUM": 30
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "next": {
+                                        "block": {
+                                          "type": "newmania_design_robot_motor_power",
+                                          "id": "four_wheels-6",
+                                          "fields": {
+                                            "MOTOR": "motor-3"
+                                          },
+                                          "inputs": {
+                                            "POWER": {
+                                              "block": {
+                                                "type": "math_number",
+                                                "id": "four_wheels-5",
+                                                "fields": {
+                                                  "NUM": 30
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "next": {
+                                            "block": {
+                                              "type": "newmania_design_robot_motor_power",
+                                              "id": "four_wheels-8",
+                                              "fields": {
+                                                "MOTOR": "motor-4"
+                                              },
+                                              "inputs": {
+                                                "POWER": {
+                                                  "block": {
+                                                    "type": "math_number",
+                                                    "id": "four_wheels-7",
+                                                    "fields": {
+                                                      "NUM": 30
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "ELSE": {
+                                "block": {
+                                  "type": "controls_if",
+                                  "id": "four_wheels-46",
+                                  "fields": {},
+                                  "inputs": {
+                                    "IF0": {
+                                      "block": {
+                                        "type": "newmania_design_ps4_button",
+                                        "id": "four_wheels-9",
+                                        "fields": {
+                                          "BUTTON": "14",
+                                          "STATE": "HELD"
+                                        }
+                                      }
+                                    },
+                                    "DO0": {
+                                      "block": {
+                                        "type": "newmania_design_robot_motor_power",
+                                        "id": "four_wheels-11",
+                                        "fields": {
+                                          "MOTOR": "motor-1"
+                                        },
+                                        "inputs": {
+                                          "POWER": {
+                                            "block": {
+                                              "type": "math_number",
+                                              "id": "four_wheels-10",
+                                              "fields": {
+                                                "NUM": -30
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "next": {
+                                          "block": {
+                                            "type": "newmania_design_robot_motor_power",
+                                            "id": "four_wheels-13",
+                                            "fields": {
+                                              "MOTOR": "motor-2"
+                                            },
+                                            "inputs": {
+                                              "POWER": {
+                                                "block": {
+                                                  "type": "math_number",
+                                                  "id": "four_wheels-12",
+                                                  "fields": {
+                                                    "NUM": -30
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "next": {
+                                              "block": {
+                                                "type": "newmania_design_robot_motor_power",
+                                                "id": "four_wheels-15",
+                                                "fields": {
+                                                  "MOTOR": "motor-3"
+                                                },
+                                                "inputs": {
+                                                  "POWER": {
+                                                    "block": {
+                                                      "type": "math_number",
+                                                      "id": "four_wheels-14",
+                                                      "fields": {
+                                                        "NUM": -30
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "next": {
+                                                  "block": {
+                                                    "type": "newmania_design_robot_motor_power",
+                                                    "id": "four_wheels-17",
+                                                    "fields": {
+                                                      "MOTOR": "motor-4"
+                                                    },
+                                                    "inputs": {
+                                                      "POWER": {
+                                                        "block": {
+                                                          "type": "math_number",
+                                                          "id": "four_wheels-16",
+                                                          "fields": {
+                                                            "NUM": -30
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "ELSE": {
+                                      "block": {
+                                        "type": "controls_if",
+                                        "id": "four_wheels-45",
+                                        "fields": {},
+                                        "inputs": {
+                                          "IF0": {
+                                            "block": {
+                                              "type": "newmania_design_ps4_button",
+                                              "id": "four_wheels-18",
+                                              "fields": {
+                                                "BUTTON": "15",
+                                                "STATE": "HELD"
+                                              }
+                                            }
+                                          },
+                                          "DO0": {
+                                            "block": {
+                                              "type": "newmania_design_robot_motor_power",
+                                              "id": "four_wheels-20",
+                                              "fields": {
+                                                "MOTOR": "motor-1"
+                                              },
+                                              "inputs": {
+                                                "POWER": {
+                                                  "block": {
+                                                    "type": "math_number",
+                                                    "id": "four_wheels-19",
+                                                    "fields": {
+                                                      "NUM": -30
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "next": {
+                                                "block": {
+                                                  "type": "newmania_design_robot_motor_power",
+                                                  "id": "four_wheels-22",
+                                                  "fields": {
+                                                    "MOTOR": "motor-2"
+                                                  },
+                                                  "inputs": {
+                                                    "POWER": {
+                                                      "block": {
+                                                        "type": "math_number",
+                                                        "id": "four_wheels-21",
+                                                        "fields": {
+                                                          "NUM": 30
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  "next": {
+                                                    "block": {
+                                                      "type": "newmania_design_robot_motor_power",
+                                                      "id": "four_wheels-24",
+                                                      "fields": {
+                                                        "MOTOR": "motor-3"
+                                                      },
+                                                      "inputs": {
+                                                        "POWER": {
+                                                          "block": {
+                                                            "type": "math_number",
+                                                            "id": "four_wheels-23",
+                                                            "fields": {
+                                                              "NUM": -30
+                                                            }
+                                                          }
+                                                        }
+                                                      },
+                                                      "next": {
+                                                        "block": {
+                                                          "type": "newmania_design_robot_motor_power",
+                                                          "id": "four_wheels-26",
+                                                          "fields": {
+                                                            "MOTOR": "motor-4"
+                                                          },
+                                                          "inputs": {
+                                                            "POWER": {
+                                                              "block": {
+                                                                "type": "math_number",
+                                                                "id": "four_wheels-25",
+                                                                "fields": {
+                                                                  "NUM": 30
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "ELSE": {
+                                            "block": {
+                                              "type": "controls_if",
+                                              "id": "four_wheels-44",
+                                              "fields": {},
+                                              "inputs": {
+                                                "IF0": {
+                                                  "block": {
+                                                    "type": "newmania_design_ps4_button",
+                                                    "id": "four_wheels-27",
+                                                    "fields": {
+                                                      "BUTTON": "16",
+                                                      "STATE": "HELD"
+                                                    }
+                                                  }
+                                                },
+                                                "DO0": {
+                                                  "block": {
+                                                    "type": "newmania_design_robot_motor_power",
+                                                    "id": "four_wheels-29",
+                                                    "fields": {
+                                                      "MOTOR": "motor-1"
+                                                    },
+                                                    "inputs": {
+                                                      "POWER": {
+                                                        "block": {
+                                                          "type": "math_number",
+                                                          "id": "four_wheels-28",
+                                                          "fields": {
+                                                            "NUM": 30
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    "next": {
+                                                      "block": {
+                                                        "type": "newmania_design_robot_motor_power",
+                                                        "id": "four_wheels-31",
+                                                        "fields": {
+                                                          "MOTOR": "motor-2"
+                                                        },
+                                                        "inputs": {
+                                                          "POWER": {
+                                                            "block": {
+                                                              "type": "math_number",
+                                                              "id": "four_wheels-30",
+                                                              "fields": {
+                                                                "NUM": -30
+                                                              }
+                                                            }
+                                                          }
+                                                        },
+                                                        "next": {
+                                                          "block": {
+                                                            "type": "newmania_design_robot_motor_power",
+                                                            "id": "four_wheels-33",
+                                                            "fields": {
+                                                              "MOTOR": "motor-3"
+                                                            },
+                                                            "inputs": {
+                                                              "POWER": {
+                                                                "block": {
+                                                                  "type": "math_number",
+                                                                  "id": "four_wheels-32",
+                                                                  "fields": {
+                                                                    "NUM": 30
+                                                                  }
+                                                                }
+                                                              }
+                                                            },
+                                                            "next": {
+                                                              "block": {
+                                                                "type": "newmania_design_robot_motor_power",
+                                                                "id": "four_wheels-35",
+                                                                "fields": {
+                                                                  "MOTOR": "motor-4"
+                                                                },
+                                                                "inputs": {
+                                                                  "POWER": {
+                                                                    "block": {
+                                                                      "type": "math_number",
+                                                                      "id": "four_wheels-34",
+                                                                      "fields": {
+                                                                        "NUM": -30
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "ELSE": {
+                                                  "block": {
+                                                    "type": "newmania_design_robot_motor_power",
+                                                    "id": "four_wheels-37",
+                                                    "fields": {
+                                                      "MOTOR": "motor-1"
+                                                    },
+                                                    "inputs": {
+                                                      "POWER": {
+                                                        "block": {
+                                                          "type": "math_number",
+                                                          "id": "four_wheels-36",
+                                                          "fields": {
+                                                            "NUM": 0
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    "next": {
+                                                      "block": {
+                                                        "type": "newmania_design_robot_motor_power",
+                                                        "id": "four_wheels-39",
+                                                        "fields": {
+                                                          "MOTOR": "motor-2"
+                                                        },
+                                                        "inputs": {
+                                                          "POWER": {
+                                                            "block": {
+                                                              "type": "math_number",
+                                                              "id": "four_wheels-38",
+                                                              "fields": {
+                                                                "NUM": 0
+                                                              }
+                                                            }
+                                                          }
+                                                        },
+                                                        "next": {
+                                                          "block": {
+                                                            "type": "newmania_design_robot_motor_power",
+                                                            "id": "four_wheels-41",
+                                                            "fields": {
+                                                              "MOTOR": "motor-3"
+                                                            },
+                                                            "inputs": {
+                                                              "POWER": {
+                                                                "block": {
+                                                                  "type": "math_number",
+                                                                  "id": "four_wheels-40",
+                                                                  "fields": {
+                                                                    "NUM": 0
+                                                                  }
+                                                                }
+                                                              }
+                                                            },
+                                                            "next": {
+                                                              "block": {
+                                                                "type": "newmania_design_robot_motor_power",
+                                                                "id": "four_wheels-43",
+                                                                "fields": {
+                                                                  "MOTOR": "motor-4"
+                                                                },
+                                                                "inputs": {
+                                                                  "POWER": {
+                                                                    "block": {
+                                                                      "type": "math_number",
+                                                                      "id": "four_wheels-42",
+                                                                      "fields": {
+                                                                        "NUM": 0
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "extraState": {
+                                                "hasElse": true
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "extraState": {
+                                          "hasElse": true
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "extraState": {
+                                    "hasElse": true
+                                  }
+                                }
+                              }
+                            },
+                            "extraState": {
+                              "hasElse": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "x": 40,
+            "y": 40,
+            "deletable": false
+          }
+        ]
+      }
+    }
+  }
+}

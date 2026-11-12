@@ -46,12 +46,12 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation }) {
       const eligiblePorts = (nextPorts.ports || []).filter(item => !fast4wd || item.fast4wdCompatible);
       setPorts(eligiblePorts);
       setPort(current => eligiblePorts.some(item => item.address === current) ? current : '');
-      setMessage(nextStatus.ready ? '' : 'Chưa kết nối được công cụ phát triển.');
+      setMessage(nextStatus.ready || wasmEnabled ? '' : 'Chưa kết nối được công cụ phát triển.');
     } catch {
       setStatus(null);
       setPorts([]);
       setPort('');
-      setMessage('Chưa kết nối được công cụ phát triển.');
+      setMessage(wasmEnabled ? '' : 'Chưa kết nối được công cụ phát triển.');
     } finally {
       release();
     }

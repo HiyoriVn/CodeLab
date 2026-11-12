@@ -1,0 +1,2065 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Bài 05 — Mecanum bằng hai Joystick",
+    "boardId": "newmania-fast100-4wd",
+    "programModel": "newmania-v1",
+    "editorMode": "beginner",
+    "deviceConfigs": {
+      "newmania-fast100-4wd": {
+        "version": 1,
+        "motors": [
+          {
+            "id": "motor-1",
+            "name": "Motor 1",
+            "port": 1,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-2",
+            "name": "Motor 2",
+            "port": 2,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-3",
+            "name": "Motor 3",
+            "port": 3,
+            "reversed": false,
+            "enabled": true
+          },
+          {
+            "id": "motor-4",
+            "name": "Motor 4",
+            "port": 4,
+            "reversed": false,
+            "enabled": true
+          }
+        ],
+        "drivetrain": {
+          "wheels": [
+            "motor-1",
+            "motor-2",
+            "motor-3",
+            "motor-4"
+          ],
+          "limit": 100
+        },
+        "controller": {
+          "enabled": true,
+          "blink": true
+        }
+      }
+    },
+    "workspace": {
+      "variables": [
+        {
+          "name": "tien",
+          "id": "joystick_math-var-0"
+        },
+        {
+          "name": "xoay",
+          "id": "joystick_math-var-1"
+        },
+        {
+          "name": "ngang",
+          "id": "joystick_math-var-2"
+        },
+        {
+          "name": "m1",
+          "id": "joystick_math-var-3"
+        },
+        {
+          "name": "m2",
+          "id": "joystick_math-var-4"
+        },
+        {
+          "name": "m3",
+          "id": "joystick_math-var-5"
+        },
+        {
+          "name": "m4",
+          "id": "joystick_math-var-6"
+        },
+        {
+          "name": "dinh",
+          "id": "joystick_math-var-7"
+        }
+      ],
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "newmania_design_program",
+            "id": "joystick_math-183",
+            "fields": {},
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "newmania_design_ps4_connect",
+                  "id": "joystick_math-181",
+                  "fields": {},
+                  "next": {
+                    "block": {
+                      "type": "newmania_design_forever",
+                      "id": "joystick_math-182",
+                      "fields": {},
+                      "inputs": {
+                        "DO": {
+                          "block": {
+                            "type": "variables_set",
+                            "id": "joystick_math-1",
+                            "fields": {
+                              "VAR": {
+                                "id": "joystick_math-var-0"
+                              }
+                            },
+                            "inputs": {
+                              "VALUE": {
+                                "block": {
+                                  "type": "robot_ps4_axis",
+                                  "id": "joystick_math-0",
+                                  "fields": {
+                                    "STICK": "LEFT",
+                                    "AXIS": "1"
+                                  }
+                                }
+                              }
+                            },
+                            "next": {
+                              "block": {
+                                "type": "controls_if",
+                                "id": "joystick_math-28",
+                                "fields": {},
+                                "inputs": {
+                                  "IF0": {
+                                    "block": {
+                                      "type": "logic_compare",
+                                      "id": "joystick_math-5",
+                                      "fields": {
+                                        "OP": "LTE"
+                                      },
+                                      "inputs": {
+                                        "A": {
+                                          "block": {
+                                            "type": "math_single",
+                                            "id": "joystick_math-3",
+                                            "fields": {
+                                              "OP": "ABS"
+                                            },
+                                            "inputs": {
+                                              "NUM": {
+                                                "block": {
+                                                  "type": "variables_get",
+                                                  "id": "joystick_math-2",
+                                                  "fields": {
+                                                    "VAR": {
+                                                      "id": "joystick_math-var-0"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "B": {
+                                          "block": {
+                                            "type": "math_number",
+                                            "id": "joystick_math-4",
+                                            "fields": {
+                                              "NUM": 6
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "DO0": {
+                                    "block": {
+                                      "type": "variables_set",
+                                      "id": "joystick_math-7",
+                                      "fields": {
+                                        "VAR": {
+                                          "id": "joystick_math-var-0"
+                                        }
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "block": {
+                                            "type": "math_number",
+                                            "id": "joystick_math-6",
+                                            "fields": {
+                                              "NUM": 0
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "ELSE": {
+                                    "block": {
+                                      "type": "controls_if",
+                                      "id": "joystick_math-27",
+                                      "fields": {},
+                                      "inputs": {
+                                        "IF0": {
+                                          "block": {
+                                            "type": "logic_compare",
+                                            "id": "joystick_math-10",
+                                            "fields": {
+                                              "OP": "GT"
+                                            },
+                                            "inputs": {
+                                              "A": {
+                                                "block": {
+                                                  "type": "variables_get",
+                                                  "id": "joystick_math-8",
+                                                  "fields": {
+                                                    "VAR": {
+                                                      "id": "joystick_math-var-0"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "B": {
+                                                "block": {
+                                                  "type": "math_number",
+                                                  "id": "joystick_math-9",
+                                                  "fields": {
+                                                    "NUM": 0
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "DO0": {
+                                          "block": {
+                                            "type": "variables_set",
+                                            "id": "joystick_math-18",
+                                            "fields": {
+                                              "VAR": {
+                                                "id": "joystick_math-var-0"
+                                              }
+                                            },
+                                            "inputs": {
+                                              "VALUE": {
+                                                "block": {
+                                                  "type": "math_arithmetic",
+                                                  "id": "joystick_math-17",
+                                                  "fields": {
+                                                    "OP": "DIVIDE"
+                                                  },
+                                                  "inputs": {
+                                                    "A": {
+                                                      "block": {
+                                                        "type": "math_arithmetic",
+                                                        "id": "joystick_math-15",
+                                                        "fields": {
+                                                          "OP": "MULTIPLY"
+                                                        },
+                                                        "inputs": {
+                                                          "A": {
+                                                            "block": {
+                                                              "type": "math_arithmetic",
+                                                              "id": "joystick_math-13",
+                                                              "fields": {
+                                                                "OP": "MINUS"
+                                                              },
+                                                              "inputs": {
+                                                                "A": {
+                                                                  "block": {
+                                                                    "type": "variables_get",
+                                                                    "id": "joystick_math-11",
+                                                                    "fields": {
+                                                                      "VAR": {
+                                                                        "id": "joystick_math-var-0"
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                },
+                                                                "B": {
+                                                                  "block": {
+                                                                    "type": "math_number",
+                                                                    "id": "joystick_math-12",
+                                                                    "fields": {
+                                                                      "NUM": 6
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          },
+                                                          "B": {
+                                                            "block": {
+                                                              "type": "math_number",
+                                                              "id": "joystick_math-14",
+                                                              "fields": {
+                                                                "NUM": 100
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    "B": {
+                                                      "block": {
+                                                        "type": "math_number",
+                                                        "id": "joystick_math-16",
+                                                        "fields": {
+                                                          "NUM": 94
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "ELSE": {
+                                          "block": {
+                                            "type": "variables_set",
+                                            "id": "joystick_math-26",
+                                            "fields": {
+                                              "VAR": {
+                                                "id": "joystick_math-var-0"
+                                              }
+                                            },
+                                            "inputs": {
+                                              "VALUE": {
+                                                "block": {
+                                                  "type": "math_arithmetic",
+                                                  "id": "joystick_math-25",
+                                                  "fields": {
+                                                    "OP": "DIVIDE"
+                                                  },
+                                                  "inputs": {
+                                                    "A": {
+                                                      "block": {
+                                                        "type": "math_arithmetic",
+                                                        "id": "joystick_math-23",
+                                                        "fields": {
+                                                          "OP": "MULTIPLY"
+                                                        },
+                                                        "inputs": {
+                                                          "A": {
+                                                            "block": {
+                                                              "type": "math_arithmetic",
+                                                              "id": "joystick_math-21",
+                                                              "fields": {
+                                                                "OP": "ADD"
+                                                              },
+                                                              "inputs": {
+                                                                "A": {
+                                                                  "block": {
+                                                                    "type": "variables_get",
+                                                                    "id": "joystick_math-19",
+                                                                    "fields": {
+                                                                      "VAR": {
+                                                                        "id": "joystick_math-var-0"
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                },
+                                                                "B": {
+                                                                  "block": {
+                                                                    "type": "math_number",
+                                                                    "id": "joystick_math-20",
+                                                                    "fields": {
+                                                                      "NUM": 6
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          },
+                                                          "B": {
+                                                            "block": {
+                                                              "type": "math_number",
+                                                              "id": "joystick_math-22",
+                                                              "fields": {
+                                                                "NUM": 100
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    "B": {
+                                                      "block": {
+                                                        "type": "math_number",
+                                                        "id": "joystick_math-24",
+                                                        "fields": {
+                                                          "NUM": 94
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "extraState": {
+                                        "hasElse": true
+                                      }
+                                    }
+                                  }
+                                },
+                                "extraState": {
+                                  "hasElse": true
+                                },
+                                "next": {
+                                  "block": {
+                                    "type": "variables_set",
+                                    "id": "joystick_math-30",
+                                    "fields": {
+                                      "VAR": {
+                                        "id": "joystick_math-var-1"
+                                      }
+                                    },
+                                    "inputs": {
+                                      "VALUE": {
+                                        "block": {
+                                          "type": "robot_ps4_axis",
+                                          "id": "joystick_math-29",
+                                          "fields": {
+                                            "STICK": "LEFT",
+                                            "AXIS": "0"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "next": {
+                                      "block": {
+                                        "type": "controls_if",
+                                        "id": "joystick_math-57",
+                                        "fields": {},
+                                        "inputs": {
+                                          "IF0": {
+                                            "block": {
+                                              "type": "logic_compare",
+                                              "id": "joystick_math-34",
+                                              "fields": {
+                                                "OP": "LTE"
+                                              },
+                                              "inputs": {
+                                                "A": {
+                                                  "block": {
+                                                    "type": "math_single",
+                                                    "id": "joystick_math-32",
+                                                    "fields": {
+                                                      "OP": "ABS"
+                                                    },
+                                                    "inputs": {
+                                                      "NUM": {
+                                                        "block": {
+                                                          "type": "variables_get",
+                                                          "id": "joystick_math-31",
+                                                          "fields": {
+                                                            "VAR": {
+                                                              "id": "joystick_math-var-1"
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "B": {
+                                                  "block": {
+                                                    "type": "math_number",
+                                                    "id": "joystick_math-33",
+                                                    "fields": {
+                                                      "NUM": 6
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "DO0": {
+                                            "block": {
+                                              "type": "variables_set",
+                                              "id": "joystick_math-36",
+                                              "fields": {
+                                                "VAR": {
+                                                  "id": "joystick_math-var-1"
+                                                }
+                                              },
+                                              "inputs": {
+                                                "VALUE": {
+                                                  "block": {
+                                                    "type": "math_number",
+                                                    "id": "joystick_math-35",
+                                                    "fields": {
+                                                      "NUM": 0
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "ELSE": {
+                                            "block": {
+                                              "type": "controls_if",
+                                              "id": "joystick_math-56",
+                                              "fields": {},
+                                              "inputs": {
+                                                "IF0": {
+                                                  "block": {
+                                                    "type": "logic_compare",
+                                                    "id": "joystick_math-39",
+                                                    "fields": {
+                                                      "OP": "GT"
+                                                    },
+                                                    "inputs": {
+                                                      "A": {
+                                                        "block": {
+                                                          "type": "variables_get",
+                                                          "id": "joystick_math-37",
+                                                          "fields": {
+                                                            "VAR": {
+                                                              "id": "joystick_math-var-1"
+                                                            }
+                                                          }
+                                                        }
+                                                      },
+                                                      "B": {
+                                                        "block": {
+                                                          "type": "math_number",
+                                                          "id": "joystick_math-38",
+                                                          "fields": {
+                                                            "NUM": 0
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "DO0": {
+                                                  "block": {
+                                                    "type": "variables_set",
+                                                    "id": "joystick_math-47",
+                                                    "fields": {
+                                                      "VAR": {
+                                                        "id": "joystick_math-var-1"
+                                                      }
+                                                    },
+                                                    "inputs": {
+                                                      "VALUE": {
+                                                        "block": {
+                                                          "type": "math_arithmetic",
+                                                          "id": "joystick_math-46",
+                                                          "fields": {
+                                                            "OP": "DIVIDE"
+                                                          },
+                                                          "inputs": {
+                                                            "A": {
+                                                              "block": {
+                                                                "type": "math_arithmetic",
+                                                                "id": "joystick_math-44",
+                                                                "fields": {
+                                                                  "OP": "MULTIPLY"
+                                                                },
+                                                                "inputs": {
+                                                                  "A": {
+                                                                    "block": {
+                                                                      "type": "math_arithmetic",
+                                                                      "id": "joystick_math-42",
+                                                                      "fields": {
+                                                                        "OP": "MINUS"
+                                                                      },
+                                                                      "inputs": {
+                                                                        "A": {
+                                                                          "block": {
+                                                                            "type": "variables_get",
+                                                                            "id": "joystick_math-40",
+                                                                            "fields": {
+                                                                              "VAR": {
+                                                                                "id": "joystick_math-var-1"
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        },
+                                                                        "B": {
+                                                                          "block": {
+                                                                            "type": "math_number",
+                                                                            "id": "joystick_math-41",
+                                                                            "fields": {
+                                                                              "NUM": 6
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  },
+                                                                  "B": {
+                                                                    "block": {
+                                                                      "type": "math_number",
+                                                                      "id": "joystick_math-43",
+                                                                      "fields": {
+                                                                        "NUM": 100
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            },
+                                                            "B": {
+                                                              "block": {
+                                                                "type": "math_number",
+                                                                "id": "joystick_math-45",
+                                                                "fields": {
+                                                                  "NUM": 94
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "ELSE": {
+                                                  "block": {
+                                                    "type": "variables_set",
+                                                    "id": "joystick_math-55",
+                                                    "fields": {
+                                                      "VAR": {
+                                                        "id": "joystick_math-var-1"
+                                                      }
+                                                    },
+                                                    "inputs": {
+                                                      "VALUE": {
+                                                        "block": {
+                                                          "type": "math_arithmetic",
+                                                          "id": "joystick_math-54",
+                                                          "fields": {
+                                                            "OP": "DIVIDE"
+                                                          },
+                                                          "inputs": {
+                                                            "A": {
+                                                              "block": {
+                                                                "type": "math_arithmetic",
+                                                                "id": "joystick_math-52",
+                                                                "fields": {
+                                                                  "OP": "MULTIPLY"
+                                                                },
+                                                                "inputs": {
+                                                                  "A": {
+                                                                    "block": {
+                                                                      "type": "math_arithmetic",
+                                                                      "id": "joystick_math-50",
+                                                                      "fields": {
+                                                                        "OP": "ADD"
+                                                                      },
+                                                                      "inputs": {
+                                                                        "A": {
+                                                                          "block": {
+                                                                            "type": "variables_get",
+                                                                            "id": "joystick_math-48",
+                                                                            "fields": {
+                                                                              "VAR": {
+                                                                                "id": "joystick_math-var-1"
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        },
+                                                                        "B": {
+                                                                          "block": {
+                                                                            "type": "math_number",
+                                                                            "id": "joystick_math-49",
+                                                                            "fields": {
+                                                                              "NUM": 6
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  },
+                                                                  "B": {
+                                                                    "block": {
+                                                                      "type": "math_number",
+                                                                      "id": "joystick_math-51",
+                                                                      "fields": {
+                                                                        "NUM": 100
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            },
+                                                            "B": {
+                                                              "block": {
+                                                                "type": "math_number",
+                                                                "id": "joystick_math-53",
+                                                                "fields": {
+                                                                  "NUM": 94
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "extraState": {
+                                                "hasElse": true
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "extraState": {
+                                          "hasElse": true
+                                        },
+                                        "next": {
+                                          "block": {
+                                            "type": "variables_set",
+                                            "id": "joystick_math-59",
+                                            "fields": {
+                                              "VAR": {
+                                                "id": "joystick_math-var-2"
+                                              }
+                                            },
+                                            "inputs": {
+                                              "VALUE": {
+                                                "block": {
+                                                  "type": "robot_ps4_axis",
+                                                  "id": "joystick_math-58",
+                                                  "fields": {
+                                                    "STICK": "RIGHT",
+                                                    "AXIS": "2"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "next": {
+                                              "block": {
+                                                "type": "controls_if",
+                                                "id": "joystick_math-86",
+                                                "fields": {},
+                                                "inputs": {
+                                                  "IF0": {
+                                                    "block": {
+                                                      "type": "logic_compare",
+                                                      "id": "joystick_math-63",
+                                                      "fields": {
+                                                        "OP": "LTE"
+                                                      },
+                                                      "inputs": {
+                                                        "A": {
+                                                          "block": {
+                                                            "type": "math_single",
+                                                            "id": "joystick_math-61",
+                                                            "fields": {
+                                                              "OP": "ABS"
+                                                            },
+                                                            "inputs": {
+                                                              "NUM": {
+                                                                "block": {
+                                                                  "type": "variables_get",
+                                                                  "id": "joystick_math-60",
+                                                                  "fields": {
+                                                                    "VAR": {
+                                                                      "id": "joystick_math-var-2"
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        },
+                                                        "B": {
+                                                          "block": {
+                                                            "type": "math_number",
+                                                            "id": "joystick_math-62",
+                                                            "fields": {
+                                                              "NUM": 6
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  "DO0": {
+                                                    "block": {
+                                                      "type": "variables_set",
+                                                      "id": "joystick_math-65",
+                                                      "fields": {
+                                                        "VAR": {
+                                                          "id": "joystick_math-var-2"
+                                                        }
+                                                      },
+                                                      "inputs": {
+                                                        "VALUE": {
+                                                          "block": {
+                                                            "type": "math_number",
+                                                            "id": "joystick_math-64",
+                                                            "fields": {
+                                                              "NUM": 0
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  "ELSE": {
+                                                    "block": {
+                                                      "type": "controls_if",
+                                                      "id": "joystick_math-85",
+                                                      "fields": {},
+                                                      "inputs": {
+                                                        "IF0": {
+                                                          "block": {
+                                                            "type": "logic_compare",
+                                                            "id": "joystick_math-68",
+                                                            "fields": {
+                                                              "OP": "GT"
+                                                            },
+                                                            "inputs": {
+                                                              "A": {
+                                                                "block": {
+                                                                  "type": "variables_get",
+                                                                  "id": "joystick_math-66",
+                                                                  "fields": {
+                                                                    "VAR": {
+                                                                      "id": "joystick_math-var-2"
+                                                                    }
+                                                                  }
+                                                                }
+                                                              },
+                                                              "B": {
+                                                                "block": {
+                                                                  "type": "math_number",
+                                                                  "id": "joystick_math-67",
+                                                                  "fields": {
+                                                                    "NUM": 0
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        },
+                                                        "DO0": {
+                                                          "block": {
+                                                            "type": "variables_set",
+                                                            "id": "joystick_math-76",
+                                                            "fields": {
+                                                              "VAR": {
+                                                                "id": "joystick_math-var-2"
+                                                              }
+                                                            },
+                                                            "inputs": {
+                                                              "VALUE": {
+                                                                "block": {
+                                                                  "type": "math_arithmetic",
+                                                                  "id": "joystick_math-75",
+                                                                  "fields": {
+                                                                    "OP": "DIVIDE"
+                                                                  },
+                                                                  "inputs": {
+                                                                    "A": {
+                                                                      "block": {
+                                                                        "type": "math_arithmetic",
+                                                                        "id": "joystick_math-73",
+                                                                        "fields": {
+                                                                          "OP": "MULTIPLY"
+                                                                        },
+                                                                        "inputs": {
+                                                                          "A": {
+                                                                            "block": {
+                                                                              "type": "math_arithmetic",
+                                                                              "id": "joystick_math-71",
+                                                                              "fields": {
+                                                                                "OP": "MINUS"
+                                                                              },
+                                                                              "inputs": {
+                                                                                "A": {
+                                                                                  "block": {
+                                                                                    "type": "variables_get",
+                                                                                    "id": "joystick_math-69",
+                                                                                    "fields": {
+                                                                                      "VAR": {
+                                                                                        "id": "joystick_math-var-2"
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                },
+                                                                                "B": {
+                                                                                  "block": {
+                                                                                    "type": "math_number",
+                                                                                    "id": "joystick_math-70",
+                                                                                    "fields": {
+                                                                                      "NUM": 6
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          },
+                                                                          "B": {
+                                                                            "block": {
+                                                                              "type": "math_number",
+                                                                              "id": "joystick_math-72",
+                                                                              "fields": {
+                                                                                "NUM": 100
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "B": {
+                                                                      "block": {
+                                                                        "type": "math_number",
+                                                                        "id": "joystick_math-74",
+                                                                        "fields": {
+                                                                          "NUM": 94
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        },
+                                                        "ELSE": {
+                                                          "block": {
+                                                            "type": "variables_set",
+                                                            "id": "joystick_math-84",
+                                                            "fields": {
+                                                              "VAR": {
+                                                                "id": "joystick_math-var-2"
+                                                              }
+                                                            },
+                                                            "inputs": {
+                                                              "VALUE": {
+                                                                "block": {
+                                                                  "type": "math_arithmetic",
+                                                                  "id": "joystick_math-83",
+                                                                  "fields": {
+                                                                    "OP": "DIVIDE"
+                                                                  },
+                                                                  "inputs": {
+                                                                    "A": {
+                                                                      "block": {
+                                                                        "type": "math_arithmetic",
+                                                                        "id": "joystick_math-81",
+                                                                        "fields": {
+                                                                          "OP": "MULTIPLY"
+                                                                        },
+                                                                        "inputs": {
+                                                                          "A": {
+                                                                            "block": {
+                                                                              "type": "math_arithmetic",
+                                                                              "id": "joystick_math-79",
+                                                                              "fields": {
+                                                                                "OP": "ADD"
+                                                                              },
+                                                                              "inputs": {
+                                                                                "A": {
+                                                                                  "block": {
+                                                                                    "type": "variables_get",
+                                                                                    "id": "joystick_math-77",
+                                                                                    "fields": {
+                                                                                      "VAR": {
+                                                                                        "id": "joystick_math-var-2"
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                },
+                                                                                "B": {
+                                                                                  "block": {
+                                                                                    "type": "math_number",
+                                                                                    "id": "joystick_math-78",
+                                                                                    "fields": {
+                                                                                      "NUM": 6
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          },
+                                                                          "B": {
+                                                                            "block": {
+                                                                              "type": "math_number",
+                                                                              "id": "joystick_math-80",
+                                                                              "fields": {
+                                                                                "NUM": 100
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "B": {
+                                                                      "block": {
+                                                                        "type": "math_number",
+                                                                        "id": "joystick_math-82",
+                                                                        "fields": {
+                                                                          "NUM": 94
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      },
+                                                      "extraState": {
+                                                        "hasElse": true
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "extraState": {
+                                                  "hasElse": true
+                                                },
+                                                "next": {
+                                                  "block": {
+                                                    "type": "variables_set",
+                                                    "id": "joystick_math-92",
+                                                    "fields": {
+                                                      "VAR": {
+                                                        "id": "joystick_math-var-3"
+                                                      }
+                                                    },
+                                                    "inputs": {
+                                                      "VALUE": {
+                                                        "block": {
+                                                          "type": "math_arithmetic",
+                                                          "id": "joystick_math-91",
+                                                          "fields": {
+                                                            "OP": "MINUS"
+                                                          },
+                                                          "inputs": {
+                                                            "A": {
+                                                              "block": {
+                                                                "type": "math_arithmetic",
+                                                                "id": "joystick_math-89",
+                                                                "fields": {
+                                                                  "OP": "MINUS"
+                                                                },
+                                                                "inputs": {
+                                                                  "A": {
+                                                                    "block": {
+                                                                      "type": "variables_get",
+                                                                      "id": "joystick_math-87",
+                                                                      "fields": {
+                                                                        "VAR": {
+                                                                          "id": "joystick_math-var-0"
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  },
+                                                                  "B": {
+                                                                    "block": {
+                                                                      "type": "variables_get",
+                                                                      "id": "joystick_math-88",
+                                                                      "fields": {
+                                                                        "VAR": {
+                                                                          "id": "joystick_math-var-2"
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            },
+                                                            "B": {
+                                                              "block": {
+                                                                "type": "variables_get",
+                                                                "id": "joystick_math-90",
+                                                                "fields": {
+                                                                  "VAR": {
+                                                                    "id": "joystick_math-var-1"
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    "next": {
+                                                      "block": {
+                                                        "type": "variables_set",
+                                                        "id": "joystick_math-98",
+                                                        "fields": {
+                                                          "VAR": {
+                                                            "id": "joystick_math-var-4"
+                                                          }
+                                                        },
+                                                        "inputs": {
+                                                          "VALUE": {
+                                                            "block": {
+                                                              "type": "math_arithmetic",
+                                                              "id": "joystick_math-97",
+                                                              "fields": {
+                                                                "OP": "ADD"
+                                                              },
+                                                              "inputs": {
+                                                                "A": {
+                                                                  "block": {
+                                                                    "type": "math_arithmetic",
+                                                                    "id": "joystick_math-95",
+                                                                    "fields": {
+                                                                      "OP": "ADD"
+                                                                    },
+                                                                    "inputs": {
+                                                                      "A": {
+                                                                        "block": {
+                                                                          "type": "variables_get",
+                                                                          "id": "joystick_math-93",
+                                                                          "fields": {
+                                                                            "VAR": {
+                                                                              "id": "joystick_math-var-0"
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      },
+                                                                      "B": {
+                                                                        "block": {
+                                                                          "type": "variables_get",
+                                                                          "id": "joystick_math-94",
+                                                                          "fields": {
+                                                                            "VAR": {
+                                                                              "id": "joystick_math-var-2"
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                },
+                                                                "B": {
+                                                                  "block": {
+                                                                    "type": "variables_get",
+                                                                    "id": "joystick_math-96",
+                                                                    "fields": {
+                                                                      "VAR": {
+                                                                        "id": "joystick_math-var-1"
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        },
+                                                        "next": {
+                                                          "block": {
+                                                            "type": "variables_set",
+                                                            "id": "joystick_math-104",
+                                                            "fields": {
+                                                              "VAR": {
+                                                                "id": "joystick_math-var-5"
+                                                              }
+                                                            },
+                                                            "inputs": {
+                                                              "VALUE": {
+                                                                "block": {
+                                                                  "type": "math_arithmetic",
+                                                                  "id": "joystick_math-103",
+                                                                  "fields": {
+                                                                    "OP": "MINUS"
+                                                                  },
+                                                                  "inputs": {
+                                                                    "A": {
+                                                                      "block": {
+                                                                        "type": "math_arithmetic",
+                                                                        "id": "joystick_math-101",
+                                                                        "fields": {
+                                                                          "OP": "ADD"
+                                                                        },
+                                                                        "inputs": {
+                                                                          "A": {
+                                                                            "block": {
+                                                                              "type": "variables_get",
+                                                                              "id": "joystick_math-99",
+                                                                              "fields": {
+                                                                                "VAR": {
+                                                                                  "id": "joystick_math-var-0"
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          },
+                                                                          "B": {
+                                                                            "block": {
+                                                                              "type": "variables_get",
+                                                                              "id": "joystick_math-100",
+                                                                              "fields": {
+                                                                                "VAR": {
+                                                                                  "id": "joystick_math-var-2"
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "B": {
+                                                                      "block": {
+                                                                        "type": "variables_get",
+                                                                        "id": "joystick_math-102",
+                                                                        "fields": {
+                                                                          "VAR": {
+                                                                            "id": "joystick_math-var-1"
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            },
+                                                            "next": {
+                                                              "block": {
+                                                                "type": "variables_set",
+                                                                "id": "joystick_math-110",
+                                                                "fields": {
+                                                                  "VAR": {
+                                                                    "id": "joystick_math-var-6"
+                                                                  }
+                                                                },
+                                                                "inputs": {
+                                                                  "VALUE": {
+                                                                    "block": {
+                                                                      "type": "math_arithmetic",
+                                                                      "id": "joystick_math-109",
+                                                                      "fields": {
+                                                                        "OP": "ADD"
+                                                                      },
+                                                                      "inputs": {
+                                                                        "A": {
+                                                                          "block": {
+                                                                            "type": "math_arithmetic",
+                                                                            "id": "joystick_math-107",
+                                                                            "fields": {
+                                                                              "OP": "MINUS"
+                                                                            },
+                                                                            "inputs": {
+                                                                              "A": {
+                                                                                "block": {
+                                                                                  "type": "variables_get",
+                                                                                  "id": "joystick_math-105",
+                                                                                  "fields": {
+                                                                                    "VAR": {
+                                                                                      "id": "joystick_math-var-0"
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              },
+                                                                              "B": {
+                                                                                "block": {
+                                                                                  "type": "variables_get",
+                                                                                  "id": "joystick_math-106",
+                                                                                  "fields": {
+                                                                                    "VAR": {
+                                                                                      "id": "joystick_math-var-2"
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        },
+                                                                        "B": {
+                                                                          "block": {
+                                                                            "type": "variables_get",
+                                                                            "id": "joystick_math-108",
+                                                                            "fields": {
+                                                                              "VAR": {
+                                                                                "id": "joystick_math-var-1"
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                },
+                                                                "next": {
+                                                                  "block": {
+                                                                    "type": "variables_set",
+                                                                    "id": "joystick_math-112",
+                                                                    "fields": {
+                                                                      "VAR": {
+                                                                        "id": "joystick_math-var-7"
+                                                                      }
+                                                                    },
+                                                                    "inputs": {
+                                                                      "VALUE": {
+                                                                        "block": {
+                                                                          "type": "math_number",
+                                                                          "id": "joystick_math-111",
+                                                                          "fields": {
+                                                                            "NUM": 100
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "next": {
+                                                                      "block": {
+                                                                        "type": "controls_if",
+                                                                        "id": "joystick_math-120",
+                                                                        "fields": {},
+                                                                        "inputs": {
+                                                                          "IF0": {
+                                                                            "block": {
+                                                                              "type": "logic_compare",
+                                                                              "id": "joystick_math-116",
+                                                                              "fields": {
+                                                                                "OP": "GT"
+                                                                              },
+                                                                              "inputs": {
+                                                                                "A": {
+                                                                                  "block": {
+                                                                                    "type": "math_single",
+                                                                                    "id": "joystick_math-114",
+                                                                                    "fields": {
+                                                                                      "OP": "ABS"
+                                                                                    },
+                                                                                    "inputs": {
+                                                                                      "NUM": {
+                                                                                        "block": {
+                                                                                          "type": "variables_get",
+                                                                                          "id": "joystick_math-113",
+                                                                                          "fields": {
+                                                                                            "VAR": {
+                                                                                              "id": "joystick_math-var-3"
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                },
+                                                                                "B": {
+                                                                                  "block": {
+                                                                                    "type": "variables_get",
+                                                                                    "id": "joystick_math-115",
+                                                                                    "fields": {
+                                                                                      "VAR": {
+                                                                                        "id": "joystick_math-var-7"
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          },
+                                                                          "DO0": {
+                                                                            "block": {
+                                                                              "type": "variables_set",
+                                                                              "id": "joystick_math-119",
+                                                                              "fields": {
+                                                                                "VAR": {
+                                                                                  "id": "joystick_math-var-7"
+                                                                                }
+                                                                              },
+                                                                              "inputs": {
+                                                                                "VALUE": {
+                                                                                  "block": {
+                                                                                    "type": "math_single",
+                                                                                    "id": "joystick_math-118",
+                                                                                    "fields": {
+                                                                                      "OP": "ABS"
+                                                                                    },
+                                                                                    "inputs": {
+                                                                                      "NUM": {
+                                                                                        "block": {
+                                                                                          "type": "variables_get",
+                                                                                          "id": "joystick_math-117",
+                                                                                          "fields": {
+                                                                                            "VAR": {
+                                                                                              "id": "joystick_math-var-3"
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        },
+                                                                        "next": {
+                                                                          "block": {
+                                                                            "type": "controls_if",
+                                                                            "id": "joystick_math-128",
+                                                                            "fields": {},
+                                                                            "inputs": {
+                                                                              "IF0": {
+                                                                                "block": {
+                                                                                  "type": "logic_compare",
+                                                                                  "id": "joystick_math-124",
+                                                                                  "fields": {
+                                                                                    "OP": "GT"
+                                                                                  },
+                                                                                  "inputs": {
+                                                                                    "A": {
+                                                                                      "block": {
+                                                                                        "type": "math_single",
+                                                                                        "id": "joystick_math-122",
+                                                                                        "fields": {
+                                                                                          "OP": "ABS"
+                                                                                        },
+                                                                                        "inputs": {
+                                                                                          "NUM": {
+                                                                                            "block": {
+                                                                                              "type": "variables_get",
+                                                                                              "id": "joystick_math-121",
+                                                                                              "fields": {
+                                                                                                "VAR": {
+                                                                                                  "id": "joystick_math-var-4"
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    },
+                                                                                    "B": {
+                                                                                      "block": {
+                                                                                        "type": "variables_get",
+                                                                                        "id": "joystick_math-123",
+                                                                                        "fields": {
+                                                                                          "VAR": {
+                                                                                            "id": "joystick_math-var-7"
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              },
+                                                                              "DO0": {
+                                                                                "block": {
+                                                                                  "type": "variables_set",
+                                                                                  "id": "joystick_math-127",
+                                                                                  "fields": {
+                                                                                    "VAR": {
+                                                                                      "id": "joystick_math-var-7"
+                                                                                    }
+                                                                                  },
+                                                                                  "inputs": {
+                                                                                    "VALUE": {
+                                                                                      "block": {
+                                                                                        "type": "math_single",
+                                                                                        "id": "joystick_math-126",
+                                                                                        "fields": {
+                                                                                          "OP": "ABS"
+                                                                                        },
+                                                                                        "inputs": {
+                                                                                          "NUM": {
+                                                                                            "block": {
+                                                                                              "type": "variables_get",
+                                                                                              "id": "joystick_math-125",
+                                                                                              "fields": {
+                                                                                                "VAR": {
+                                                                                                  "id": "joystick_math-var-4"
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            },
+                                                                            "next": {
+                                                                              "block": {
+                                                                                "type": "controls_if",
+                                                                                "id": "joystick_math-136",
+                                                                                "fields": {},
+                                                                                "inputs": {
+                                                                                  "IF0": {
+                                                                                    "block": {
+                                                                                      "type": "logic_compare",
+                                                                                      "id": "joystick_math-132",
+                                                                                      "fields": {
+                                                                                        "OP": "GT"
+                                                                                      },
+                                                                                      "inputs": {
+                                                                                        "A": {
+                                                                                          "block": {
+                                                                                            "type": "math_single",
+                                                                                            "id": "joystick_math-130",
+                                                                                            "fields": {
+                                                                                              "OP": "ABS"
+                                                                                            },
+                                                                                            "inputs": {
+                                                                                              "NUM": {
+                                                                                                "block": {
+                                                                                                  "type": "variables_get",
+                                                                                                  "id": "joystick_math-129",
+                                                                                                  "fields": {
+                                                                                                    "VAR": {
+                                                                                                      "id": "joystick_math-var-5"
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        },
+                                                                                        "B": {
+                                                                                          "block": {
+                                                                                            "type": "variables_get",
+                                                                                            "id": "joystick_math-131",
+                                                                                            "fields": {
+                                                                                              "VAR": {
+                                                                                                "id": "joystick_math-var-7"
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  },
+                                                                                  "DO0": {
+                                                                                    "block": {
+                                                                                      "type": "variables_set",
+                                                                                      "id": "joystick_math-135",
+                                                                                      "fields": {
+                                                                                        "VAR": {
+                                                                                          "id": "joystick_math-var-7"
+                                                                                        }
+                                                                                      },
+                                                                                      "inputs": {
+                                                                                        "VALUE": {
+                                                                                          "block": {
+                                                                                            "type": "math_single",
+                                                                                            "id": "joystick_math-134",
+                                                                                            "fields": {
+                                                                                              "OP": "ABS"
+                                                                                            },
+                                                                                            "inputs": {
+                                                                                              "NUM": {
+                                                                                                "block": {
+                                                                                                  "type": "variables_get",
+                                                                                                  "id": "joystick_math-133",
+                                                                                                  "fields": {
+                                                                                                    "VAR": {
+                                                                                                      "id": "joystick_math-var-5"
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                },
+                                                                                "next": {
+                                                                                  "block": {
+                                                                                    "type": "controls_if",
+                                                                                    "id": "joystick_math-144",
+                                                                                    "fields": {},
+                                                                                    "inputs": {
+                                                                                      "IF0": {
+                                                                                        "block": {
+                                                                                          "type": "logic_compare",
+                                                                                          "id": "joystick_math-140",
+                                                                                          "fields": {
+                                                                                            "OP": "GT"
+                                                                                          },
+                                                                                          "inputs": {
+                                                                                            "A": {
+                                                                                              "block": {
+                                                                                                "type": "math_single",
+                                                                                                "id": "joystick_math-138",
+                                                                                                "fields": {
+                                                                                                  "OP": "ABS"
+                                                                                                },
+                                                                                                "inputs": {
+                                                                                                  "NUM": {
+                                                                                                    "block": {
+                                                                                                      "type": "variables_get",
+                                                                                                      "id": "joystick_math-137",
+                                                                                                      "fields": {
+                                                                                                        "VAR": {
+                                                                                                          "id": "joystick_math-var-6"
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            },
+                                                                                            "B": {
+                                                                                              "block": {
+                                                                                                "type": "variables_get",
+                                                                                                "id": "joystick_math-139",
+                                                                                                "fields": {
+                                                                                                  "VAR": {
+                                                                                                    "id": "joystick_math-var-7"
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      },
+                                                                                      "DO0": {
+                                                                                        "block": {
+                                                                                          "type": "variables_set",
+                                                                                          "id": "joystick_math-143",
+                                                                                          "fields": {
+                                                                                            "VAR": {
+                                                                                              "id": "joystick_math-var-7"
+                                                                                            }
+                                                                                          },
+                                                                                          "inputs": {
+                                                                                            "VALUE": {
+                                                                                              "block": {
+                                                                                                "type": "math_single",
+                                                                                                "id": "joystick_math-142",
+                                                                                                "fields": {
+                                                                                                  "OP": "ABS"
+                                                                                                },
+                                                                                                "inputs": {
+                                                                                                  "NUM": {
+                                                                                                    "block": {
+                                                                                                      "type": "variables_get",
+                                                                                                      "id": "joystick_math-141",
+                                                                                                      "fields": {
+                                                                                                        "VAR": {
+                                                                                                          "id": "joystick_math-var-6"
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    },
+                                                                                    "next": {
+                                                                                      "block": {
+                                                                                        "type": "newmania_design_robot_motor_power",
+                                                                                        "id": "joystick_math-153",
+                                                                                        "fields": {
+                                                                                          "MOTOR": "motor-1"
+                                                                                        },
+                                                                                        "inputs": {
+                                                                                          "POWER": {
+                                                                                            "block": {
+                                                                                              "type": "math_constrain",
+                                                                                              "id": "joystick_math-152",
+                                                                                              "fields": {},
+                                                                                              "inputs": {
+                                                                                                "VALUE": {
+                                                                                                  "block": {
+                                                                                                    "type": "math_arithmetic",
+                                                                                                    "id": "joystick_math-149",
+                                                                                                    "fields": {
+                                                                                                      "OP": "MULTIPLY"
+                                                                                                    },
+                                                                                                    "inputs": {
+                                                                                                      "A": {
+                                                                                                        "block": {
+                                                                                                          "type": "math_arithmetic",
+                                                                                                          "id": "joystick_math-147",
+                                                                                                          "fields": {
+                                                                                                            "OP": "DIVIDE"
+                                                                                                          },
+                                                                                                          "inputs": {
+                                                                                                            "A": {
+                                                                                                              "block": {
+                                                                                                                "type": "variables_get",
+                                                                                                                "id": "joystick_math-145",
+                                                                                                                "fields": {
+                                                                                                                  "VAR": {
+                                                                                                                    "id": "joystick_math-var-3"
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            },
+                                                                                                            "B": {
+                                                                                                              "block": {
+                                                                                                                "type": "variables_get",
+                                                                                                                "id": "joystick_math-146",
+                                                                                                                "fields": {
+                                                                                                                  "VAR": {
+                                                                                                                    "id": "joystick_math-var-7"
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      },
+                                                                                                      "B": {
+                                                                                                        "block": {
+                                                                                                          "type": "math_number",
+                                                                                                          "id": "joystick_math-148",
+                                                                                                          "fields": {
+                                                                                                            "NUM": 100
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                },
+                                                                                                "LOW": {
+                                                                                                  "block": {
+                                                                                                    "type": "math_number",
+                                                                                                    "id": "joystick_math-150",
+                                                                                                    "fields": {
+                                                                                                      "NUM": -100
+                                                                                                    }
+                                                                                                  }
+                                                                                                },
+                                                                                                "HIGH": {
+                                                                                                  "block": {
+                                                                                                    "type": "math_number",
+                                                                                                    "id": "joystick_math-151",
+                                                                                                    "fields": {
+                                                                                                      "NUM": 100
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        },
+                                                                                        "next": {
+                                                                                          "block": {
+                                                                                            "type": "newmania_design_robot_motor_power",
+                                                                                            "id": "joystick_math-162",
+                                                                                            "fields": {
+                                                                                              "MOTOR": "motor-2"
+                                                                                            },
+                                                                                            "inputs": {
+                                                                                              "POWER": {
+                                                                                                "block": {
+                                                                                                  "type": "math_constrain",
+                                                                                                  "id": "joystick_math-161",
+                                                                                                  "fields": {},
+                                                                                                  "inputs": {
+                                                                                                    "VALUE": {
+                                                                                                      "block": {
+                                                                                                        "type": "math_arithmetic",
+                                                                                                        "id": "joystick_math-158",
+                                                                                                        "fields": {
+                                                                                                          "OP": "MULTIPLY"
+                                                                                                        },
+                                                                                                        "inputs": {
+                                                                                                          "A": {
+                                                                                                            "block": {
+                                                                                                              "type": "math_arithmetic",
+                                                                                                              "id": "joystick_math-156",
+                                                                                                              "fields": {
+                                                                                                                "OP": "DIVIDE"
+                                                                                                              },
+                                                                                                              "inputs": {
+                                                                                                                "A": {
+                                                                                                                  "block": {
+                                                                                                                    "type": "variables_get",
+                                                                                                                    "id": "joystick_math-154",
+                                                                                                                    "fields": {
+                                                                                                                      "VAR": {
+                                                                                                                        "id": "joystick_math-var-4"
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                },
+                                                                                                                "B": {
+                                                                                                                  "block": {
+                                                                                                                    "type": "variables_get",
+                                                                                                                    "id": "joystick_math-155",
+                                                                                                                    "fields": {
+                                                                                                                      "VAR": {
+                                                                                                                        "id": "joystick_math-var-7"
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          },
+                                                                                                          "B": {
+                                                                                                            "block": {
+                                                                                                              "type": "math_number",
+                                                                                                              "id": "joystick_math-157",
+                                                                                                              "fields": {
+                                                                                                                "NUM": 100
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    },
+                                                                                                    "LOW": {
+                                                                                                      "block": {
+                                                                                                        "type": "math_number",
+                                                                                                        "id": "joystick_math-159",
+                                                                                                        "fields": {
+                                                                                                          "NUM": -100
+                                                                                                        }
+                                                                                                      }
+                                                                                                    },
+                                                                                                    "HIGH": {
+                                                                                                      "block": {
+                                                                                                        "type": "math_number",
+                                                                                                        "id": "joystick_math-160",
+                                                                                                        "fields": {
+                                                                                                          "NUM": 100
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            },
+                                                                                            "next": {
+                                                                                              "block": {
+                                                                                                "type": "newmania_design_robot_motor_power",
+                                                                                                "id": "joystick_math-171",
+                                                                                                "fields": {
+                                                                                                  "MOTOR": "motor-3"
+                                                                                                },
+                                                                                                "inputs": {
+                                                                                                  "POWER": {
+                                                                                                    "block": {
+                                                                                                      "type": "math_constrain",
+                                                                                                      "id": "joystick_math-170",
+                                                                                                      "fields": {},
+                                                                                                      "inputs": {
+                                                                                                        "VALUE": {
+                                                                                                          "block": {
+                                                                                                            "type": "math_arithmetic",
+                                                                                                            "id": "joystick_math-167",
+                                                                                                            "fields": {
+                                                                                                              "OP": "MULTIPLY"
+                                                                                                            },
+                                                                                                            "inputs": {
+                                                                                                              "A": {
+                                                                                                                "block": {
+                                                                                                                  "type": "math_arithmetic",
+                                                                                                                  "id": "joystick_math-165",
+                                                                                                                  "fields": {
+                                                                                                                    "OP": "DIVIDE"
+                                                                                                                  },
+                                                                                                                  "inputs": {
+                                                                                                                    "A": {
+                                                                                                                      "block": {
+                                                                                                                        "type": "variables_get",
+                                                                                                                        "id": "joystick_math-163",
+                                                                                                                        "fields": {
+                                                                                                                          "VAR": {
+                                                                                                                            "id": "joystick_math-var-5"
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      }
+                                                                                                                    },
+                                                                                                                    "B": {
+                                                                                                                      "block": {
+                                                                                                                        "type": "variables_get",
+                                                                                                                        "id": "joystick_math-164",
+                                                                                                                        "fields": {
+                                                                                                                          "VAR": {
+                                                                                                                            "id": "joystick_math-var-7"
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              },
+                                                                                                              "B": {
+                                                                                                                "block": {
+                                                                                                                  "type": "math_number",
+                                                                                                                  "id": "joystick_math-166",
+                                                                                                                  "fields": {
+                                                                                                                    "NUM": 100
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        },
+                                                                                                        "LOW": {
+                                                                                                          "block": {
+                                                                                                            "type": "math_number",
+                                                                                                            "id": "joystick_math-168",
+                                                                                                            "fields": {
+                                                                                                              "NUM": -100
+                                                                                                            }
+                                                                                                          }
+                                                                                                        },
+                                                                                                        "HIGH": {
+                                                                                                          "block": {
+                                                                                                            "type": "math_number",
+                                                                                                            "id": "joystick_math-169",
+                                                                                                            "fields": {
+                                                                                                              "NUM": 100
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                },
+                                                                                                "next": {
+                                                                                                  "block": {
+                                                                                                    "type": "newmania_design_robot_motor_power",
+                                                                                                    "id": "joystick_math-180",
+                                                                                                    "fields": {
+                                                                                                      "MOTOR": "motor-4"
+                                                                                                    },
+                                                                                                    "inputs": {
+                                                                                                      "POWER": {
+                                                                                                        "block": {
+                                                                                                          "type": "math_constrain",
+                                                                                                          "id": "joystick_math-179",
+                                                                                                          "fields": {},
+                                                                                                          "inputs": {
+                                                                                                            "VALUE": {
+                                                                                                              "block": {
+                                                                                                                "type": "math_arithmetic",
+                                                                                                                "id": "joystick_math-176",
+                                                                                                                "fields": {
+                                                                                                                  "OP": "MULTIPLY"
+                                                                                                                },
+                                                                                                                "inputs": {
+                                                                                                                  "A": {
+                                                                                                                    "block": {
+                                                                                                                      "type": "math_arithmetic",
+                                                                                                                      "id": "joystick_math-174",
+                                                                                                                      "fields": {
+                                                                                                                        "OP": "DIVIDE"
+                                                                                                                      },
+                                                                                                                      "inputs": {
+                                                                                                                        "A": {
+                                                                                                                          "block": {
+                                                                                                                            "type": "variables_get",
+                                                                                                                            "id": "joystick_math-172",
+                                                                                                                            "fields": {
+                                                                                                                              "VAR": {
+                                                                                                                                "id": "joystick_math-var-6"
+                                                                                                                              }
+                                                                                                                            }
+                                                                                                                          }
+                                                                                                                        },
+                                                                                                                        "B": {
+                                                                                                                          "block": {
+                                                                                                                            "type": "variables_get",
+                                                                                                                            "id": "joystick_math-173",
+                                                                                                                            "fields": {
+                                                                                                                              "VAR": {
+                                                                                                                                "id": "joystick_math-var-7"
+                                                                                                                              }
+                                                                                                                            }
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  },
+                                                                                                                  "B": {
+                                                                                                                    "block": {
+                                                                                                                      "type": "math_number",
+                                                                                                                      "id": "joystick_math-175",
+                                                                                                                      "fields": {
+                                                                                                                        "NUM": 100
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            },
+                                                                                                            "LOW": {
+                                                                                                              "block": {
+                                                                                                                "type": "math_number",
+                                                                                                                "id": "joystick_math-177",
+                                                                                                                "fields": {
+                                                                                                                  "NUM": -100
+                                                                                                                }
+                                                                                                              }
+                                                                                                            },
+                                                                                                            "HIGH": {
+                                                                                                              "block": {
+                                                                                                                "type": "math_number",
+                                                                                                                "id": "joystick_math-178",
+                                                                                                                "fields": {
+                                                                                                                  "NUM": 100
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "x": 40,
+            "y": 40,
+            "deletable": false
+          }
+        ]
+      }
+    }
+  }
+}

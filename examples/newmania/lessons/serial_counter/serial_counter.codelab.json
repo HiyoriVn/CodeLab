@@ -1,0 +1,163 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Bài 01 — Serial Counter",
+    "boardId": "newmania-fast100-4wd",
+    "programModel": "newmania-v1",
+    "editorMode": "beginner",
+    "deviceConfigs": {
+      "newmania-fast100-4wd": {
+        "version": 1,
+        "motors": [
+          {
+            "id": "motor-1",
+            "name": "Motor 1",
+            "port": 1,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-2",
+            "name": "Motor 2",
+            "port": 2,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-3",
+            "name": "Motor 3",
+            "port": 3,
+            "reversed": false,
+            "enabled": true
+          },
+          {
+            "id": "motor-4",
+            "name": "Motor 4",
+            "port": 4,
+            "reversed": false,
+            "enabled": true
+          }
+        ],
+        "drivetrain": {
+          "wheels": [
+            "motor-1",
+            "motor-2",
+            "motor-3",
+            "motor-4"
+          ],
+          "limit": 100
+        },
+        "controller": {
+          "enabled": true,
+          "blink": true
+        }
+      }
+    },
+    "workspace": {
+      "variables": [
+        {
+          "name": "dem",
+          "id": "serial_counter-var-0"
+        }
+      ],
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "newmania_design_program",
+            "id": "serial_counter-8",
+            "fields": {},
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "variables_set",
+                  "id": "serial_counter-1",
+                  "fields": {
+                    "VAR": {
+                      "id": "serial_counter-var-0"
+                    }
+                  },
+                  "inputs": {
+                    "VALUE": {
+                      "block": {
+                        "type": "math_number",
+                        "id": "serial_counter-0",
+                        "fields": {
+                          "NUM": 0
+                        }
+                      }
+                    }
+                  },
+                  "next": {
+                    "block": {
+                      "type": "newmania_design_forever",
+                      "id": "serial_counter-7",
+                      "fields": {},
+                      "inputs": {
+                        "DO": {
+                          "block": {
+                            "type": "beginner_wait",
+                            "id": "serial_counter-2",
+                            "fields": {
+                              "SECONDS": 0.5
+                            },
+                            "next": {
+                              "block": {
+                                "type": "math_change",
+                                "id": "serial_counter-4",
+                                "fields": {
+                                  "VAR": {
+                                    "id": "serial_counter-var-0"
+                                  }
+                                },
+                                "inputs": {
+                                  "DELTA": {
+                                    "block": {
+                                      "type": "math_number",
+                                      "id": "serial_counter-3",
+                                      "fields": {
+                                        "NUM": 1
+                                      }
+                                    }
+                                  }
+                                },
+                                "next": {
+                                  "block": {
+                                    "type": "beginner_message",
+                                    "id": "serial_counter-6",
+                                    "fields": {},
+                                    "inputs": {
+                                      "VALUE": {
+                                        "block": {
+                                          "type": "variables_get",
+                                          "id": "serial_counter-5",
+                                          "fields": {
+                                            "VAR": {
+                                              "id": "serial_counter-var-0"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "x": 40,
+            "y": 40,
+            "deletable": false
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import * as Blockly from 'blockly';
-import { exampleDesign, loadDesign } from './design-preview/model.js';
+import { LESSONS, lessonProject } from './lessons/newmania.js';
+import legacyProject from '../examples/beginner/lesson_robot_motor_events/lesson_robot_motor_events.codelab.json';
 import { generateArduino } from './generators/arduino.js';
 import { FAST4WD_BOARD_ID } from './boards/profiles.js';
 import { compileInBrowser } from './compiler/browser-compiler-client.js';
@@ -24,49 +25,35 @@ function log(text) {
 async function run() {
   log('Bắt đầu quy trình kiểm thử Blockly -> C++ -> WASM -> BIN...');
 
-  // 1. Generate 4 Blockly programs
-  log('1. Khởi tạo 4 chương trình từ Blockly workspace...');
 
-  // Program 1: Hold X to run Motor M1, release to stop
-  const w1 = loadDesign(exampleDesign('hold'));
-  const res1 = generateArduino(w1, FAST4WD_BOARD_ID);
-  if (res1.warnings.length) throw new Error('Program 1 warnings: ' + res1.warnings.join('; '));
-  w1.dispose();
-
-  // Program 2: Press X increments counter
-  const w2 = loadDesign(exampleDesign('count'));
-  const res2 = generateArduino(w2, FAST4WD_BOARD_ID);
-  if (res2.warnings.length) throw new Error('Program 2 warnings: ' + res2.warnings.join('; '));
-  w2.dispose();
-
-  // Program 3: Joystick drives mecanum
-  const w3 = loadDesign(exampleDesign('drive'));
-  const res3 = generateArduino(w3, FAST4WD_BOARD_ID);
-  if (res3.warnings.length) throw new Error('Program 3 warnings: ' + res3.warnings.join('; '));
-  w3.dispose();
-
-  // Program 4: Loop with Wait (Repeat 3 times, wait 1000ms each)
-  const w4 = loadDesign(exampleDesign('hold'));
-  const root = w4.getBlocksByType('newmania_design_program')[0];
-  const loop = w4.newBlock('controls_repeat_ext');
-  const times = w4.newBlock('math_number');
-  times.setFieldValue('3', 'NUM');
-  loop.getInput('TIMES').connection.connect(times.outputConnection);
-  const wait = w4.newBlock('beginner_wait');
-  wait.setFieldValue('1', 'SECONDS');
-  loop.getInput('DO').connection.connect(wait.previousConnection);
-  root.getInput('DO').connection.targetBlock().dispose();
-  root.getInput('DO').connection.connect(loop.previousConnection);
-  const res4 = generateArduino(w4, FAST4WD_BOARD_ID);
-  if (res4.warnings.length) throw new Error('Program 4 warnings: ' + res4.warnings.join('; '));
-  w4.dispose();
-
-  const programs = [
-    { id: 'prog1_hold_m1', name: 'Giữ nút X chạy Motor M1, thả để dừng', code: res1.code },
-    { id: 'prog2_counter_x', name: 'Vừa nhấn X tăng biến một lần', code: res2.code },
-    { id: 'prog3_mecanum', name: 'Joystick điều khiển mecanum', code: res3.code },
-    { id: 'prog4_loop_wait', name: 'Chương trình có Wait và vòng lặp', code: res4.code },
-  ];
+  const programs = LESSONS.map(lesson => {
+    const project=lessonProject(lesson.id), workspace=new Blockly.Workspace();
+    try {
+      Blockly.serialization.workspaces.load(project.workspace,workspace);
+      const result=generateArduino(workspace,project.boardId,project.deviceConfigs[project.boardId]);
+      if(result.warnings.length)throw Error(result.warnings.join('; '));
+      return {id:lesson.id,name:lesson.label,code:result.code};
+    }finally{workspace.dispose();}
+  });
+  // A standalone signed motor program deliberately has no PS4 blocks.
+  const autonomous=lessonProject('serial_counter'),autoWorkspace=new Blockly.Workspace();
+  Blockly.serialization.workspaces.load(autonomous.workspace,autoWorkspace);
+  const root=autoWorkspace.getBlocksByType('newmania_design_program')[0];
+  const first=root.getInputTargetBlock('DO');first.unplug();
+  const spin=autoWorkspace.newBlock('newmania_design_robot_motor_power');
+  const power=autoWorkspace.newBlock('math_number');power.setFieldValue(20,'NUM');
+  spin.getInput('POWER').connection.connect(power.outputConnection);
+  root.getInput('DO').connection.connect(spin.previousConnection);spin.nextConnection.connect(first.previousConnection);
+  const autoCode=generateArduino(autoWorkspace,FAST4WD_BOARD_ID);
+  if(autoCode.warnings.length)throw Error(autoCode.warnings.join('; '));
+  programs.push({id:'autonomous_motor',name:'Motor tự động không PS4',code:autoCode.code});autoWorkspace.dispose();
+  const legacy=new Blockly.Workspace();
+  try {
+    Blockly.serialization.workspaces.load(legacyProject.project.workspace,legacy);
+    const result=generateArduino(legacy,FAST4WD_BOARD_ID,legacyProject.project.deviceConfigs[FAST4WD_BOARD_ID]);
+    if(result.warnings.length)throw Error(result.warnings.join('; '));
+    programs.push({id:'legacy_events',name:'Tương thích sự kiện motor cũ, không ARM/Share',code:result.code});
+  }finally{legacy.dispose();}
 
   const results = [];
 
@@ -111,13 +98,14 @@ async function run() {
       buildId: buildRes.buildId,
       durationMs,
       stats: buildRes.stats,
+      libraryRevision: buildRes.libraryRevision,
       segments: buildRes.manifest.segments.map((s) => ({ file: s.file, address: s.address, sha256: s.sha256 })),
     });
   }
 
   // 5. Test build invalidation when code changes
   log('\n--- Kiểm tra cơ chế chống nạp nhầm firmware (Build Invalidation) ---');
-  const modifiedCode = res1.code + '\n// modified comment';
+  const modifiedCode = programs[0].code + '\n// modified comment';
   const build1 = results[0].buildId;
   const hash1 = build1.split('-')[1];
   const buildMod = await compileInBrowser(modifiedCode, FAST4WD_BOARD_ID);
@@ -165,24 +153,6 @@ async function run() {
   if (!networkErrorCaught) {
     throw new Error('Hệ thống không phát hiện lỗi khi URL toolchain không tồn tại!');
   }
-
-  // 8. Test Feature Flag Security on Production Domain
-  log('\n--- Kiểm tra bảo mật Feature Flag trên môi trường Production ---');
-  const { isBrowserCompilerEnabled } = await import('./compiler/config.js');
-  // Simulate hostname check
-  const isDevLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  log(`  Môi trường hiện tại: ${window.location.hostname} (isDev=${isDevLocal})`);
-  log(`  isBrowserCompilerEnabled() trả về: ${isBrowserCompilerEnabled()}`);
-  
-  // Test production domain simulation: URL param ?wasm_compiler=1 MUST NOT bypass on production
-  const testProdCheck = (hostname) => {
-    const isDev = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname.endsWith('.local');
-    return isDev; // Feature flag logic verified
-  };
-  if (testProdCheck('codelab.hirovn9395.workers.dev') !== false) {
-    throw new Error('Feature flag bị hở trên domain workers.dev!');
-  }
-  log('  Xác nhận: Tên miền workers.dev / production TUYỆT ĐỐI KHÔNG thể kích hoạt compiler bằng URL parameter (Bảo mật PASS).');
 
   const mem = window.performance.memory;
   const finalReport = {

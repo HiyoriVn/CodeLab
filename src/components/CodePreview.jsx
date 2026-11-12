@@ -28,7 +28,7 @@ function CodePreview({ code, warnings, logic = '' }) {
         </select>
         <button className="button button-quiet" onClick={copyCode}>{copyStatus || 'Sao chép mã'}</button>
       </div>
-      <p className="code-mode-note">{mode === 'logic' ? 'Mã diễn giải để học — không thể biên dịch. Chương trình chạy sau Options ARM; Share và watchdog dừng chương trình.' : 'Arduino C++ được dùng để biên dịch. Chỉ ẩn comment tự sinh; scheduler và cơ chế an toàn giữ nguyên.'}</p>
+      <p className="code-mode-note">{mode === 'logic' ? 'Mã diễn giải để học — không thể biên dịch. Chương trình tự chạy sau khởi động. Dự án dùng PS4 dừng motor khi mất kết nối; logic vẫn tiếp tục.' : 'Arduino C++ được dùng để biên dịch. Chỉ ẩn comment tự sinh; scheduler và cơ chế an toàn giữ nguyên.'}</p>
       {warnings.length > 0 && (
         <div className="generator-warning" role="status">
           <strong>Mã chưa hoàn chỉnh.</strong> {warnings.join(' ')} Không dùng để nạp lên bo mạch.

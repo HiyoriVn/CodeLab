@@ -66,7 +66,7 @@ test('stick and direction changes retain the original axis mapping and one-step 
   w.dispose();
 });
 
-test('existing Newmania projects reopen without data changes and generate byte-identical C++', () => {
+test('existing Newmania project data reopens unchanged and matches current runtime goldens', () => {
   for (const name of ['hold_m1','counter_x','mecanum']) {
     const project = JSON.parse(readFileSync(`examples/newmania/${name}/${name}.codelab.json`, 'utf8')).project;
     const before = JSON.stringify(project), w = load(project.workspace);

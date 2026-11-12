@@ -1,6 +1,16 @@
 # Bách UI integration
 
-## Integration in progress — 2026-11-12
+## Current integration — 2026-11-12
+
+The owner subsequently approved removing both Options ARM and Share STOP from
+Blockly, retaining hardware/demo baselines, project-wide PS4 link-loss motor stop
+and neutral/new-action recovery. This is implemented without a new model/board
+or UI mode. Five lessons are now available. `npm test` **137/137 PASS**, build
+PASS, Chrome WASM **7/7 PASS**, plus live UI checks. Browser export download
+capture remains unverified; no actual USB/hardware test was authorized.
+[Final behavior and evidence](verification/INTEGRATION_UI_WASM_NO_ARM.md).
+
+## Earlier checkpoint — 2026-11-12 (historical)
 
 `test/integration-ui-wasm-newmania` was created from fetched `main` at
 `161b4c0901f197063154ac6ca8ed75fd69387d0d`. UI head

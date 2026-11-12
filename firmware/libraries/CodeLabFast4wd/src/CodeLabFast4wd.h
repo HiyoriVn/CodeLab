@@ -43,6 +43,54 @@ class Robot : private robot::MotorInterface {
   uint32_t polledAt_ = 0, printedAt_ = 0;
   uint32_t previousButtons_ = 0, pressed_ = 0, released_ = 0;
   bool buttonsLinked_ = false;
+  // Blockly policy is selected only by generated programs. Reference clients
+  // retain the original controller policy and unchanged physical drivers.
+  bool blockly_ = false, ps4Dependent_ = false, motorFault_ = false;
+  bool blocklyTicked_ = false, linkSeen_ = false;
+  uint32_t blocklyAt_ = 0, motionEpoch_ = 0, observedReport_ = 0;
+  uint32_t inputButtons_ = 0x1fcffU; // excludes Options/Share as system controls
+  uint8_t inputAxes_ = 7;
+  enum class Recovery { NEUTRAL, ACTION, READY } recovery_ = Recovery::NEUTRAL;
+
+  void updateBlocklyLink(uint32_t now) {
+    if (!ps4Dependent_) return;
+    const auto input = receiver_.snapshot(now);
+    if (!busReady_ || !input.connected) {
+      if (linkSeen_) { ++motionEpoch_; disable(); }
+      linkSeen_ = false;
+      recovery_ = Recovery::NEUTRAL;
+      return;
+    }
+    linkSeen_ = true;
+    if (receiver_.advances == observedReport_) return;
+    observedReport_ = receiver_.advances;
+    const int16_t axes[] = {input.lx,input.ly,input.rx,input.ry};
+    bool neutral = (input.buttons & inputButtons_) == 0;
+    for (unsigned i=0;i<4;++i) if ((inputAxes_ & (1U<<i)) && abs(axes[i]) > 60) neutral = false;
+    if (recovery_ == Recovery::NEUTRAL && neutral) recovery_ = Recovery::ACTION;
+    else if (recovery_ == Recovery::ACTION && !neutral) recovery_ = Recovery::READY;
+  }
+
+  void endBlocklyLoop(uint32_t now) {
+    if (!canCommand()) { disable(); return; }
+    float mixed[4] = {};
+    if (drive_ != Drive::Idle) {
+      robot::Twist intent = fixed_;
+      if (drive_ == Drive::Ps4) {
+        const auto input = receiver_.snapshot(now);
+        const auto axis = [](int value) { const float x=value/1000.0f,a=fabsf(x); return a<=0.06f?0.0f:(x<0?-1:1)*(a-0.06f)/0.94f; };
+        // The legacy PS4 macro retains its axis convention and turn priority.
+        intent = {abs(input.lx)>100?0.0f:axis(input.ly), axis(input.rx), abs(input.lx)>100?axis(input.lx):0.0f};
+      }
+      if (!robot::MecanumMixer::mix(intent, config(limit_,layout_).mixer, mixed)) { motorFault_=true; disable(); return; }
+    }
+    bool requested = drive_ != Drive::Idle;
+    for (const auto& command:commands_) requested = requested || command.active;
+    if (!requested) return; // Boot never permits PWM without a student command.
+    if (!motors_.permitted() && !motors_.permit(now)) { motorFault_=true; disable(); return; }
+    motors_.renew(now);
+    if (!write(mixed)) { motorFault_=true; disable(); }
+  }
 
   static robot::ControlConfig config(float limit, const MotorLayout& layout) {
     robot::ControlConfig c;
@@ -108,6 +156,8 @@ class Robot : private robot::MotorInterface {
   }
 
   bool canCommand() const {
+    if (blockly_) return initialized_ && motors_.ready() && !motorFault_ && !stopRequested_ &&
+      (!ps4Dependent_ || (connected() && recovery_ == Recovery::READY));
     return controller_.state() == robot::State::ARMED && motors_.permitted() &&
       connected() && !stopRequested_ && !button(8);
   }
@@ -130,6 +180,16 @@ class Robot : private robot::MotorInterface {
   }
 
  public:
+  void configureBlockly(bool ps4Dependent, uint32_t buttons = 0x1fcffU, uint8_t axes = 7) {
+    blockly_ = true; ps4Dependent_ = ps4Dependent;
+    inputButtons_ = buttons; inputAxes_ = axes;
+  }
+  void requirePs4() {
+    if (!ps4Dependent_) { ps4Dependent_=true; recovery_=Recovery::NEUTRAL; ++motionEpoch_; disable(); }
+  }
+  bool motionAllowed() const { return canCommand(); }
+  uint32_t motionEpoch() const { return motionEpoch_; }
+  void haltMotorOutputs() { if (blockly_) { disable(); drive_=Drive::Idle; fixed_={}; } stopRequested_=true; }
   explicit Robot(uint8_t speedPercent = 100, MotorLayout layout = {}) :
     layout_(layout), limit_(robot::clamp(speedPercent, 1, 100) / 100.0f),
     controller_(*this, servo_, config(limit_, layout_)) {}
@@ -148,7 +208,8 @@ class Robot : private robot::MotorInterface {
     Wire.setTimeOut(20);
     initialized_ = true;
     const bool motorReady = motors_.begin();
-    Serial.printf("4WD I2C=%u MCPWM=%u. Options=ARM, Share=STOP.\n", unsigned(busReady_), unsigned(motorReady));
+    if (blockly_) Serial.printf("Blockly I2C=%u MCPWM=%u. Program starts at boot.\n", unsigned(busReady_), unsigned(motorReady));
+    else Serial.printf("4WD I2C=%u MCPWM=%u. Options=ARM, Share=STOP.\n", unsigned(busReady_), unsigned(motorReady));
   }
 
   void beginLoop() {
@@ -156,9 +217,11 @@ class Robot : private robot::MotorInterface {
     stopRequested_ = false;
     if (!initialized_) return;
     const uint32_t now = millis();
+    if (blockly_ && blocklyTicked_ && uint32_t(now-blocklyAt_) > 250) { motorFault_=true; disable(); }
     motors_.expire(now);
     poll(now);
     sampleButtons(millis());
+    if (blockly_) updateBlocklyLink(millis());
   }
 
   bool connected() const { return busReady_ && receiver_.snapshot(millis()).connected; }
@@ -183,13 +246,14 @@ class Robot : private robot::MotorInterface {
   void movePercent(float forward, float left, float counterclockwise) {
     move(forward / 100.0f, left / 100.0f, counterclockwise / 100.0f);
   }
-  void stop() { stopRequested_ = true; }
+  void stop() { haltMotorOutputs(); }
 
   bool spin(unsigned port, float percent, bool reverse) {
     if (!motorEnabled(port) || !canCommand()) return false;
     if (!isfinite(percent)) { stop(); return false; }
     const float duty = robot::clamp(percent, 0, limit_ * 100) / 100.0f;
     const bool inverted = (layout_.reversed & (1U << port)) != 0;
+    if (blockly_ && !motors_.permitted() && !motors_.permit(millis())) { motorFault_=true; disable(); return false; }
     commands_[port] = {true, inverted != reverse ? -duty : duty, 0, 0};
     return true;
   }
@@ -235,6 +299,13 @@ class Robot : private robot::MotorInterface {
       auto input = receiver_.snapshot(now);
       const bool fresh = busReady_ && input.connected;
       if (blink_) digitalWrite(ledPin, fresh || ((now / 250U) % 2U == 0U) ? HIGH : LOW);
+      if (blockly_) {
+        updateBlocklyLink(now);
+        endBlocklyLoop(now);
+        blocklyAt_=now; blocklyTicked_=true;
+        delay(2);
+        return;
+      }
 
       // Preserve fast100's left-stick turn priority over forward motion.
       const int16_t turn = input.lx;

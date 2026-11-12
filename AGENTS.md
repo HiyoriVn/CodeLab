@@ -1,5 +1,20 @@
 # Instructions for coding agents
 
+## No-ARM/no-Share integration — 2026-11-12
+
+- The owner approved runtime/generator/library changes on `test/integration-ui-wasm-newmania`.
+  Generated Blockly starts once at boot; neither Options nor Share controls system motor permission or STOP.
+- Programs using PS4 stop ALL motors on lost/stale PS4 input, including timed motions/Wait,
+  while student logic/variables/Serial/ordinary Wait continue. Reconnect discards old commands,
+  waits for fresh neutral input, then accepts a new control action. Cached polls cannot recover.
+- Fully non-PS4 programs run autonomous motors without PS4 freshness requirements. The existing
+  controller configuration alone does not count as PS4 usage. Link LED remains solid/flickering as specified.
+- Keep existing project model/board/UI selection; do not introduce newmania-v2 or ARM blocks/steps.
+  Preserve GPIO/MCPWM/I2C/D1/FQBN, motor mapping/reversal, physical drivers and demo baseline.
+- These decisions supersede earlier ARM/Share requirements for this Blockly integration only.
+  No merge into main, production deploy or hardware flash is authorized. See
+  `docs/verification/INTEGRATION_UI_WASM_NO_ARM.md` for implementation and actual software evidence.
+
 ## Source of truth
 
 - Read this file and the relevant documents in `docs/` before changing architecture or project scope.

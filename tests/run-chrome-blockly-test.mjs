@@ -72,16 +72,15 @@ console.log(`Vite server listening at http://127.0.0.1:${PORT}/`);
 const testUrl = `http://127.0.0.1:${PORT}/test-wasm-runner.html`;
 console.log(`Launching Google Chrome: ${CHROME_PATH}`);
 
-const userDataDir = 'C:/Users/Admin/.gemini/antigravity/brain/21936b3c-7308-4e46-9620-7beaf2ef9732/scratch/chrome-blockly-test-profile';
-fs.rmSync(userDataDir, { recursive: true, force: true });
-fs.mkdirSync(userDataDir, { recursive: true });
+const outputDir = path.resolve('firmware/tests/build-output');
+fs.mkdirSync(outputDir, { recursive: true });
+// Isolate each test; never delete an existing profile outside this repository.
+const userDataDir = fs.mkdtempSync(path.join(outputDir, 'chrome-blockly-test-'));
 
 const chromeProc = spawn(
   CHROME_PATH,
   [
     '--headless=new',
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
     '--disable-gpu',
     '--no-first-run',
     '--no-default-browser-check',
@@ -138,5 +137,8 @@ try {
   clearTimeout(timer);
   try { chromeProc.kill('SIGKILL'); } catch (_) {}
   await server.close();
-  try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch (_) {}
+  const relativeProfile = path.relative(outputDir, path.resolve(userDataDir));
+  if (!relativeProfile.startsWith('..') && !path.isAbsolute(relativeProfile) && relativeProfile.startsWith('chrome-blockly-test-')) {
+    try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch (_) {}
+  }
 }

@@ -4,6 +4,19 @@ CodeLab is a browser-first React/Vite + Blockly editor that generates Arduino C+
 
 ## Scratch-first editor — 2026-11-06
 
+Current integration, 2026-11-12: `CodeLabNewmania` starts the student scheduler
+once at boot, independent of PS4. `ps4-usage.js` classifies the complete project
+and supplies button/axis masks to the existing Robot's internal Blockly policy;
+no new board/model/UI mode was added. Link loss revokes PWM, drive intent and
+motion handles without canceling variables, timer Wait or the student script.
+Fresh neutral input followed by a new action permits subsequent PS4 motor
+commands. Options/Share have no system role in generated Blockly programs.
+The legacy standalone Robot policy is retained for reference clients; generated
+new and legacy Blockly both select the new policy. Physical drivers, board
+configuration and demo baseline are unchanged. WASM packages the canonical
+library sources with a verified revision used in object-cache/build identity.
+[Implementation and verification](verification/INTEGRATION_UI_WASM_NO_ARM.md).
+
 `src/blocks/beginner.js` adds new IDs alongside legacy registrations; `beginner-toolbox.js` builds mode/profile-specific categories. Optional `project.editorMode` is persisted/exported by App; no metadata means Advanced for legacy compatibility. BlocklyWorkspace updates the toolbox in place. The Arduino generator adds setup-only events, loop bodies and explicit PS4 simulation alongside unchanged UART helpers; unsupported actuator requests return diagnostics consumed by the existing compile gate. New lessons are version1 JSON plus deterministic C++ in `examples/beginner`. [Details](SCRATCH_FIRST.md). The historical audit descriptions below retain their original context; this section describes Issue22 only.
 
 ## Modules

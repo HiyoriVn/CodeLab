@@ -5,6 +5,7 @@ import { fast4wdConfig, fast4wdConstructor, registerFast4wdBlocks } from './fast
 import { generateV2Scheduler } from './v2-scheduler.js';
 import { hasNewmaniaBlocks } from '../blocks/newmania.js';
 import { generateNewmania } from './newmania.js';
+import { ps4Usage } from './ps4-usage.js';
 
 const ATOMIC = 0;
 
@@ -232,7 +233,8 @@ class ArduinoGenerator extends Blockly.CodeGenerator {
       const { blink } = this.fast4wd_;
       this.includes_.fast4wd = '#include <CodeLabFast4wd.h>';
       this.definitions_.fast4wd = `static codelab::fast4wd::Robot robot4wd(${fast4wdConstructor(this.fast4wd_)});`;
-      this.setupStatements_.set('fast4wd', `robot4wd.begin(${blink});`);
+      const usage=ps4Usage(workspace);
+      this.setupStatements_.set('fast4wd', `robot4wd.configureBlockly(${usage.dependent}, ${usage.buttons}UL, ${usage.axes});\nrobot4wd.begin(${blink});`);
       this.loopPreamble_ = 'robot4wd.beginLoop();';
     }
     this.controllerRequested_ = false;

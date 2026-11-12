@@ -72,5 +72,6 @@
     "flashMode": "dio",
     "flashFreq": "80m",
     "flashSize": "16MB"
-  }
+  },
+  "libraryRevision": "05859712244b9f29151e001945a32bf7fb8a4958d4020a16f0b0d86be67336ba"
 }

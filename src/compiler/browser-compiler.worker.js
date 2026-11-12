@@ -88,6 +88,10 @@ async function getToolchain(manifestUrl, onProgress) {
   const pocDataRes = await fetch(new URL('codelab-poc-data.json', baseUrl).toString());
   if (!pocDataRes.ok) throw new Error('Không thể tải thư viện CodeLab từ toolchain.');
   const pocData = await pocDataRes.json();
+  const libraryRevision = await sha256Hex(new TextEncoder().encode(JSON.stringify(pocData.libraries)));
+  if (manifest.libraryRevision !== libraryRevision || pocData.libraryRevision !== libraryRevision) {
+    throw new Error('Thư viện runtime và manifest không cùng revision. Hãy tải lại bộ toolchain.');
+  }
 
   toolchainCache = {
     manifest,
@@ -98,6 +102,7 @@ async function getToolchain(manifestUrl, onProgress) {
     partitionTable,
     bootApp0,
     libraries: pocData.libraries,
+    libraryRevision,
   };
   return toolchainCache;
 }
@@ -119,7 +124,7 @@ self.onmessage = async (ev) => {
     }
 
     const tc = await getToolchain(toolchainUrl, (msg) => post({ type: 'progress', message: msg }));
-    const { vfs, clangMod, ldMod, manifest, bootloader, partitionTable, bootApp0, libraries } = tc;
+    const { vfs, clangMod, ldMod, manifest, bootloader, partitionTable, bootApp0, libraries, libraryRevision } = tc;
 
     post({ type: 'progress', message: 'Đang chuẩn bị workspace biên dịch…' });
     vfs.resetDir('src');
@@ -175,7 +180,7 @@ self.onmessage = async (ev) => {
     for (const lib of libraries) {
       for (const f of lib.files) {
         if (/\.(cpp|cxx|cc|c|S)$/.test(f.path)) {
-          const cacheKey = `${lib.id}:${f.path}`;
+          const cacheKey = `${libraryRevision}:${lib.id}:${f.path}`;
           const objVirt = `/build/lib_${objects.length}.o`;
           let cached = libObjectCache.get(cacheKey);
           if (cached) {
@@ -263,7 +268,7 @@ self.onmessage = async (ev) => {
     // Perform exact CodeLab validatePackage check
     const validatedSegments = await validatePackage(manifestFlash, filesFlash, sha256);
 
-    const codeHash = await sha256Hex(new TextEncoder().encode(code));
+    const codeHash = await sha256Hex(new TextEncoder().encode(code + '\n' + libraryRevision));
     const buildId = `wasm-${codeHash.slice(0, 12)}-${boardId}-${manifest.version || '3.3.7'}`;
 
     post({
@@ -272,6 +277,7 @@ self.onmessage = async (ev) => {
       boardId,
       code,
       toolchainVersion: manifest.version,
+      libraryRevision,
       manifest: manifestFlash,
       segments: validatedSegments,
       stats: {

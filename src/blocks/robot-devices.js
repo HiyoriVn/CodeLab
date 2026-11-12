@@ -28,7 +28,7 @@ const block = (group, type, title, message0, tooltip, args0, shape = 'statement'
 
 export const robotBlocks = [
   block('motor', 'motor_spin', 'Quay motor', 'quay %1 chiều %2 PWM %3 %%',
-    'Gửi PWM 0–100% cho motor đã chọn và chạy tiếp ngay. Lệnh giữ đến khi dừng, mất ARM hoặc trả motor về drivetrain.', [motor, direction, number('POWER')]),
+    'Gửi PWM 0–100% cho motor đã chọn và chạy tiếp ngay. Lệnh giữ đến khi dừng, mất kết nối PS4 (nếu chương trình dùng PS4) hoặc trả motor về drivetrain.', [motor, direction, number('POWER')]),
   block('motor', 'motor_power', 'Công suất motor', 'motor %1 công suất %2 %%',
     'Đặt công suất từ −100 đến 100% cho motor đã chọn (dương = thuận, âm = ngược) và giữ lệnh.', [motor, number('POWER')]),
   block('motor', 'motor_for', 'Quay motor theo thời gian', 'quay %1 chiều %2 PWM %3 %% trong %4 ms %5',
@@ -39,7 +39,7 @@ export const robotBlocks = [
   block('motor', 'motor_stop', 'Dừng motor', 'dừng %1',
     'Đưa PWM của riêng motor về 0 trong lượt này. Motor vẫn được tách khỏi drivetrain cho tới khi trả quyền.', [motor]),
   block('motor', 'motor_stop_all', 'Dừng tất cả motor', 'dừng tất cả motor',
-    'Đưa PWM của tất cả motor và drivetrain về 0 mà không hủy trạng thái ARM.', []),
+    'Đưa PWM của tất cả motor và drivetrain về 0 và tiếp tục chương trình.', []),
   block('motor', 'motor_release', 'Trả quyền điều khiển motor', 'trả %1 về drivetrain',
     'Hủy lệnh độc lập của motor. Nếu có lệnh drivetrain, bánh này nhận lại điều khiển từ drivetrain.', [motor]),
   block('motor', 'motor_pwm', 'Đọc PWM motor', 'PWM đã áp dụng của %1 (%%)',
@@ -50,7 +50,7 @@ export const robotBlocks = [
     'Dùng bốn bánh đã gán trong cấu hình. Mỗi trục từ −100 đến 100. Lệnh áp dụng cho lượt lặp hiện tại và không chờ.',
     [number('FORWARD'), number('LEFT'), number('TURN')]),
   block('drive', 'drive_stop', 'Dừng di chuyển robot', 'dừng di chuyển robot',
-    'Đưa tốc độ di chuyển drivetrain về 0 mà không DISARM tay cầm.', []),
+    'Đưa tốc độ di chuyển drivetrain về 0 và tiếp tục chương trình.', []),
   block('drive', 'drive_for_time', 'Di chuyển theo thời gian', 'robot %1 tốc độ %2 %% trong %3 giây %4',
     'Di chuyển theo hướng chọn trong thời gian 0–60 giây rồi tự dừng drivetrain. Có thể chọn đợi hoặc không đợi.',
     [driveDirection, number('SPEED'), { type: 'field_number', name: 'SECONDS', value: 1, min: 0, max: 60 },

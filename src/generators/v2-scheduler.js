@@ -101,7 +101,7 @@ function compileHat(block, gen) {
         const duration = Number(b.getFieldValue('MS')) || 1;
         const start = `codelabScheduler.motorRunFor(${port}, ${sign}codelabSchedulerPower(${power}), ${duration}UL, nowMs)`;
         action = b.getFieldValue('WAIT') === 'YES'
-          ? `const uint32_t handle = ${start}; if (!handle) return codelab::v2::StepResult::YIELD; ctx.handleId = handle; ctx.pc = ${continuation}; ctx.waitKind = codelab::v2::WaitKind::HANDLE; return codelab::v2::StepResult::WAIT;`
+          ? `const uint32_t handle = ${start}; ctx.pc = ${continuation}; if (!handle) return codelab::v2::StepResult::YIELD; ctx.handleId = handle; ctx.waitKind = codelab::v2::WaitKind::HANDLE; return codelab::v2::StepResult::WAIT;`
           : `${start};`;
         break;
       }
@@ -201,6 +201,7 @@ export function generateV2Scheduler(workspace, gen) {
       `static codelab::fast4wd::SchedulerGate codelabSchedulerGate(robot4wd);\n` +
       `static codelab::v2::Scheduler codelabScheduler(codelabSchedulerGate);\n` +
       `static bool codelabSchedulerRegistered = true;\n` +
+      `static bool codelabProgramStarted = false; static uint32_t codelabMotionEpoch = 0;\n` +
       `static uint8_t codelabDriveMode = 0; static float codelabDriveValues[3] = {};\n` +
       `static bool codelabDriveTimed = false; static uint32_t codelabDriveDeadlineMs = 0;\n` +
       `static uint32_t codelabRunGeneration = 0;\n` +
@@ -238,8 +239,8 @@ export function generateV2Scheduler(workspace, gen) {
       `  --codelabLogCount;\n` +
       `  return true;\n` +
       `}\n` +
-      `[[maybe_unused]] static void codelabDriveFromPs4() { codelabDriveTimed = false; codelabDriveMode = 1; }\n` +
-      `[[maybe_unused]] static void codelabDrive(float forward, float left, float turn) { codelabDriveTimed = false; codelabDriveMode = 2; codelabDriveValues[0] = forward; codelabDriveValues[1] = left; codelabDriveValues[2] = turn; }\n` +
+      `[[maybe_unused]] static void codelabDriveFromPs4() { if (!robot4wd.motionAllowed()) return; codelabDriveTimed = false; codelabDriveMode = 1; }\n` +
+      `[[maybe_unused]] static void codelabDrive(float forward, float left, float turn) { if (!robot4wd.motionAllowed()) return; codelabDriveTimed = false; codelabDriveMode = 2; codelabDriveValues[0] = forward; codelabDriveValues[1] = left; codelabDriveValues[2] = turn; }\n` +
       `[[maybe_unused]] static void codelabDrivePercent(double forward, double left, double turn) { codelabDrive(isfinite(forward) ? (float)(forward / 100.0) : 0.0f, isfinite(left) ? (float)(left / 100.0) : 0.0f, isfinite(turn) ? (float)(turn / 100.0) : 0.0f); }\n` +
       `[[maybe_unused]] static void codelabDriveStop() { codelabDrive(0.0f, 0.0f, 0.0f); }\n` +
       `[[maybe_unused]] static void codelabDriveForTime(double forward, double left, double turn, uint32_t durationMs, uint32_t nowMs) { if (durationMs == 0) { codelabDriveStop(); return; } codelabDrivePercent(forward, left, turn); codelabDriveTimed = true; codelabDriveDeadlineMs = nowMs + durationMs; }\n` +
@@ -252,11 +253,8 @@ export function generateV2Scheduler(workspace, gen) {
     setup: scripts.map(script => script.registration).join('\n') + '\n',
     loop: `static void codelabSchedulerLoop() {\n` +
       `  const uint32_t nowMs = millis();\n` +
-      `  const bool shareEdge = robot4wd.buttonEdge(8, true);\n` +
-      `  if (shareEdge || (codelabScheduler.state() == codelab::v2::LifecycleState::RUN && !robot4wd.controllerArmed())) codelabScheduler.stop(nowMs);\n` +
-      `  if (codelabScheduler.state() == codelab::v2::LifecycleState::RUN && !robot4wd.connected()) codelabScheduler.fault(codelab::v2::FaultCode::LINK_LOST, nowMs);\n` +
-      `  if (robot4wd.buttonEdge(12, true)) codelabScheduler.clearFault();\n` +
-      `  if (!shareEdge && codelabSchedulerRegistered && codelabScheduler.state() == codelab::v2::LifecycleState::READY && robot4wd.controllerArmed()) codelabScheduler.startController(nowMs);\n` +
+      `  if (codelabMotionEpoch != robot4wd.motionEpoch()) { codelabMotionEpoch = robot4wd.motionEpoch(); codelabDriveMode = 0; codelabDriveTimed = false; codelabScheduler.cancelMotions(nowMs); }\n` +
+      `  if (!codelabProgramStarted && codelabSchedulerRegistered && codelabScheduler.state() == codelab::v2::LifecycleState::READY) codelabProgramStarted = codelabScheduler.startProgram(nowMs);\n` +
       `  if (codelabScheduler.state() != codelab::v2::LifecycleState::RUN) { codelabDriveMode = 0; codelabDriveTimed = false; }\n` +
       `  if (codelabScheduler.state() == codelab::v2::LifecycleState::RUN) {\n` +
       `    codelabUpdateTimedDrive(nowMs);\n` +

@@ -1,5 +1,22 @@
 # Testing and verification strategy
 
+## No-ARM/no-Share integration — 2026-11-12
+
+`npm test`: **137/137 PASS**. Production build PASS (existing bundle warning).
+Chrome headless 157 / Arduino Core 3.3.7 compiled all five student lessons, a
+standalone autonomous motor program and legacy motor events; all seven passed
+`validatePackage`. Native C++ executes the actual receiver/scheduler/motor path
+with platform mocks, covering boot/no PS4, Options/Share neutrality, canceled
+motion waits, ordinary Wait continuation, reconnect neutral/new action, LED,
+heartbeat and unchanged low-level driver regressions. Browser library payload
+matches the canonical sources and revision exactly.
+
+Live Chrome verified project creation/switch/rename/reload, block edit/drag/undo,
+file import, preview modes/copy, theme/zoom/Serial UI, compile success, Escape
+lock while compiling, stale-build rejection and 680×800 layout. Export download
+event capture timed out; no export-through-browser PASS is claimed. USB selection,
+flashing and hardware acceptance were not performed. [Detailed evidence](verification/INTEGRATION_UI_WASM_NO_ARM.md).
+
 ## UI/WASM integration checkpoint — 2026-11-12
 
 Intermediate integration tree: **132/132 tests PASS**, production build PASS

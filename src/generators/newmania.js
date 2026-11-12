@@ -2,6 +2,7 @@ import { TYPES, previewMotorTypes, designDiagnostics, unsupported } from '../blo
 import { FAST4WD_BOARD_ID, getBoardProfile } from '../boards/profiles.js';
 import { defaultRobotDevices, robotDeviceWarnings } from '../boards/robot-devices.js';
 import { fast4wdConstructor } from './fast4wd.js';
+import { ps4Usage } from './ps4-usage.js';
 
 const oldMotor = new Map([...previewMotorTypes].map(([old, type]) => [type, old]));
 const buttonNames = ['X','Circle','Square','Triangle','L1','R1','L2','R2','Share','Options','L3','R3','Home','Up','Down','Left','Right'];
@@ -19,7 +20,8 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
   const warnings=robotDeviceWarnings(devices,profile);
   if(warnings.length)return {code:'',warnings,boardId};
   const issues=designDiagnostics(workspace);
-  if(!devices.controller.enabled)issues.push({id:'PS4',message:'Cấu hình PS4 phải được bật để giữ ARM và watchdog.'});
+  const usage=ps4Usage(workspace);
+  if(usage.dependent&&!devices.controller.enabled)issues.push({id:'PS4',message:'Bật cấu hình PS4 để dùng các khối tay cầm.'});
   if(issues.length)return {code:'',warnings:issues.map(i=>`${i.message} (${i.type??'cấu hình'} · ${i.id})`),boardId};
   let current;
   try {
@@ -235,7 +237,7 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
     for(const state of forLoops)reset.push(`  ${state}.reset();`);
     for(const cursor of cursors.values())reset.push(`  ${cursor} = {};`);
     const body=cases.map(c=>`    case ${c.pc}: { // ${c.block.type} · ${c.block.id.replace(/[^\w-]/g,'_')}\n      ${c.body.replaceAll('\n','\n      ')}\n    }`).join('\n');
-    const code=`// Newmania ESP32S3 Board — một chương trình chính, chờ không chặn.\n#include <CodeLabNewmania.h>\nusing namespace codelab::newmania;\nstatic Board newmania(${constructor});\n${declarations.join('\n')}\n\nstatic void resetStudent() {\n${reset.join('\n')}\n}\n\nstatic Board::Step studentProgram(Board::Context& ctx, uint32_t) {\n  switch (ctx.pc) {\n    case 0: ctx.pc = ${entry}; return Board::Step::YIELD;\n${body}\n    default: return Board::Step::DONE;\n  }\n}\n\nvoid setup() {\n  newmania.begin(${devices.controller.blink});\n  newmania.registerProgram(${uidOf(root.id)}UL, studentProgram, resetStudent);\n}\n\nvoid loop() {\n  newmania.update();\n}\n`;
+    const code=`// Newmania ESP32S3 Board — một chương trình chính, chờ không chặn.\n#include <CodeLabNewmania.h>\nusing namespace codelab::newmania;\nstatic Board newmania(${constructor});\n${declarations.join('\n')}\n\nstatic void resetStudent() {\n${reset.join('\n')}\n}\n\nstatic Board::Step studentProgram(Board::Context& ctx, uint32_t) {\n  switch (ctx.pc) {\n    case 0: ctx.pc = ${entry}; return Board::Step::YIELD;\n${body}\n    default: return Board::Step::DONE;\n  }\n}\n\nvoid setup() {\n  newmania.begin(${devices.controller.blink}, ${usage.dependent}, ${usage.buttons}UL, ${usage.axes});\n  newmania.registerProgram(${uidOf(root.id)}UL, studentProgram, resetStudent);\n}\n\nvoid loop() {\n  newmania.update();\n}\n`;
     return {code,warnings:[],boardId};
   } catch(error) {
     return {code:'',warnings:[`${error.message}${current?` (${current.type} · ${current.id})`:''}`],boardId};

@@ -1,0 +1,465 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Bài 03 — Kiểm tra từng Motor",
+    "boardId": "newmania-fast100-4wd",
+    "programModel": "newmania-v1",
+    "editorMode": "beginner",
+    "deviceConfigs": {
+      "newmania-fast100-4wd": {
+        "version": 1,
+        "motors": [
+          {
+            "id": "motor-1",
+            "name": "Motor 1",
+            "port": 1,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-2",
+            "name": "Motor 2",
+            "port": 2,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-3",
+            "name": "Motor 3",
+            "port": 3,
+            "reversed": false,
+            "enabled": true
+          },
+          {
+            "id": "motor-4",
+            "name": "Motor 4",
+            "port": 4,
+            "reversed": false,
+            "enabled": true
+          }
+        ],
+        "drivetrain": {
+          "wheels": [
+            "motor-1",
+            "motor-2",
+            "motor-3",
+            "motor-4"
+          ],
+          "limit": 100
+        },
+        "controller": {
+          "enabled": true,
+          "blink": true
+        }
+      }
+    },
+    "workspace": {
+      "variables": [
+        {
+          "name": "chieu",
+          "id": "motor_test-var-0"
+        }
+      ],
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "newmania_design_program",
+            "id": "motor_test-37",
+            "fields": {},
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "newmania_design_ps4_connect",
+                  "id": "motor_test-35",
+                  "fields": {},
+                  "next": {
+                    "block": {
+                      "type": "variables_set",
+                      "id": "motor_test-1",
+                      "fields": {
+                        "VAR": {
+                          "id": "motor_test-var-0"
+                        }
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "block": {
+                            "type": "math_number",
+                            "id": "motor_test-0",
+                            "fields": {
+                              "NUM": 1
+                            }
+                          }
+                        }
+                      },
+                      "next": {
+                        "block": {
+                          "type": "newmania_design_forever",
+                          "id": "motor_test-36",
+                          "fields": {},
+                          "inputs": {
+                            "DO": {
+                              "block": {
+                                "type": "controls_if",
+                                "id": "motor_test-6",
+                                "fields": {},
+                                "inputs": {
+                                  "IF0": {
+                                    "block": {
+                                      "type": "newmania_design_ps4_button",
+                                      "id": "motor_test-2",
+                                      "fields": {
+                                        "BUTTON": "4",
+                                        "STATE": "PRESS"
+                                      }
+                                    }
+                                  },
+                                  "DO0": {
+                                    "block": {
+                                      "type": "variables_set",
+                                      "id": "motor_test-5",
+                                      "fields": {
+                                        "VAR": {
+                                          "id": "motor_test-var-0"
+                                        }
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "block": {
+                                            "type": "math_single",
+                                            "id": "motor_test-4",
+                                            "fields": {
+                                              "OP": "NEG"
+                                            },
+                                            "inputs": {
+                                              "NUM": {
+                                                "block": {
+                                                  "type": "variables_get",
+                                                  "id": "motor_test-3",
+                                                  "fields": {
+                                                    "VAR": {
+                                                      "id": "motor_test-var-0"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "next": {
+                                  "block": {
+                                    "type": "controls_if",
+                                    "id": "motor_test-13",
+                                    "fields": {},
+                                    "inputs": {
+                                      "IF0": {
+                                        "block": {
+                                          "type": "newmania_design_ps4_button",
+                                          "id": "motor_test-7",
+                                          "fields": {
+                                            "BUTTON": "13",
+                                            "STATE": "HELD"
+                                          }
+                                        }
+                                      },
+                                      "DO0": {
+                                        "block": {
+                                          "type": "newmania_design_robot_motor_power",
+                                          "id": "motor_test-11",
+                                          "fields": {
+                                            "MOTOR": "motor-1"
+                                          },
+                                          "inputs": {
+                                            "POWER": {
+                                              "block": {
+                                                "type": "math_arithmetic",
+                                                "id": "motor_test-10",
+                                                "fields": {
+                                                  "OP": "MULTIPLY"
+                                                },
+                                                "inputs": {
+                                                  "A": {
+                                                    "block": {
+                                                      "type": "math_number",
+                                                      "id": "motor_test-8",
+                                                      "fields": {
+                                                        "NUM": 50
+                                                      }
+                                                    }
+                                                  },
+                                                  "B": {
+                                                    "block": {
+                                                      "type": "variables_get",
+                                                      "id": "motor_test-9",
+                                                      "fields": {
+                                                        "VAR": {
+                                                          "id": "motor_test-var-0"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "ELSE": {
+                                        "block": {
+                                          "type": "newmania_design_robot_motor_stop",
+                                          "id": "motor_test-12",
+                                          "fields": {
+                                            "MOTOR": "motor-1"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "extraState": {
+                                      "hasElse": true
+                                    },
+                                    "next": {
+                                      "block": {
+                                        "type": "controls_if",
+                                        "id": "motor_test-20",
+                                        "fields": {},
+                                        "inputs": {
+                                          "IF0": {
+                                            "block": {
+                                              "type": "newmania_design_ps4_button",
+                                              "id": "motor_test-14",
+                                              "fields": {
+                                                "BUTTON": "14",
+                                                "STATE": "HELD"
+                                              }
+                                            }
+                                          },
+                                          "DO0": {
+                                            "block": {
+                                              "type": "newmania_design_robot_motor_power",
+                                              "id": "motor_test-18",
+                                              "fields": {
+                                                "MOTOR": "motor-2"
+                                              },
+                                              "inputs": {
+                                                "POWER": {
+                                                  "block": {
+                                                    "type": "math_arithmetic",
+                                                    "id": "motor_test-17",
+                                                    "fields": {
+                                                      "OP": "MULTIPLY"
+                                                    },
+                                                    "inputs": {
+                                                      "A": {
+                                                        "block": {
+                                                          "type": "math_number",
+                                                          "id": "motor_test-15",
+                                                          "fields": {
+                                                            "NUM": 50
+                                                          }
+                                                        }
+                                                      },
+                                                      "B": {
+                                                        "block": {
+                                                          "type": "variables_get",
+                                                          "id": "motor_test-16",
+                                                          "fields": {
+                                                            "VAR": {
+                                                              "id": "motor_test-var-0"
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "ELSE": {
+                                            "block": {
+                                              "type": "newmania_design_robot_motor_stop",
+                                              "id": "motor_test-19",
+                                              "fields": {
+                                                "MOTOR": "motor-2"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "extraState": {
+                                          "hasElse": true
+                                        },
+                                        "next": {
+                                          "block": {
+                                            "type": "controls_if",
+                                            "id": "motor_test-27",
+                                            "fields": {},
+                                            "inputs": {
+                                              "IF0": {
+                                                "block": {
+                                                  "type": "newmania_design_ps4_button",
+                                                  "id": "motor_test-21",
+                                                  "fields": {
+                                                    "BUTTON": "15",
+                                                    "STATE": "HELD"
+                                                  }
+                                                }
+                                              },
+                                              "DO0": {
+                                                "block": {
+                                                  "type": "newmania_design_robot_motor_power",
+                                                  "id": "motor_test-25",
+                                                  "fields": {
+                                                    "MOTOR": "motor-3"
+                                                  },
+                                                  "inputs": {
+                                                    "POWER": {
+                                                      "block": {
+                                                        "type": "math_arithmetic",
+                                                        "id": "motor_test-24",
+                                                        "fields": {
+                                                          "OP": "MULTIPLY"
+                                                        },
+                                                        "inputs": {
+                                                          "A": {
+                                                            "block": {
+                                                              "type": "math_number",
+                                                              "id": "motor_test-22",
+                                                              "fields": {
+                                                                "NUM": 50
+                                                              }
+                                                            }
+                                                          },
+                                                          "B": {
+                                                            "block": {
+                                                              "type": "variables_get",
+                                                              "id": "motor_test-23",
+                                                              "fields": {
+                                                                "VAR": {
+                                                                  "id": "motor_test-var-0"
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "ELSE": {
+                                                "block": {
+                                                  "type": "newmania_design_robot_motor_stop",
+                                                  "id": "motor_test-26",
+                                                  "fields": {
+                                                    "MOTOR": "motor-3"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "extraState": {
+                                              "hasElse": true
+                                            },
+                                            "next": {
+                                              "block": {
+                                                "type": "controls_if",
+                                                "id": "motor_test-34",
+                                                "fields": {},
+                                                "inputs": {
+                                                  "IF0": {
+                                                    "block": {
+                                                      "type": "newmania_design_ps4_button",
+                                                      "id": "motor_test-28",
+                                                      "fields": {
+                                                        "BUTTON": "16",
+                                                        "STATE": "HELD"
+                                                      }
+                                                    }
+                                                  },
+                                                  "DO0": {
+                                                    "block": {
+                                                      "type": "newmania_design_robot_motor_power",
+                                                      "id": "motor_test-32",
+                                                      "fields": {
+                                                        "MOTOR": "motor-4"
+                                                      },
+                                                      "inputs": {
+                                                        "POWER": {
+                                                          "block": {
+                                                            "type": "math_arithmetic",
+                                                            "id": "motor_test-31",
+                                                            "fields": {
+                                                              "OP": "MULTIPLY"
+                                                            },
+                                                            "inputs": {
+                                                              "A": {
+                                                                "block": {
+                                                                  "type": "math_number",
+                                                                  "id": "motor_test-29",
+                                                                  "fields": {
+                                                                    "NUM": 50
+                                                                  }
+                                                                }
+                                                              },
+                                                              "B": {
+                                                                "block": {
+                                                                  "type": "variables_get",
+                                                                  "id": "motor_test-30",
+                                                                  "fields": {
+                                                                    "VAR": {
+                                                                      "id": "motor_test-var-0"
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  "ELSE": {
+                                                    "block": {
+                                                      "type": "newmania_design_robot_motor_stop",
+                                                      "id": "motor_test-33",
+                                                      "fields": {
+                                                        "MOTOR": "motor-4"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "extraState": {
+                                                  "hasElse": true
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "x": 40,
+            "y": 40,
+            "deletable": false
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { robotDeviceWarnings } from '../boards/robot-devices.js';
+import { ps4Usage } from './ps4-usage.js';
 
 const setupBlocks = new Set(['fast4wd_init', 'fast4wd_connect', 'fast4wd_speed', 'fast4wd_led']);
 const logicBlocks = new Set([
@@ -95,7 +96,7 @@ export function fast4wdConfig(workspace, profile, devices) {
       warnings.add('Chưa thể dùng khối "' + type + '" tại vị trí này trong chương trình Robot PS4.');
     }
   }
-  if (devices && !devices.controller.enabled) warnings.add('Bật Tay cầm PS4 trong Cấu hình robot để dùng ARM và watchdog.');
+  if (devices && !devices.controller.enabled && ps4Usage(workspace).dependent) warnings.add('Bật Tay cầm PS4 để sử dụng các khối tay cầm.');
   if (!devices && (!setup.has('fast4wd_init') || !setup.has('fast4wd_connect'))) {
     warnings.add('Thêm Khởi tạo robot 4 bánh và Kết nối PS4 qua I2C vào Khi bắt đầu.');
   }

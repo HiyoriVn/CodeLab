@@ -3,6 +3,8 @@ import { defaultRobotDevices } from '../boards/robot-devices.js';
 import { TYPES, NEWMANIA_MODEL, previewMotorTypes } from '../blocks/newmania.js';
 
 export const LESSONS = [
+  { id:'serial_counter', label:'Bài 01 — Serial Counter' },
+  { id:'ps4_connection', label:'Bài 02 — PS4 Connection' },
   { id:'motor_test', label:'Bài 03 — Kiểm tra từng Motor' },
   { id:'four_wheels', label:'Bài 04 — Di chuyển 4 bánh cơ bản' },
   { id:'joystick_math', label:'Bài 05 — Mecanum bằng hai Joystick' },
@@ -15,8 +17,9 @@ export function lessonProject(id) {
   const lesson = LESSONS.find(item => item.id === id);
   if (!lesson) throw new Error('Bài mẫu chưa được hỗ trợ.');
   let sequence = 0;
+  const prefix=id==='ps4_connection'?'ps4_link':id;
   const variables = new Map();
-  const b = (type, fields = {}, inputs = {}) => ({type,id:`${id}-${sequence++}`,fields,
+  const b = (type, fields = {}, inputs = {}) => ({type,id:`${prefix}-${sequence++}`,fields,
     ...(Object.keys(inputs).length ? {inputs:Object.fromEntries(Object.entries(inputs).map(([name,block])=>[name,{block}]))} : {})});
   const num = n => b('math_number',{NUM:n});
   const text = s => b('text',{TEXT:s});
@@ -45,7 +48,16 @@ export function lessonProject(id) {
   const stop = channel => b(previewMotorTypes.get('robot_motor_stop'),{MOTOR:'motor-'+channel});
   const powers = values => join(...values.map((n,i)=>motor(i+1,num(n))));
   let setup, body;
-  if (id === 'motor_test') {
+  if (id === 'serial_counter') {
+    setup=set('dem',num(0));
+    body=join(b('beginner_wait',{SECONDS:0.5}),b('math_change',{VAR:ref('dem')},{DELTA:num(1)}),b('beginner_message',{}, {VALUE:get('dem')}));
+  } else if (id === 'ps4_connection') {
+    setup=set('trang_thai_cu',num(-1));
+    const report=(value,message)=>join(b('beginner_message',{}, {VALUE:text(message)}),set('trang_thai_cu',num(value)));
+    body=join(condition(b('fast4wd_connected'),
+      condition(compare('NEQ',get('trang_thai_cu'),num(1)),report(1,'PS4 CONNECTED (S3 I2C)')),
+      condition(compare('NEQ',get('trang_thai_cu'),num(0)),report(0,'PS4 DISCONNECTED (S3 I2C)'))),b('beginner_wait',{SECONDS:0.05}));
+  } else if (id === 'motor_test') {
     setup=set('chieu',num(1));
     body=join(condition(button(4,'PRESS'),set('chieu',unary('NEG',get('chieu')))),
       ...[13,14,15,16].map((bit,i)=>condition(button(bit),motor(i+1,op('MULTIPLY',num(50),get('chieu'))),stop(i+1))));
@@ -75,7 +87,7 @@ export function lessonProject(id) {
         VALUE:op('MULTIPLY',op('DIVIDE',get('m'+i),get('dinh')),num(100)),LOW:num(-100),HIGH:num(100),
       }))));
   }
-  const root=b(TYPES.root,{}, {DO:join(b(TYPES.connect),setup,b(TYPES.forever,{}, {DO:body}))});
+  const root=b(TYPES.root,{}, {DO:join(id==='serial_counter'?null:b(TYPES.connect),setup,b(TYPES.forever,{}, {DO:body}))});
   root.x=40;root.y=40;root.deletable=false;
   const devices=defaultRobotDevices(getBoardProfile(FAST4WD_BOARD_ID));
   return {name:lesson.label,boardId:FAST4WD_BOARD_ID,programModel:NEWMANIA_MODEL,editorMode:'beginner',

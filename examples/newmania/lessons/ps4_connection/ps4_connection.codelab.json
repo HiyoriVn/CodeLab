@@ -1,0 +1,307 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Bài 02 — PS4 Connection",
+    "boardId": "newmania-fast100-4wd",
+    "programModel": "newmania-v1",
+    "editorMode": "beginner",
+    "deviceConfigs": {
+      "newmania-fast100-4wd": {
+        "version": 1,
+        "motors": [
+          {
+            "id": "motor-1",
+            "name": "Motor 1",
+            "port": 1,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-2",
+            "name": "Motor 2",
+            "port": 2,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-3",
+            "name": "Motor 3",
+            "port": 3,
+            "reversed": false,
+            "enabled": true
+          },
+          {
+            "id": "motor-4",
+            "name": "Motor 4",
+            "port": 4,
+            "reversed": false,
+            "enabled": true
+          }
+        ],
+        "drivetrain": {
+          "wheels": [
+            "motor-1",
+            "motor-2",
+            "motor-3",
+            "motor-4"
+          ],
+          "limit": 100
+        },
+        "controller": {
+          "enabled": true,
+          "blink": true
+        }
+      }
+    },
+    "workspace": {
+      "variables": [
+        {
+          "name": "trang_thai_cu",
+          "id": "ps4_connection-var-0"
+        }
+      ],
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "newmania_design_program",
+            "id": "ps4_link-23",
+            "fields": {},
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "newmania_design_ps4_connect",
+                  "id": "ps4_link-21",
+                  "fields": {},
+                  "next": {
+                    "block": {
+                      "type": "variables_set",
+                      "id": "ps4_link-1",
+                      "fields": {
+                        "VAR": {
+                          "id": "ps4_connection-var-0"
+                        }
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "block": {
+                            "type": "math_number",
+                            "id": "ps4_link-0",
+                            "fields": {
+                              "NUM": -1
+                            }
+                          }
+                        }
+                      },
+                      "next": {
+                        "block": {
+                          "type": "newmania_design_forever",
+                          "id": "ps4_link-22",
+                          "fields": {},
+                          "inputs": {
+                            "DO": {
+                              "block": {
+                                "type": "controls_if",
+                                "id": "ps4_link-19",
+                                "fields": {},
+                                "inputs": {
+                                  "IF0": {
+                                    "block": {
+                                      "type": "fast4wd_connected",
+                                      "id": "ps4_link-2",
+                                      "fields": {}
+                                    }
+                                  },
+                                  "DO0": {
+                                    "block": {
+                                      "type": "controls_if",
+                                      "id": "ps4_link-10",
+                                      "fields": {},
+                                      "inputs": {
+                                        "IF0": {
+                                          "block": {
+                                            "type": "logic_compare",
+                                            "id": "ps4_link-5",
+                                            "fields": {
+                                              "OP": "NEQ"
+                                            },
+                                            "inputs": {
+                                              "A": {
+                                                "block": {
+                                                  "type": "variables_get",
+                                                  "id": "ps4_link-3",
+                                                  "fields": {
+                                                    "VAR": {
+                                                      "id": "ps4_connection-var-0"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "B": {
+                                                "block": {
+                                                  "type": "math_number",
+                                                  "id": "ps4_link-4",
+                                                  "fields": {
+                                                    "NUM": 1
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "DO0": {
+                                          "block": {
+                                            "type": "beginner_message",
+                                            "id": "ps4_link-7",
+                                            "fields": {},
+                                            "inputs": {
+                                              "VALUE": {
+                                                "block": {
+                                                  "type": "text",
+                                                  "id": "ps4_link-6",
+                                                  "fields": {
+                                                    "TEXT": "PS4 CONNECTED (S3 I2C)"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "next": {
+                                              "block": {
+                                                "type": "variables_set",
+                                                "id": "ps4_link-9",
+                                                "fields": {
+                                                  "VAR": {
+                                                    "id": "ps4_connection-var-0"
+                                                  }
+                                                },
+                                                "inputs": {
+                                                  "VALUE": {
+                                                    "block": {
+                                                      "type": "math_number",
+                                                      "id": "ps4_link-8",
+                                                      "fields": {
+                                                        "NUM": 1
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "ELSE": {
+                                    "block": {
+                                      "type": "controls_if",
+                                      "id": "ps4_link-18",
+                                      "fields": {},
+                                      "inputs": {
+                                        "IF0": {
+                                          "block": {
+                                            "type": "logic_compare",
+                                            "id": "ps4_link-13",
+                                            "fields": {
+                                              "OP": "NEQ"
+                                            },
+                                            "inputs": {
+                                              "A": {
+                                                "block": {
+                                                  "type": "variables_get",
+                                                  "id": "ps4_link-11",
+                                                  "fields": {
+                                                    "VAR": {
+                                                      "id": "ps4_connection-var-0"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "B": {
+                                                "block": {
+                                                  "type": "math_number",
+                                                  "id": "ps4_link-12",
+                                                  "fields": {
+                                                    "NUM": 0
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "DO0": {
+                                          "block": {
+                                            "type": "beginner_message",
+                                            "id": "ps4_link-15",
+                                            "fields": {},
+                                            "inputs": {
+                                              "VALUE": {
+                                                "block": {
+                                                  "type": "text",
+                                                  "id": "ps4_link-14",
+                                                  "fields": {
+                                                    "TEXT": "PS4 DISCONNECTED (S3 I2C)"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "next": {
+                                              "block": {
+                                                "type": "variables_set",
+                                                "id": "ps4_link-17",
+                                                "fields": {
+                                                  "VAR": {
+                                                    "id": "ps4_connection-var-0"
+                                                  }
+                                                },
+                                                "inputs": {
+                                                  "VALUE": {
+                                                    "block": {
+                                                      "type": "math_number",
+                                                      "id": "ps4_link-16",
+                                                      "fields": {
+                                                        "NUM": 0
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "extraState": {
+                                  "hasElse": true
+                                },
+                                "next": {
+                                  "block": {
+                                    "type": "beginner_wait",
+                                    "id": "ps4_link-20",
+                                    "fields": {
+                                      "SECONDS": 0.05
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "x": 40,
+            "y": 40,
+            "deletable": false
+          }
+        ]
+      }
+    }
+  }
+}

@@ -104,6 +104,18 @@ bool Scheduler::startController(uint32_t nowMs) {
   return true;
 }
 
+bool Scheduler::startProgram(uint32_t nowMs) {
+  // Unlimited cooperative program; no controller input or ARM prerequisite.
+  return startController(nowMs);
+}
+
+void Scheduler::cancelMotions(uint32_t nowMs) {
+  gate_.hardLock();
+  for (auto& h : handles_) if (h.state == HandleState::ACTIVE) h.state = HandleState::CANCELED;
+  if (state_ == LifecycleState::RUN) gate_.unlock(runGeneration_);
+  record("motors-canceled",nowMs);
+}
+
 void Scheduler::cancelAll(uint32_t nowMs) {
   gate_.hardLock();
   for (size_t i = 0; i < scriptCount_; ++i) {

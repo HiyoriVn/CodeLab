@@ -27,7 +27,7 @@ static Board::Step studentProgram(Board::Context& ctx, uint32_t) {
 }
 
 void setup() {
-  newmania.begin(true);
+  newmania.begin(true, true, 130303UL, 7);
   newmania.registerProgram(2472772916UL, studentProgram, resetStudent);
 }
 

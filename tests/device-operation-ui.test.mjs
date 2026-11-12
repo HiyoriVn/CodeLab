@@ -17,6 +17,7 @@ await build({stdin:{contents:`
   import Modal from './src/ui/Modal.jsx';
   import {useDeviceOperation} from './src/device/useDeviceOperation.js';
   import {FAST4WD_BOARD_ID} from './src/boards/profiles.js';
+  export {setBrowserCompilerEnabled} from './src/compiler/config.js';
   export function Harness({code='sketch'}) {
     const operation=useDeviceOperation();
     const [open,setOpen]=React.useState(true);
@@ -26,7 +27,7 @@ await build({stdin:{contents:`
       <button disabled={operation.busy} onClick={()=>{if(!operation.isBusy())setOpen(false)}}>Đóng</button>
     </Modal>;
   }`,resolveDir:process.cwd(),loader:'jsx'},bundle:true,packages:'external',format:'esm',platform:'node',jsx:'automatic',outfile:resolve(folder,'harness.mjs')});
-const { Harness } = await import(pathToFileURL(resolve(folder,'harness.mjs')));
+const { Harness, setBrowserCompilerEnabled } = await import(pathToFileURL(resolve(folder,'harness.mjs')));
 const deferred = () => {let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return {promise,resolve,reject};};
 const response = data => ({ok:true,json:async()=>data});
 const tick = () => new Promise(resolve=>setTimeout(resolve,10));
@@ -145,6 +146,15 @@ test('real React panels lock each other, modal and repeated clicks; recover afte
     assert.equal(document.querySelector('section[aria-label="Nạp firmware từ trình duyệt"]').closest('details').open,false);
     await click(button('Biên dịch chương trình'));await click(button('Chọn USB và nạp'));
     assert.equal(requests.length,beforeRequests);assert.equal(chooseCalls,3);
+    // A local bridge is optional when WASM is enabled. Its absence must not
+    // present a failure to a student who can compile entirely in the browser.
+    dom.reconfigure({url:'http://localhost/'});
+    setBrowserCompilerEnabled(true);
+    globalThis.fetch=async()=>{throw Error('No local bridge');};
+    await act(async()=>{root.render(createElement(Harness,{key:'wasm-no-bridge'}));await tick();});
+    assert.equal(button('Biên dịch chương trình').disabled,false);
+    assert.doesNotMatch(document.querySelector('.device-panel').textContent,/Chưa kết nối được công cụ phát triển/);
+    setBrowserCompilerEnabled(false);
   } finally {
     await act(async()=>root.unmount());dom.window.close();globalThis.fetch=oldFetch;
     for(const [name,descriptor] of saved)if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];

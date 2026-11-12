@@ -11,7 +11,7 @@ class SchedulerGate final : public v2::MotorOutputGate {
 
   void hardLock() override {
     locked_ = true;
-    robot_.stop();
+    robot_.haltMotorOutputs();
     for (auto& command : commands_) command = {};
   }
 

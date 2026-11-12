@@ -11,11 +11,11 @@ test('Newmania facade uses real existing receiver, scheduler and motor backend o
   const flags=['-std=c++17','-Wall','-Wextra','-Werror','-I'+dir,'-I'+resolve('tests/fixtures'),...['CodeLabFast4wd','CodeLabPs4I2C','CodeLabRobot'].map(lib=>'-I'+resolve('firmware/libraries',lib,'src'))];
   const binary=join(dir,'newmania-api.exe');
   execFileSync(process.env.CXX||'g++',[...flags,resolve('tests/newmania-api-native.cpp'),resolve('firmware/libraries/CodeLabFast4wd/src/CodeLabV2Scheduler.cpp'),'-o',binary],{stdio:'pipe'});
-  assert.match(execFileSync(binary,{encoding:'utf8'}),/PASS: boot\/ARM/);
+  assert.match(execFileSync(binary,{encoding:'utf8'}),/PASS: boot without ARM/);
   execFileSync(process.env.CXX||'g++',[...flags,'-fsyntax-only','-x','c++',resolve('tests/fixtures/newmania-api-example.ino')],{stdio:'pipe'});
 });
 
-test('legacy scheduler generator keeps its existing runtime while facade wraps the same Robot',()=>{
+test('legacy and facade generators reuse the same physical Robot runtime',()=>{
   assert.doesNotMatch(readFileSync('src/generators/v2-scheduler.js','utf8'),/CodeLabNewmania/);
   assert.match(readFileSync('firmware/libraries/CodeLabFast4wd/src/CodeLabNewmania.h','utf8'),/fast4wd::Robot robot_/);
 });

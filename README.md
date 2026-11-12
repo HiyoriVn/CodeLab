@@ -4,7 +4,19 @@ CodeLab is a browser-first visual programming environment for ESP32-S3 robotics.
 
 ## Scratch-first editor
 
-New projects default to **Cơ bản**; switch to **Nâng cao** for GPIO/bus settings without losing blocks. Open one of three lessons from **Bài mẫu**; each opens a separate project. Motor/servo requests stay compile-blocked until an accepted hardware backend exists. [Usage and verification](docs/SCRATCH_FIRST.md).
+On the integration test branch, new projects use the existing Newmania board and
+the student toolbox with individual M1–M4 motor blocks. **Bài mẫu** contains five
+editable lessons: Serial Counter, PS4 Connection, individual motors, basic four
+wheels and joystick arithmetic. **Mã nguồn** starts closed and offers learning
+logic or full Arduino C++; the resizable panel has its own workspace area.
+
+Generated Blockly programs now start once at boot, without Options ARM or Share
+STOP. A program using PS4 stops all motors on link loss while logic/Serial/Wait
+continue; reconnect requires neutral input then a new action. Programs without
+PS4 run motors independently. The LED stays solid on fresh link and blinks on
+loss. Existing hardware/profile/driver checks remain. Compile and upload are
+separate explicit actions. [Current behavior, tests and limitations](docs/verification/INTEGRATION_UI_WASM_NO_ARM.md).
+Historical multi-profile Scratch-first work: [record](docs/SCRATCH_FIRST.md).
 
 ## Product decisions
 
@@ -52,4 +64,7 @@ NewmaniaCodeLab is a separate design reference, not the CodeLab repository. Its 
 
 The integration branch includes Bách's refreshed editor, light/dark mode, menu colors, a right-side code preview, a bottom serial panel, and a device dialog. Use **Tập tin** to switch between browser-local projects or import/export files. Projects remain in the current browser profile unless exported. The serial monitor uses Web Serial where supported. See [UI integration](docs/UI-INTEGRATION.md) for provenance and verification limits.
 
-[Cloudflare Pages and browser USB firmware](docs/CLOUDFLARE_PAGES.md) — precompiled packages only; Arduino CLI compilation remains separate.
+[Cloudflare Pages and browser USB firmware](docs/CLOUDFLARE_PAGES.md) includes the
+historical precompiled-package flow. This test branch also has browser WASM
+Core 3.3.7 compilation, enabled locally with `?wasm_compiler=1` and on the
+existing preview/staging origins. The production feature flag is unchanged.

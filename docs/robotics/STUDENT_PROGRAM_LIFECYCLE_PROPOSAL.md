@@ -1,5 +1,9 @@
 # Đề xuất tách chương trình Blockly khỏi ARM motor
 
+> **Đã bị thay thế bởi quyết định bỏ hoàn toàn Options ARM của chủ dự án.**
+> Nội dung dưới đây chỉ là lịch sử đề xuất, chưa được triển khai. Thiết kế mới
+> không có bước ARM cho motor; xem [No-ARM runtime](NO_ARM_RUNTIME.md).
+
 Ngày: 2026-11-12. **Đang chờ chủ dự án duyệt; chưa triển khai firmware/scheduler.**
 Yêu cầu mới thay cho phương án giữ ARM toàn chương trình. Bài 01–02 chưa chốt.
 

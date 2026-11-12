@@ -86,6 +86,8 @@ class Scheduler {
   bool registerEventScript(uint32_t scriptUid, ScriptStep stepFunc, uint8_t button, Edge edge);
   bool startAuto(uint32_t nowMs, uint32_t maxRunMs);
   bool startController(uint32_t nowMs);
+  bool startProgram(uint32_t nowMs);
+  void cancelMotions(uint32_t nowMs);
   void stop(uint32_t nowMs);
   void fault(FaultCode code, uint32_t nowMs);
   bool clearFault();

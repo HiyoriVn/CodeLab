@@ -22,7 +22,7 @@ function fileFor(name,code) {const path=join(outDir,name+'.cpp');writeFileSync(p
 function native(name,code,body) {
   const source=fileFor(name,code+`
 #include <cassert>
-static constexpr uint32_t OPTIONS = 1U << 9, SHARE = 1U << 8;
+[[maybe_unused]] static constexpr uint32_t OPTIONS = 1U << 9, SHARE = 1U << 8;
 static void fresh(uint32_t buttons = 0, int16_t lx = 0, int16_t ly = 0, int16_t rx = 0) {
   clockMs += 20;
   Wire.report.connected = true; Wire.report.sequence = (Wire.report.sequence + 1) & 127;
@@ -30,13 +30,13 @@ static void fresh(uint32_t buttons = 0, int16_t lx = 0, int16_t ly = 0, int16_t 
   Wire.report.axes[0] = lx; Wire.report.axes[1] = ly; Wire.report.axes[2] = rx;
   loop();
 }
-static void arm() {
-  fresh(); fresh(); fresh(OPTIONS);
+static void startStudent() {
+  fresh(); fresh(); fresh();
   for (int i=0; i<20; ++i) fresh();
   assert(newmania.running());
 }
 static void stopped() { for (const auto& m: enabled) for(bool op:m) assert(!op); }
-int main() { setup(); arm(); ${body} }
+int main() { setup(); startStudent(); ${body} }
 `);
   const binary=join(outDir,name+'.exe');
   execFileSync(cxx,[...flags,source,resolve('firmware/libraries/CodeLabFast4wd/src/CodeLabV2Scheduler.cpp'),'-o',binary],{stdio:'pipe'});
@@ -57,14 +57,15 @@ test('three new examples use API, survive serialization and retain correct board
   }
 });
 
-test('hold example generated C++ drives M1, releases X to stop, and Share wins',()=>{
+test('hold example drives M1 without ARM, releases X to stop, and ignores system Share',()=>{
   const w=loadDesign(exampleDesign('hold')),code=generate(w);w.dispose();
   native('hold',code,`
     for(int i=0;i<12;++i) fresh(1);
     assert(newmania.motorPwm(Motor::M1)>19);
     for(int i=0;i<12;++i) { fresh(); } stopped();
     for(int i=0;i<12;++i) fresh(1);
-    fresh(SHARE|1); stopped(); assert(!newmania.running());
+    fresh(SHARE|1); assert(newmania.motorPwm(Motor::M1)>19 && newmania.running());
+    for(int i=0;i<14;++i) { clockMs+=20; loop(); } stopped(); assert(newmania.running());
   `);
 });
 
@@ -79,7 +80,7 @@ test('counter generated C++ counts real presses once and prints through bounded 
     assert(serialOutput.find("1\\n")!=std::string::npos);
     fresh(SHARE); stopped(); fresh(); fresh(OPTIONS);
     for(int i=0;i<20;++i) fresh();
-    assert(newmania.running() && student_var_0==0);
+    assert(newmania.running() && student_var_0==3);
   `);
 });
 
@@ -93,11 +94,12 @@ test('mecanum generated C++ preserves LY forward, RX sideways, LX rotation and s
     assert(enabled[0][0] && enabled[1][1] && enabled[2][0] && enabled[3][1]);
     for(int i=0;i<30;++i) fresh(0,32767,0,0);
     assert(enabled[0][0] && enabled[1][1] && enabled[2][1] && enabled[3][0]);
-    fresh(SHARE); stopped();
+    fresh(SHARE); assert(newmania.running());
+    for(int i=0;i<14;++i) { clockMs+=20; loop(); } stopped(); assert(newmania.running());
   `);
 });
 
-test('generated wait keeps safety active and canceled continuation does not resume',()=>{
+test('generated Wait continues while PS4 loss clears PWM and Share does not stop the program',()=>{
   const w=loadDesign(exampleDesign('hold'));
   const loop=w.getBlocksByType(TYPES.forever)[0],condition=loop.getInputTargetBlock('DO');condition.dispose(false);
   const spin=w.newBlock(previewMotorTypes.get('robot_motor_spin')),power=w.newBlock('math_number');power.setFieldValue(20,'NUM');spin.getInput('POWER').connection.connect(power.outputConnection);
@@ -106,9 +108,10 @@ test('generated wait keeps safety active and canceled continuation does not resu
   loop.getInput('DO').connection.connect(spin.previousConnection);spin.nextConnection.connect(wait.previousConnection);wait.nextConnection.connect(stop.previousConnection);
   const code=generate(w);assert.match(code,/return newmania.wait\(ctx, 1000UL,/);w.dispose();
   native('wait',code,`
-    assert(newmania.motorPwm(Motor::M1)>19);
-    fresh(SHARE); stopped(); assert(!newmania.running());
-    for(int i=0;i<60;++i) { fresh(); } stopped(); assert(!newmania.running());
+    assert(newmania.running());
+    fresh(SHARE); assert(newmania.running());
+    for(int i=0;i<14;++i) { clockMs+=20; loop(); } stopped(); assert(newmania.running());
+    for(int i=0;i<60;++i) { fresh(); } stopped(); assert(newmania.running());
   `);
 });
 

@@ -40,11 +40,11 @@ static void fresh(uint32_t buttons=0) {
   clockMs+=20; Wire.report.connected=true; Wire.report.sequence=(Wire.report.sequence+1)&127;
   Wire.report.buttons=buttons; loop();
 }
-static void stopped() { for(const auto& m:enabled) for(bool x:m) assert(!x); }
-int main() { ${before} setup(); fresh(); fresh(); fresh(1U<<9);
+[[maybe_unused]] static void stopped() { for(const auto& m:enabled) for(bool x:m) assert(!x); }
+int main() { ${before} setup(); fresh(); fresh(); fresh();
   for(int i=0;i<20;++i) { fresh(); } assert(newmania.running());
   ${assertions}
-  fresh(1U<<8); stopped(); assert(!newmania.running());
+  const bool wasRunning=newmania.running(); fresh(1U<<8); assert(newmania.running()==wasRunning);
 }
 `);
   execFileSync(cxx,[...flags,source,resolve('firmware/libraries/CodeLabFast4wd/src/CodeLabV2Scheduler.cpp'),'-o',binary]);
@@ -72,7 +72,7 @@ test('generated for descends, continue advances, nested repeat break resets, whi
   execute('loops',code,'for(int j=0;j<400;++j) { fresh(); } assert(student_var_0==10); assert(student_var_1==6); assert(student_var_2==-1); assert(student_var_3==5);');
 });
 
-test('unbounded student while still yields to Share and the heartbeat',()=>{
+test('unbounded student while keeps yielding and respects the heartbeat',()=>{
   const b=build(),loop=b.w.newBlock('controls_whileUntil'),truth=b.w.newBlock('logic_boolean');truth.setFieldValue('TRUE','BOOL');b.plug(loop,'BOOL',truth);b.attach(loop);
   const code=output(b.w);b.w.dispose();
   execute('while_stop',code,'for(int j=0;j<50;++j) { fresh(); } assert(newmania.connected()); assert(uint32_t(clockMs-newmania.heartbeatAt())<10);');
