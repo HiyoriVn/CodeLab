@@ -1,0 +1,50 @@
+{
+  "version": "20261112-core3.3.7-newmania-16MB-default_8MB",
+  "core": "3.3.7",
+  "boardId": "newmania-fast100-4wd",
+  "fqbn": "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=default_8MB,PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=cdc",
+  "tools": {
+    "clang": {
+      "url": "llvm.wasm",
+      "chunks": [
+        "llvm.wasm.part0",
+        "llvm.wasm.part1",
+        "llvm.wasm.part2"
+      ],
+      "chunkHashes": {
+        "llvm.wasm.part0": "56537b18f1d0323a65fe3e330861bf4025f16984bcb70c195f45ab85ed4cab46",
+        "llvm.wasm.part1": "35b0a6f26b6f220a769b5e2e11547d02f6fb8b82f407ff1de6e3393191958426",
+        "llvm.wasm.part2": "85b6406265246d2e4bf7208c62ee5ee9b04f72668f0448ce4895aa402f7bd29b"
+      },
+      "argv0": "clang"
+    },
+    "ld": {
+      "url": "ld.wasm",
+      "chunks": [
+        "ld.wasm"
+      ],
+      "chunkHashes": {
+        "ld.wasm": "cb8d0a223ca28c5eefc134399d7a54313b95ab5c7f1cbf84edccb23080f58c32"
+      },
+      "argv0": "ld"
+    }
+  },
+  "sysroot": "sysroot-337.tar.gz",
+  "sysrootChunks": [
+    "sysroot-337.tar.gz.part0"
+  ],
+  "sysrootChunkHashes": {
+    "sysroot-337.tar.gz.part0": "3e8f6c35721f6c137733db946cc00b19c68098bbd90c813f9b5c25fdfec8c367"
+  },
+  "bootloader": "bootloader.bin",
+  "bootloaderHash": "5403ba8cdf81cbb47f2debe13c0f5ff5903540075ccaf3fac65f0ee68213cb7d",
+  "partitionTable": "partitions.bin",
+  "partitionTableHash": "1d9cca96de0fe07ad7fc0648b9878ddecd9ce565e38b589ad20fea698ed4c80c",
+  "bootApp0": "boot_app0.bin",
+  "bootApp0Hash": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0",
+  "image": {
+    "flashMode": "dio",
+    "flashFreq": "80m",
+    "flashSize": "16MB"
+  }
+}
