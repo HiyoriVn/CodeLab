@@ -181,3 +181,17 @@ Do not mark the MVP release-ready until the hardware matrix and release gate abo
 Browser-flash tests validate package rejection, chip/capacity/installed-layout gates, readback verification and transport cleanup with mocked USB. React DOM tests exercise mutual exclusion between bridge and browser USB, modal Escape/backdrop, repeated clicks, cancellation/failure recovery and static-origin behavior. Packager tests accept exact Core 3.3.7, reject version prefixes and preserve an existing manifest. These checks do not access a device or deploy a site. See [Cloudflare/browser USB](CLOUDFLARE_PAGES.md) for scope and remaining live acceptance.
 
 Verification: npm test **121/121 PASS**, npm run build **PASS** (existing chunk-size warning), 2026-11-12. Live USB/Pages checks remain unverified.
+
+## Student compile/upload UI — Windows acceptance, 2026-11-12
+
+The actual checkout passes `npm test` **124/124** and `npm run build` (existing
+chunk-size warning). Golden comparisons use `tests/helpers/golden.mjs` to
+normalize CRLF to LF in both operands only; C++ content, indentation, escaped
+characters and final newlines remain checked. Three regression tests enforce
+that boundary. No generated C++ or firmware fixtures were edited.
+
+React DOM tests retain the two-step UI, unavailable compiler state, disabled
+Blockly upload, closed technical tools and confirmation/USB lock checks.
+Live Chrome/Edge and responsive layout acceptance remain unverified because
+the saved browser permission/managed policy blocks localhost access. No compiler
+integration, hardware flash or deployment is part of this acceptance.

@@ -280,7 +280,7 @@ function App() {
         <button className="btn p" onClick={closeDialog}>Đã hiểu</button>
       </Modal>
       <Modal open={dialog === 'connect'} genie="connect" locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
-        <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
+        <p>Biên dịch chương trình, sau đó chọn USB và nạp vào robot. Để xem dữ liệu Serial, dùng nút Bảng lệnh.</p>
         <DevicePanel key={project.id + boardId} operation={deviceOperation} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
         <BrowserFlasher boardId={boardId} operation={deviceOperation} />
         <div className="dialog-actions"><button className="btn" disabled={deviceBusy} onClick={closeDialog}>Đóng</button></div>

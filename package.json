@@ -14,6 +14,7 @@
     "examples:beginner": "node tools/beginner-examples.mjs"
   },
   "dependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.4.2",
     "blockly": "^12.3.0",
     "esptool-js": "0.7.1",
     "react": "^19.1.1",

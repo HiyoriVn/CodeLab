@@ -1,3 +1,4 @@
+import { assertGoldenEqual } from './helpers/golden.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as Blockly from 'blockly';
@@ -10,7 +11,7 @@ test('robotics examples deterministic, schema round-trip and supported build sou
  assert.equal(a.code,generateArduino(w,c.boardId).code);
  const saved=Blockly.serialization.workspaces.save(w),r=new Blockly.Workspace();Blockly.serialization.workspaces.load(saved,r);
  assert.equal(generateArduino(r,c.boardId).code,a.code);
- if(c.supported)assert.equal(readFileSync(`firmware/verification/robotics_examples/${c.name}/${c.name}.ino`,'utf8'),a.code);
+ if(c.supported)assertGoldenEqual(readFileSync(`firmware/verification/robotics_examples/${c.name}/${c.name}.ino`,'utf8'),a.code);
  r.dispose();w.dispose();}
 });
 test('motor/servo requests blocked across concrete/generic and out-of-range channels stay intact',()=>{

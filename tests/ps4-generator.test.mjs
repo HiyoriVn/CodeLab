@@ -1,3 +1,4 @@
+import { assertGoldenEqual } from './helpers/golden.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -9,7 +10,7 @@ import { generateArduino } from '../src/generators/arduino.js';
 test('PS4 UART golden code, escaped literals, include dedup and board reservations',()=>{
  const w=ps4Workspace();const a=generateArduino(w,'steam-mainboard-v2');assert.deepEqual(a.warnings,[]);
  assert.equal(a.code,generateArduino(w,'steam-mainboard-v2').code);
- assert.equal(a.code,readFileSync('tests/fixtures/ps4_uart.ino','utf8'));
+ assertGoldenEqual(a.code,readFileSync('tests/fixtures/ps4_uart.ino','utf8'));
  assert.equal((a.code.match(/#include <Wire.h>/g)||[]).length,1);
  assert.ok(a.code.includes("'\\n'") && a.code.includes("'\\r'") && a.code.includes("'\\0'"));
  assert.ok(!a.code.includes('\x00'));assert.match(a.code,/Serial1.begin\(115200, SERIAL_8N1, 7, 6\)/);

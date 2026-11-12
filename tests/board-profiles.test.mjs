@@ -1,3 +1,4 @@
+import { assertGoldenEqual } from './helpers/golden.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as Blockly from 'blockly';
@@ -76,6 +77,6 @@ test('concrete profiles block generic H-bridge even on free digital pins',()=>{
   assert.ok(generateArduino(w,v1.id).warnings.some(msg=>msg.includes('chưa cho phép điều khiển motor')));w.dispose();
 });
 test('standalone V1 firmware and committed examples match generated source',()=>{
-  for(const kind of EXAMPLES){const w=exampleWorkspace(kind);const code=generateArduino(w,v1.id).code;assert.equal(readFileSync(`firmware/newmania_v1/examples/${kind}/${kind}.ino`,'utf8'),code);w.dispose();}
-  assert.equal(readFileSync('firmware/newmania_v1/newmania_v1.ino','utf8'),readFileSync('firmware/newmania_v1/examples/minimal/minimal.ino','utf8'));
+  for(const kind of EXAMPLES){const w=exampleWorkspace(kind);const code=generateArduino(w,v1.id).code;assertGoldenEqual(readFileSync(`firmware/newmania_v1/examples/${kind}/${kind}.ino`,'utf8'),code);w.dispose();}
+  assertGoldenEqual(readFileSync('firmware/newmania_v1/newmania_v1.ino','utf8'),readFileSync('firmware/newmania_v1/examples/minimal/minimal.ino','utf8'));
 });

@@ -1,0 +1,76 @@
+{
+  "version": "20261112-core3.3.7-newmania-16MB-default_8MB",
+  "core": "3.3.7",
+  "boardId": "newmania-fast100-4wd",
+  "fqbn": "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=default_8MB,PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=cdc",
+  "tools": {
+    "clang": {
+      "url": "llvm.wasm",
+      "chunks": [
+        "llvm.wasm.part00",
+        "llvm.wasm.part01",
+        "llvm.wasm.part02",
+        "llvm.wasm.part03",
+        "llvm.wasm.part04",
+        "llvm.wasm.part05",
+        "llvm.wasm.part06",
+        "llvm.wasm.part07",
+        "llvm.wasm.part08",
+        "llvm.wasm.part09",
+        "llvm.wasm.part10",
+        "llvm.wasm.part11"
+      ],
+      "chunkHashes": {
+        "llvm.wasm.part00": "c9905197339b3ed9ae461336e8339e2c01c9a1302d1a98701812fa081a8a4eb1",
+        "llvm.wasm.part01": "2b5e6518f0f5de1e5c594fff77ff64d29aac9aebd9ea02fbd3e0b80f0a04afb0",
+        "llvm.wasm.part02": "8dfbfe9d1cf8ca12d4cea969e423462987b4af152aff6b9b95b144134def8c5f",
+        "llvm.wasm.part03": "d551e547dd83b5858e99817c61d9e9b889ec6921d75d1c2dbaa4198de29d5eef",
+        "llvm.wasm.part04": "4ffdf4724281cff81f51e69a723bf87f760da4611cef59cf1be6d6539519557b",
+        "llvm.wasm.part05": "c15100603b4689b31d7d9efefd9a9e9dcac8e7b0759cdbbd05ee217fde453b43",
+        "llvm.wasm.part06": "006cc99832c37d9220d458be3add8c22e19c68fb5f71cd2b9e0a670f01f08b01",
+        "llvm.wasm.part07": "9aede72bfdad47163713a0655a3c172b92dfefbab7ecae9c68c0db95046435aa",
+        "llvm.wasm.part08": "f4fc0e25a97d54e4661e19a7ab7f8557c6c43887b2e176e011f35e3251590591",
+        "llvm.wasm.part09": "04612979448314c8a8607f73f1e99c77f9d0138d566c0ef3dc920bd142efbecc",
+        "llvm.wasm.part10": "ca03f1ee9077e508b9c330fddb3e98fbc2544b600c6edd1df63fb43c210d05ed",
+        "llvm.wasm.part11": "067ce3d75e5f3ec2b699ae432a36bc64a7269be3aab392d84d1113fe5df92989"
+      },
+      "argv0": "clang"
+    },
+    "ld": {
+      "url": "ld.wasm",
+      "chunks": [
+        "ld.wasm"
+      ],
+      "chunkHashes": {
+        "ld.wasm": "cb8d0a223ca28c5eefc134399d7a54313b95ab5c7f1cbf84edccb23080f58c32"
+      },
+      "argv0": "ld"
+    }
+  },
+  "sysroot": "sysroot-337.tar.gz",
+  "sysrootChunks": [
+    "sysroot-337.tar.gz.part00",
+    "sysroot-337.tar.gz.part01",
+    "sysroot-337.tar.gz.part02",
+    "sysroot-337.tar.gz.part03",
+    "sysroot-337.tar.gz.part04"
+  ],
+  "sysrootChunkHashes": {
+    "sysroot-337.tar.gz.part00": "d9d168471a5aaef2ffe0b5051cf2ce3c8048b1d1988aba1a92fb00dc7bc84d6d",
+    "sysroot-337.tar.gz.part01": "3abd17e7e1091d5270a9acd7451a0bb24d300640f59d87b8b7aa6e5a097d2957",
+    "sysroot-337.tar.gz.part02": "d718f989589fd583ded6b68d1a811f17d01539f47c5b87f95d2e259f5b58ff65",
+    "sysroot-337.tar.gz.part03": "3ca6bc6b06a20cd62674b5f52e028313c3869f5a96e72b9c04d10b50db63dc21",
+    "sysroot-337.tar.gz.part04": "aed16a36004db12045b2a5f0d46e5af63cdfb327825618527e09829fbfa623c3"
+  },
+  "bootloader": "bootloader.bin",
+  "bootloaderHash": "5403ba8cdf81cbb47f2debe13c0f5ff5903540075ccaf3fac65f0ee68213cb7d",
+  "partitionTable": "partitions.bin",
+  "partitionTableHash": "1d9cca96de0fe07ad7fc0648b9878ddecd9ce565e38b589ad20fea698ed4c80c",
+  "bootApp0": "boot_app0.bin",
+  "bootApp0Hash": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0",
+  "image": {
+    "flashMode": "dio",
+    "flashFreq": "80m",
+    "flashSize": "16MB"
+  }
+}

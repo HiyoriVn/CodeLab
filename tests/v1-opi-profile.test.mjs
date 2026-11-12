@@ -1,3 +1,4 @@
+import { assertGoldenEqual } from './helpers/golden.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as Blockly from 'blockly';
@@ -24,7 +25,7 @@ test('OPI examples serialize deterministically, only explicit Blink configures L
   for (const name of ['minimal','blink','serial_hello']) {
     const w = exampleWorkspace(name), out = generateArduino(w,OPI_BOARD_ID);
     assert.deepEqual(out.warnings,[]);
-    assert.equal(out.code,readFileSync(`firmware/verification/v1_opi_examples/${name}/${name}.ino`,'utf8'));
+    assertGoldenEqual(out.code,readFileSync(`firmware/verification/v1_opi_examples/${name}/${name}.ino`,'utf8'));
     assert.doesNotMatch(out.code,/gpio_set_|codelabSafeStartup|ledc|Servo/);
     if(name==='blink') { assert.match(out.code,/pinMode\(47, OUTPUT\)/); assert.match(out.code,/digitalWrite\(47, LOW\)/); }
     else assert.doesNotMatch(out.code,/pinMode|digitalWrite/);
@@ -55,6 +56,6 @@ test('experimental PWM example only attaches LED47 and preserves generated golde
   assert.match(out.code,/ledcAttach\(47, 5000, 8\)/);
   assert.match(out.code,/ledcWrite\(47,/);
   assert.doesNotMatch(out.code,/gpio_set_|codelabSafeStartup/);
-  assert.equal(out.code,readFileSync('firmware/verification/v1_opi_examples/pwm_led/pwm_led.ino','utf8'));
+  assertGoldenEqual(out.code,readFileSync('firmware/verification/v1_opi_examples/pwm_led/pwm_led.ino','utf8'));
   w.dispose();
 });
