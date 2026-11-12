@@ -255,7 +255,6 @@ function App() {
         <button className="btn" onClick={() => setDialog('convert')}>Tạo bản sao Newmania…</button>
       </div>}
       {legacyDriveBlocks(project.workspace).length > 0 && <div className="legacy-block-note" role="status">Dự án cũ có block di chuyển tổng hợp ({legacyDriveBlocks(project.workspace).join(', ')}). Block và dữ liệu vẫn được giữ nguyên để mở, sửa và xuất; toolbox học sinh chỉ cung cấp Motor riêng lẻ.</div>}
-      <div className="runtime-note">Chương trình tự chạy sau khi nạp và khởi động board. Options/Share không điều khiển motor ở cấp hệ thống. Dự án dùng PS4 dừng mọi motor khi mất link; đưa tay cầm về giữa, nhả nút rồi thao tác mới để tiếp tục. LED sáng: có kết nối; nhấp nháy: mất kết nối.</div>
       <div className="main" style={{'--code-size':`${codeSize}px`}}>
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
           <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode="beginner" programModel={usesNewmaniaProgram(project) ? NEWMANIA_MODEL : undefined} robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
