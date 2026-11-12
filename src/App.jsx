@@ -220,13 +220,13 @@ function App() {
         onLanguage={() => showToast('Chưa có bản dịch, hiện chỉ có Tiếng Việt')}
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
-      <div className="board-profile-toolbar">
-        <label>Board <select aria-label="Board profile" value={FAST4WD_BOARD_ID} disabled={legacyBoard} onChange={() => {}}><option value={FAST4WD_BOARD_ID}>Newmania ESP32S3 Board</option></select></label>
-        <label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}>
-          <option value="">Chọn bài mẫu...</option>
-          <option value="mecanum">Robot mecanum 4 bánh bằng PS4</option>
-        </select></label>
-      </div>
+      <ProfileToolbar
+        boardId={boardId}
+        boards={[{ id: FAST4WD_BOARD_ID, name: 'Newmania ESP32S3 Board' }, ...(boardId !== FAST4WD_BOARD_ID ? [{ id: boardId, name: `Board của dự án đã nhập: ${boardId}` }] : [])]}
+        onBoard={() => {}}
+        lessons={LESSONS}
+        onLesson={(value) => openLesson({ target: { value } })}
+      />
       {(legacyBoard || legacyProgram) && <div role="alert">{legacyBoard ? `Dự án cũ dùng board ${boardId}. Chưa chuyển sang Newmania; giữ nguyên dữ liệu và board gốc.` : 'Dự án dùng cấu trúc cũ; giữ nguyên các luồng và cách sinh mã hiện có.'}
         <button className="btn" onClick={() => setDialog('convert')}>Tạo bản sao Newmania…</button>
       </div>}

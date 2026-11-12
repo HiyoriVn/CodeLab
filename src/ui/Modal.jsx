@@ -24,8 +24,8 @@ function Modal({ open, onClose, title, children, locked = false, genie }) {
       ref={ref}
       className={closing ? 'is-closing' : undefined}
       aria-label={title}
-      onClose={() => { if (!locked) onClose(); }}
-      onCancel={(event) => { if (locked) event.preventDefault(); }}
+      onClose={() => { if (openRef.current && !locked) onClose(); }}
+      onCancel={(event) => { event.preventDefault(); if (!locked) onClose(); }}
       onClick={(event) => { if (!locked && event.target === ref.current) onClose(); }}
     >
       {shown && <><h3>{title}</h3>{children}</>}
