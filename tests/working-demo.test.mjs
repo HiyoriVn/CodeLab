@@ -1,3 +1,4 @@
+import { assertGoldenEqual } from './helpers/golden.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -15,7 +16,7 @@ test('working demo command/runtime and RZ7899 plan remain fail closed',()=>{
 });
 test('integrated demo reuses canonical parser and never contains actuator GPIO writes',()=>{
  const root='firmware/demos/newmania_ps4_mecanum/';
- assert.equal(readFileSync(root+'GeneratedPs4Parser.h','utf8'),parserHeader());
+ assertGoldenEqual(readFileSync(root+'GeneratedPs4Parser.h','utf8'),parserHeader());
  for(const name of ['newmania_ps4_mecanum.ino','DemoRuntime.h','DemoConfig.h','Rz7899Plan.h'])
   assert.doesNotMatch(readFileSync(root+name,'utf8'),/pinMode\(|digitalWrite\(|gpio_set_|ledcAttach\(|ledcWrite\(|\.attach\(/);
  assert.match(readFileSync(root+'newmania_ps4_mecanum.ino','utf8'),/if\(demo::uartEnabled\)/);

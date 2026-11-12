@@ -1,3 +1,4 @@
+import { assertGoldenEqual } from './helpers/golden.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as Blockly from 'blockly';
@@ -12,7 +13,7 @@ test('new lessons have deterministic C++ and lossless version1 serialization',()
   for(const name of BEGINNER_EXAMPLES) {
     const w=beginnerWorkspace(name),a=generateArduino(w,LESSON_BOARD);
     assert.deepEqual(a.warnings,[]);
-    assert.equal(a.code,readFileSync(`examples/beginner/${name}/${name}.ino`,'utf8'));
+    assertGoldenEqual(a.code,readFileSync(`examples/beginner/${name}/${name}.ino`,'utf8'));
     const fixture=JSON.parse(readFileSync(`examples/beginner/${name}/${name}.codelab.json`,'utf8'));
     assert.equal(projectEditorMode(fixture.project),'beginner');
     const restored=new Blockly.Workspace();Blockly.serialization.workspaces.load(fixture.project.workspace,restored);

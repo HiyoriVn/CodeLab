@@ -4,5 +4,10 @@
   "assets": {
     "directory": "./dist"
   },
-  "previews": {}
+  "previews": {},
+  "env": {
+    "staging": {
+      "name": "codelab-staging"
+    }
+  }
 }

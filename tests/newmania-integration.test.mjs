@@ -1,3 +1,4 @@
+import { assertGoldenEqual } from './helpers/golden.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as Blockly from 'blockly';
@@ -171,7 +172,7 @@ test('committed Newmania example files regenerate deterministically with exact p
     const payload=JSON.parse(readFileSync(`examples/newmania/${name}/${name}.codelab.json`,'utf8'));
     assert.deepEqual(JSON.parse(JSON.stringify(newmaniaExample(name))),payload);
     const w=new Blockly.Workspace();Blockly.serialization.workspaces.load(payload.project.workspace,w);
-    assert.equal(generate(w),readFileSync(`examples/newmania/${name}/${name}.ino`,'utf8'));w.dispose();
+    assertGoldenEqual(generate(w),readFileSync(`examples/newmania/${name}/${name}.ino`,'utf8'));w.dispose();
   }
 });
 

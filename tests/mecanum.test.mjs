@@ -1,3 +1,4 @@
+import { assertGoldenEqual } from './helpers/golden.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -18,7 +19,7 @@ test('mecanum/controller host simulation uses real CSV publisher/parser and mock
   assert.match(output,/SIMULATION_ONLY/);
 });
 test('compile-only simulation parser header matches generator; no hardware actuator initialization',()=>{
-  assert.equal(readFileSync('firmware/verification/ps4_mecanum_sim/GeneratedPs4Parser.h','utf8'),parserHeader());
+  assertGoldenEqual(readFileSync('firmware/verification/ps4_mecanum_sim/GeneratedPs4Parser.h','utf8'),parserHeader());
   const sketch=readFileSync('firmware/verification/ps4_mecanum_sim/ps4_mecanum_sim.ino','utf8');
   assert.doesNotMatch(sketch,/pinMode\(|gpio_set_|ledcAttach\(|analogWrite\(|\.attach\(|Serial1.begin\(|Wire.begin\(/);
   assert.match(sketch,/MockMotors/);assert.match(sketch,/MockServo/);
