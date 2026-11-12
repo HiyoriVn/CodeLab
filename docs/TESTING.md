@@ -175,3 +175,9 @@ Until hardware identity and results are recorded, describe Phase 5 as adapter-co
 - Confirm the production bundle can be reproduced from the documented setup.
 
 Do not mark the MVP release-ready until the hardware matrix and release gate above are complete.
+
+## Cloudflare / browser USB — review 2026-11-12
+
+Browser-flash tests validate package rejection, chip/capacity/installed-layout gates, readback verification and transport cleanup with mocked USB. React DOM tests exercise mutual exclusion between bridge and browser USB, modal Escape/backdrop, repeated clicks, cancellation/failure recovery and static-origin behavior. Packager tests accept exact Core 3.3.7, reject version prefixes and preserve an existing manifest. These checks do not access a device or deploy a site. See [Cloudflare/browser USB](CLOUDFLARE_PAGES.md) for scope and remaining live acceptance.
+
+Verification: npm test **121/121 PASS**, npm run build **PASS** (existing chunk-size warning), 2026-11-12. Live USB/Pages checks remain unverified.

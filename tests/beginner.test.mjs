@@ -39,7 +39,8 @@ test('toolbox is compact, profile-aware and raw hardware appears only in Advance
     const basic=editorToolbox(board.id,'beginner'),advanced=editorToolbox(board.id,'advanced');
     if (board.capabilities.fast4wd) {
       assert.deepEqual(basic, advanced);
-      assert.ok(types(basic).includes('fast4wd_drive'));
+      assert.ok(!types(basic).includes('fast4wd_drive'));
+      assert.ok(types(basic).includes('fast4wd_connected')); // Newmania supplies default real-controller devices.
       assert.ok(types(basic).includes('beginner_wait'));
       assert.ok(types(basic).includes('controls_repeat_ext'));
       assert.ok(!types(advanced).includes('codelab_gpio_write'));

@@ -1,0 +1,20 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { createHash } from 'node:crypto';
+import { getBoardProfile, FAST4WD_BOARD_ID } from '../src/boards/profiles.js';
+import { validatePackage } from '../src/device/firmware-package.js';
+const dir=process.argv[2]; if(!dir) throw new Error('Usage: node tools/package-browser-firmware.mjs <Arduino build directory>');
+const options=JSON.parse(await fs.readFile(path.join(dir,'build.options.json'),'utf8'));
+if(options.fqbn!==getBoardProfile(FAST4WD_BOARD_ID).build.fqbn || typeof options.hardwareFolders!=='string' || !/\/esp32\/hardware\/esp32\/3\.3\.7(?:[\/,;]|$)/.test(options.hardwareFolders.replaceAll('\\','/'))) throw new Error('Sai FQBN/core. Không tạo gói.');
+const args=await fs.readFile(path.join(dir,'flash_args'),'utf8');
+const lines=args.trim().split(/\r?\n/).slice(1);
+const files=[], segments=[];
+const hash=data=>createHash('sha256').update(data).digest('hex');
+for(const line of lines){ const match=line.trim().match(/^(0x[0-9a-f]+)\s+(.+?)(?:\s*)$/i); if(!match)throw new Error('flash_args không hợp lệ');
+ const name=match[2].replace(/^"|"$/g,''); if(path.basename(name)!==name)throw new Error('Chỉ chấp nhận tên tệp trong build directory');
+ const data=await fs.readFile(path.join(dir,name)); files.push({name,size:data.length,arrayBuffer:async()=>Uint8Array.from(data).buffer}); segments.push({file:name,address:Number(match[1]),sha256:hash(data)});
+}
+const manifest={version:1,boardId:FAST4WD_BOARD_ID,chip:'ESP32-S3',core:'3.3.7',fqbn:options.fqbn,segments};
+await validatePackage(manifest,files,hash);
+await fs.writeFile(path.join(dir,'codelab-flash.json'),JSON.stringify(manifest,null,2),{flag:'wx'});
+console.log('Đã tạo codelab-flash.json; chọn cùng 4 .bin trong trình duyệt. Không flash.');

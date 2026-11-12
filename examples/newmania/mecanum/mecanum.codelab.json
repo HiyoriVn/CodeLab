@@ -1,0 +1,123 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Robot mecanum 4 bánh bằng PS4",
+    "boardId": "newmania-fast100-4wd",
+    "programModel": "newmania-v1",
+    "editorMode": "beginner",
+    "deviceConfigs": {
+      "newmania-fast100-4wd": {
+        "version": 1,
+        "motors": [
+          {
+            "id": "motor-1",
+            "name": "Motor 1",
+            "port": 1,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-2",
+            "name": "Motor 2",
+            "port": 2,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-3",
+            "name": "Motor 3",
+            "port": 3,
+            "reversed": false,
+            "enabled": true
+          },
+          {
+            "id": "motor-4",
+            "name": "Motor 4",
+            "port": 4,
+            "reversed": false,
+            "enabled": true
+          }
+        ],
+        "drivetrain": {
+          "wheels": [
+            "motor-1",
+            "motor-2",
+            "motor-3",
+            "motor-4"
+          ],
+          "limit": 100
+        },
+        "controller": {
+          "enabled": true,
+          "blink": true
+        }
+      }
+    },
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "newmania_design_program",
+            "id": "mecanum-block-0",
+            "x": 40,
+            "y": 40,
+            "deletable": false,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "newmania_design_ps4_connect",
+                  "id": "mecanum-block-1",
+                  "next": {
+                    "block": {
+                      "type": "newmania_design_forever",
+                      "id": "mecanum-block-2",
+                      "inputs": {
+                        "DO": {
+                          "block": {
+                            "type": "robot_mecanum",
+                            "id": "mecanum-block-3",
+                            "inputs": {
+                              "FORWARD": {
+                                "block": {
+                                  "type": "robot_ps4_axis",
+                                  "id": "mecanum-block-4",
+                                  "fields": {
+                                    "AXIS": "1"
+                                  }
+                                }
+                              },
+                              "LEFT": {
+                                "block": {
+                                  "type": "robot_ps4_axis",
+                                  "id": "mecanum-block-5",
+                                  "fields": {
+                                    "AXIS": "2"
+                                  }
+                                }
+                              },
+                              "TURN": {
+                                "block": {
+                                  "type": "robot_ps4_axis",
+                                  "id": "mecanum-block-6",
+                                  "fields": {
+                                    "AXIS": "0"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import { getBoardProfile, DEFAULT_BOARD_ID } from '../boards/profiles.js';
 import { roboticsToolbox } from './robotics-toolbox.js';
-import { fast4wdToolbox } from './fast4wd.js';
+import './fast4wd.js';
+import { defaultRobotDevices } from '../boards/robot-devices.js';
 import { robotDeviceToolbox } from './robot-devices.js';
 import { CATEGORIES } from './palette.js';
 
@@ -11,6 +12,7 @@ const category = (name, colour, contents) => ({kind:'category',name,colour,conte
 const shadow = (type, fields) => ({shadow:{type,fields}});
 export function editorToolbox(boardId, mode = 'beginner', devices) {
   const p = getBoardProfile(boardId);
+  if (p.capabilities.fast4wd && devices === undefined) devices = defaultRobotDevices(p);
   if (p.capabilities.fast4wd) return {
     kind: 'categoryToolbox',
     contents: [
@@ -18,16 +20,13 @@ export function editorToolbox(boardId, mode = 'beginner', devices) {
         block('beginner_start'), block('beginner_forever'), block('beginner_wait'),
         block('controls_if'), block('controls_if',{extraState:{hasElse:true}}),
         block('controls_repeat_ext',{inputs:{TIMES:shadow('math_number',{NUM:5})}}),
-      ]),
-      category('PS4', '#cf5b9b', [
-        block('robot_ps4_event',{fields:{EDGE:'PRESS',BUTTON:'0'}}),
-        block('robot_ps4_event',{fields:{EDGE:'RELEASE',BUTTON:'0'}}),
-        ...['robot_ps4_button','robot_ps4_axis','fast4wd_connected'].map(type=>block(type)),
+        block('controls_whileUntil'), block('controls_for'), block('controls_flow_statements'),
       ]),
       category('Logic', '#5c81a6', [
-        ...['logic_boolean','logic_negate','logic_operation','logic_compare','math_number'].map(type => block(type)),
-        block('math_arithmetic',{inputs:{A:shadow('math_number',{NUM:1}),B:shadow('math_number',{NUM:1})}}),
-        block('text'),
+        ...['logic_boolean','logic_negate','logic_operation','logic_compare'].map(type => block(type)),
+      ]),
+      category(CATEGORIES.math.name, CATEGORIES.math.colour, [
+        ...['math_number','math_arithmetic','math_modulo','math_single','math_random_int','math_round','math_constrain'].map(type => block(type)),
       ]),
       {
         kind: 'category',
@@ -40,16 +39,14 @@ export function editorToolbox(boardId, mode = 'beginner', devices) {
           block('variables_get'),
         ],
       },
-      category(CATEGORIES.display.name, CATEGORIES.display.colour, [
+      category('Hiển thị / Serial', CATEGORIES.display.colour, [
         block('beginner_message',{inputs:{VALUE:shadow('text',{TEXT:'Xin chào!'})}}),
         block('beginner_led'),
-        block('beginner_led',{fields:{STATE:'LOW'}}),
+        block('beginner_led',{fields:{STATE:'LOW'}}), block('beginner_blink'),
+        ...['text','text_join','text_print','beginner_serial_ready','codelab_serial_print','codelab_serial_available','codelab_serial_read'].map(type => block(type)),
       ]),
-      devices ? { ...fast4wdToolbox, contents: fast4wdToolbox.contents.filter(({ type }) =>
-        type === 'fast4wd_connected' || type === 'fast4wd_stop' ||
-        (devices.drivetrain.wheels.length && ['fast4wd_drive','fast4wd_forward','fast4wd_strafe','fast4wd_turn'].includes(type))) }
-        : fast4wdToolbox,
-      ...robotDeviceToolbox(devices, p),
+      ...robotDeviceToolbox(devices, p).map(group => group.name === 'Tay cầm PS4'
+        ? { ...group, contents: [...group.contents, block('fast4wd_connected')] } : group),
     ],
   };
   const advanced = mode === 'advanced';

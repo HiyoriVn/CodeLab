@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getBoardProfile } from '../boards/profiles.js';
+import { useDeviceOperation } from '../device/useDeviceOperation.js';
 
 async function request(path, options) {
   const response = await fetch(path, options);
@@ -8,8 +9,11 @@ async function request(path, options) {
   return data;
 }
 
-function DevicePanel({ code, warnings, boardId, onOpenSerial }) {
+function DevicePanel({ code, warnings, boardId, onOpenSerial, operation }) {
+  const localOperation = useDeviceOperation();
+  const deviceOperation = operation ?? localOperation;
   const board = getBoardProfile(boardId);
+  const localBridge = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
   const fast4wd = board.capabilities.fast4wd;
   const [status, setStatus] = useState(null);
   const [ports, setPorts] = useState([]);
@@ -17,10 +21,16 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial }) {
   const [hardwareConfirmed, setHardwareConfirmed] = useState(false);
   const [build, setBuild] = useState(null);
   const buildId = build?.code === code && build?.boardId === boardId ? build.id : '';
-  const [busy, setBusy] = useState(false);
+  const busy = deviceOperation.busy;
   const [message, setMessage] = useState('Đang kết nối dịch vụ Arduino cục bộ…');
 
   const refresh = async () => {
+    if (!localBridge) {
+      setMessage('Website tĩnh: dùng gói .bin bên dưới. Biên dịch Arduino CLI cần mở CodeLab trên localhost cùng bridge local.');
+      return;
+    }
+    const release = deviceOperation.acquire();
+    if (!release) return;
     setHardwareConfirmed(false);
     try {
       const [nextStatus, nextPorts] = await Promise.all([
@@ -37,13 +47,17 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial }) {
       setPorts([]);
       setPort('');
       setMessage('Chưa kết nối bridge. Chạy npm run bridge và cài Arduino CLI cùng ESP32 core.');
+    } finally {
+      release();
     }
   };
 
   useEffect(() => { refresh(); }, []);
 
   const compile = async () => {
-    setBusy(true);
+    if (!status?.ready || !code || warnings.length) return;
+    const release = deviceOperation.acquire();
+    if (!release) return;
     setMessage('Đang biên dịch cho ESP32-S3…');
     setBuild(null);
     try {
@@ -57,14 +71,15 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial }) {
     } catch (error) {
       setMessage('Biên dịch thất bại. Xem lỗi Arduino CLI bên dưới.\n' + error.message);
     } finally {
-      setBusy(false);
+      release();
     }
   };
 
   const upload = async () => {
-    if (!buildId || !port || warnings.length || (fast4wd && !hardwareConfirmed)) return;
+    if (deviceOperation.isBusy() || !buildId || !port || warnings.length || (fast4wd && !hardwareConfirmed)) return;
     if (!window.confirm(`Nạp firmware ${board.name} vào ${port}? Chương trình đang chạy trên bo sẽ bị thay thế.`)) return;
-    setBusy(true);
+    const release = deviceOperation.acquire();
+    if (!release) return;
     setMessage('Đang nạp firmware… Không rút cáp USB.');
     try {
       const result = await request('/api/upload', {
@@ -77,7 +92,7 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial }) {
       setMessage('Nạp thất bại. Nếu cổng đang bận, đóng Serial Monitor rồi thử lại.\n' + error.message);
     } finally {
       setHardwareConfirmed(false);
-      setBusy(false);
+      release();
     }
   };
 
@@ -85,7 +100,7 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial }) {
     <section className="device-panel" aria-label="Biên dịch và nạp ESP32-S3">
       <div className="device-panel-heading">
         <div><span className="code-panel-icon" aria-hidden="true">↥</span><strong>Newmania ESP32S3 Board</strong></div>
-        <button className="button button-quiet" onClick={refresh} disabled={busy}>Làm mới cổng</button>
+        <button className="button button-quiet" onClick={refresh} disabled={busy || !localBridge}>Làm mới cổng</button>
       </div>
       <p className="device-message" style={{ whiteSpace: 'pre-wrap' }} role="status">{message}</p>
       {warnings.length > 0 && <div role="alert" className="beginner-help"><strong>Chưa thể biên dịch. Hãy sửa các mục sau:</strong><ul>{warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></div>}
