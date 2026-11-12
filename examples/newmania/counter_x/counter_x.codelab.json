@@ -1,0 +1,179 @@
+{
+  "format": "codelab-project",
+  "version": 1,
+  "project": {
+    "name": "Nhấn X tăng biến đếm",
+    "boardId": "newmania-fast100-4wd",
+    "programModel": "newmania-v1",
+    "editorMode": "beginner",
+    "deviceConfigs": {
+      "newmania-fast100-4wd": {
+        "version": 1,
+        "motors": [
+          {
+            "id": "motor-1",
+            "name": "Motor 1",
+            "port": 1,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-2",
+            "name": "Motor 2",
+            "port": 2,
+            "reversed": true,
+            "enabled": true
+          },
+          {
+            "id": "motor-3",
+            "name": "Motor 3",
+            "port": 3,
+            "reversed": false,
+            "enabled": true
+          },
+          {
+            "id": "motor-4",
+            "name": "Motor 4",
+            "port": 4,
+            "reversed": false,
+            "enabled": true
+          }
+        ],
+        "drivetrain": {
+          "wheels": [
+            "motor-1",
+            "motor-2",
+            "motor-3",
+            "motor-4"
+          ],
+          "limit": 100
+        },
+        "controller": {
+          "enabled": true,
+          "blink": true
+        }
+      }
+    },
+    "workspace": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "newmania_design_program",
+            "id": "counter_x-block-0",
+            "x": 40,
+            "y": 40,
+            "deletable": false,
+            "inputs": {
+              "DO": {
+                "block": {
+                  "type": "newmania_design_ps4_connect",
+                  "id": "counter_x-block-1",
+                  "next": {
+                    "block": {
+                      "type": "variables_set",
+                      "id": "counter_x-block-2",
+                      "fields": {
+                        "VAR": {
+                          "id": "counter_x-variable-0"
+                        }
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "block": {
+                            "type": "math_number",
+                            "id": "counter_x-block-3",
+                            "fields": {
+                              "NUM": 0
+                            }
+                          }
+                        }
+                      },
+                      "next": {
+                        "block": {
+                          "type": "newmania_design_forever",
+                          "id": "counter_x-block-4",
+                          "inputs": {
+                            "DO": {
+                              "block": {
+                                "type": "controls_if",
+                                "id": "counter_x-block-5",
+                                "inputs": {
+                                  "IF0": {
+                                    "block": {
+                                      "type": "newmania_design_ps4_button",
+                                      "id": "counter_x-block-6",
+                                      "fields": {
+                                        "BUTTON": "0",
+                                        "STATE": "PRESS"
+                                      }
+                                    }
+                                  },
+                                  "DO0": {
+                                    "block": {
+                                      "type": "math_change",
+                                      "id": "counter_x-block-7",
+                                      "fields": {
+                                        "VAR": {
+                                          "id": "counter_x-variable-0"
+                                        }
+                                      },
+                                      "inputs": {
+                                        "DELTA": {
+                                          "block": {
+                                            "type": "math_number",
+                                            "id": "counter_x-block-8",
+                                            "fields": {
+                                              "NUM": 1
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "next": {
+                                        "block": {
+                                          "type": "beginner_message",
+                                          "id": "counter_x-block-9",
+                                          "inputs": {
+                                            "VALUE": {
+                                              "block": {
+                                                "type": "variables_get",
+                                                "id": "counter_x-block-10",
+                                                "fields": {
+                                                  "VAR": {
+                                                    "id": "counter_x-variable-0"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "variables": [
+        {
+          "name": "đếm",
+          "id": "counter_x-variable-0"
+        },
+        {
+          "name": "item",
+          "id": "counter_x-variable-1"
+        }
+      ]
+    }
+  }
+}

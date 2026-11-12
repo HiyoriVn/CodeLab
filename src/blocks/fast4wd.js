@@ -19,8 +19,8 @@ const definitions = [
   statement('fast4wd_strafe', 'di chuyển ngang sang %1', 'Đi ngang khi robot đã ARM và còn nhận báo cáo PS4.', [direction('trái', 'phải')]),
   statement('fast4wd_turn', 'xoay %1', 'Xoay tại chỗ khi robot đã ARM và còn nhận báo cáo PS4.', [direction('trái', 'phải')]),
   statement('fast4wd_stop', 'dừng robot', 'Dừng và DISARM. Cần bấm Options để ARM lại.'),
-  { type: 'fast4wd_connected', message0: 'PS4 đã kết nối?', output: 'Boolean', colour,
-    tooltip: 'Đúng khi robot còn nhận báo cáo PS4 mới.' },
+  { type: 'fast4wd_connected', message0: 'Tay cầm PS4 đã kết nối?', output: 'Boolean', colour,
+    tooltip: 'Đúng khi robot còn nhận dữ liệu mới từ tay cầm. Ví dụ: Nếu Tay cầm PS4 đã kết nối? thì hiển thị “Sẵn sàng”. Sai khi mất kết nối.' },
 ];
 
 Blockly.defineBlocksWithJsonArray(definitions);

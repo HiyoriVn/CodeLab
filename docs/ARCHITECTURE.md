@@ -59,3 +59,5 @@ STEAM Robotics Mainboard V2.0 uses ESP32-S3-MINI-1-N8. PS4 data enters UART1: TX
 - Bridge chip/board, bridge-side wiring/power, toolchain and versioned protocol with axis/button conversion.
 - Implementation and verification of the two firmware targets, driver resources and safety policy.
 - Desktop packaging after web MVP feedback.
+
+[Static Pages / browser USB flow](CLOUDFLARE_PAGES.md) — precompiled packages only; Arduino CLI compilation remains separate.
