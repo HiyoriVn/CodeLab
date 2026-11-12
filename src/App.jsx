@@ -215,7 +215,7 @@ function App() {
   const toggleConsoleSize = () => setConsoleHeight((h) => (h <= CONSOLE_MIN + 4 ? clampConsole(300) : CONSOLE_MIN));
 
   return (
-    <div className="app">
+    <div className={`app${terminalOpen ? ' has-console' : ''}`} style={{ '--console-h': `${consoleHeight}px` }}>
       <TopBar
         projects={projectStore.projects} activeProjectId={project.id} onSwitchProject={switchProject}
         projectName={project?.name || ''} onRename={renameProject} onRenameCommit={() => persist(projectStore)}

@@ -65,7 +65,7 @@ select,.fld{height:40px;border:1px solid var(--dot);border-radius:8px;background
 .status-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block}
 
 /* ---- code panel ---- */
-.code-side{width:340px;flex:none;border-left:1px solid var(--line);border-radius:14px 0 0 14px;background:var(--pan);display:flex;flex-direction:column;min-height:0}
+.code-side{width:340px;flex:none;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--pan);display:flex;flex-direction:column;min-height:0}
 .code-side h2,.console h2{margin:0;padding:12px 16px;font-size:14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
 .code-panel{flex:1;min-height:0;display:flex;flex-direction:column}
 .code-panel-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
@@ -79,7 +79,7 @@ select,.fld{height:40px;border:1px solid var(--dot);border-radius:8px;background
 .code-output code{font:inherit;white-space:pre}
 
 /* ---- console ---- */
-.console{flex:none;position:relative;height:var(--console-h,300px);min-height:44px;overflow:hidden;border-radius:14px 14px 0 0;background:#181B26;color:#D8DCEC;display:flex;flex-direction:column}
+.console{flex:none;position:relative;height:var(--console-h,300px);min-height:44px;overflow:hidden;border:1px solid #2E3350;border-radius:16px;background:#181B26;color:#D8DCEC;display:flex;flex-direction:column}
 .console h2{flex:none}
 .console-grip{position:absolute;top:0;left:0;right:0;height:10px;cursor:ns-resize;touch-action:none;z-index:2;display:flex;justify-content:center;align-items:flex-start}
 .console-grip::before{content:"";width:48px;height:4px;margin-top:3px;border-radius:2px;background:#4A5070}
@@ -181,6 +181,18 @@ dialog ol{padding-left:20px;line-height:1.7;margin:0 0 16px}
 .card{transition:border-color .18s,transform .18s}
 .card:hover{transform:translateY(-2px)}
 .code-output,.serial-output{scroll-behavior:smooth}
+
+:root{--float-gap:14px}
+.app,.main{position:relative}
+.dock-right{position:absolute;top:var(--float-gap);right:var(--float-gap);bottom:var(--float-gap);width:var(--dock-w,340px);z-index:12;pointer-events:none}
+.dock-bottom{position:absolute;left:var(--float-gap);right:var(--float-gap);bottom:var(--float-gap);height:var(--console-h,300px);z-index:12;pointer-events:none}
+.dock-panel{pointer-events:auto}
+.dock-right>.dock-panel{left:0;right:0;width:auto}
+.dock-bottom>.console{left:0;right:0}
+.code-side{box-shadow:0 18px 44px rgba(20,25,70,.28),0 3px 10px rgba(20,25,70,.12)}
+.console{box-shadow:0 18px 44px rgba(10,14,40,.42),0 3px 10px rgba(10,14,40,.2)}
+:root[data-theme="dark"] .code-side{box-shadow:0 18px 44px rgba(0,0,0,.55),0 3px 10px rgba(0,0,0,.3)}
+.code-output{border-radius:0 0 15px 15px}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
@@ -342,8 +354,7 @@ dialog[open].is-closing::backdrop{animation:fade-out var(--genie-ms) ease forwar
 
 @media (max-width:900px){.dock-right{--dock-w:300px}}
 @media (max-width:650px){
-  .dock-right{position:absolute;top:56px;right:0;bottom:0;z-index:15;--dock-w:min(340px,92vw)}
-  .dock-right>.dock-panel{box-shadow:-8px 0 22px rgba(0,0,0,.2)}
+  .dock-right{--dock-w:min(340px,92vw)}
 }
 
 /* ---- setting ---- */
@@ -374,3 +385,21 @@ dialog:has(.changelog){width:min(560px,92vw)}
 .cl-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .cl-list li{display:flex;align-items:flex-start;gap:10px;line-height:1.55}
 .cl-list .sel-tag{margin-top:2px;min-width:66px;justify-content:center}
+
+/* ---- floating panels  ---- */
+:root{--float-gap:14px}
+.app,.main{position:relative}
+.dock-right{position:absolute;top:var(--float-gap);right:var(--float-gap);bottom:var(--float-gap);width:var(--dock-w,340px);z-index:12;pointer-events:none}
+.dock-bottom{position:absolute;left:var(--float-gap);right:var(--float-gap);bottom:var(--float-gap);height:var(--console-h,300px);z-index:12;pointer-events:none}
+.dock-panel{pointer-events:auto}
+.dock-right>.dock-panel{left:0;right:0;width:auto}
+.dock-bottom>.console{left:0;right:0}
+.code-side{box-shadow:0 18px 44px rgba(20,25,70,.28),0 3px 10px rgba(20,25,70,.12)}
+.console{box-shadow:0 18px 44px rgba(10,14,40,.42),0 3px 10px rgba(10,14,40,.2)}
+:root[data-theme="dark"] .code-side{box-shadow:0 18px 44px rgba(0,0,0,.55),0 3px 10px rgba(0,0,0,.3)}
+.code-output{border-radius:0 0 15px 15px}
+.zoom-ctl{transition:right .3s cubic-bezier(.22,.8,.3,1),bottom .3s cubic-bezier(.22,.8,.3,1)}
+.main:has(.dock-right:not(.is-closing)) .zoom-ctl{right:calc(340px + var(--float-gap) * 2)}
+.app.has-console .zoom-ctl{bottom:calc(var(--console-h,300px) + var(--float-gap) + 16px)}
+@media (max-width:900px){.main:has(.dock-right:not(.is-closing)) .zoom-ctl{right:calc(300px + var(--float-gap) * 2)}}
+@media (max-width:650px){:root{--float-gap:8px}.main:has(.dock-right:not(.is-closing)) .zoom-ctl{right:22px}}
