@@ -1,5 +1,8 @@
 {
   "name": "codelab",
-  "pages_build_output_dir": "./dist",
-  "compatibility_date": "2026-11-11"
+  "compatibility_date": "2026-11-12",
+  "assets": {
+    "directory": "./dist"
+  },
+  "previews": {}
 }
