@@ -1,5 +1,16 @@
 # Testing and verification strategy
 
+## UI/WASM integration checkpoint — 2026-11-12
+
+Intermediate integration tree: **132/132 tests PASS**, production build PASS
+(existing chunk warning). Three individual-motor lessons have serialization,
+deterministic generator and generated native-C++ execution coverage. Live Chrome
+partially checked preview/default closed, separate layout, mode switch, keyboard
+resize and 680×800 responsiveness. Full five-lesson/WASM/USB UI acceptance is
+pending the owner's runtime architecture decision. Firmware/scheduler/profile
+source is unchanged; no flash or hardware PASS. See [integration record](UI-INTEGRATION.md)
+and [pending program/motor lifecycle proposal](robotics/STUDENT_PROGRAM_LIFECYCLE_PROPOSAL.md).
+
 ## Device Configuration — 2026-11-09
 
 `npm test` đạt 67/67 và `npm run build` thành công. Test host kiểm tra cổng, cấu hình bốn bánh, chiều đảo, PWM từng motor, lệnh hẹn giờ và watchdog/Share trong lúc chờ. Chrome xác nhận đổi tên motor cập nhật nhãn và giữ sau khi tải lại, đồng thời tháo/nối lại trục trong bài mecanum cập nhật C++. Sketch và các header trong demo fast100 gốc giữ nguyên SHA-256. [Thiết kế và nguồn VEX](robotics/DEVICE_CONFIGURATION_DESIGN.md) · [Hướng dẫn và bài mẫu](robotics/PS4_FAST100_4WD.md)

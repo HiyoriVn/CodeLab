@@ -274,7 +274,9 @@ test('V0.2 Basic 30-block catalog coverage matrix: all 30 blocks accounted for, 
 
   for (const item of matrix) {
     assert.ok(Blockly.Blocks[item.type], 'Missing Blockly definition for ' + item.id + ' (' + item.type + ')');
-    assert.ok(hasEntry(item.match), 'Missing toolbox entry for ' + item.id + ' (' + item.type + ')');
+    if (['robot_drive_direction','robot_mecanum','robot_drive_stop','robot_drive_for_time'].includes(item.type)) {
+      assert.ok(!hasEntry(item.match), 'Compatibility-only macro must stay hidden: ' + item.type);
+    } else assert.ok(hasEntry(item.match), 'Missing toolbox entry for ' + item.id + ' (' + item.type + ')');
   }
 
   // Verify E01v2 (beginner_led) is hardware-gated on fast100 (where GPIO47 is reserved for system safety/PS4 status)

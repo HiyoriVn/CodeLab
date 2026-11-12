@@ -10,6 +10,17 @@ export const projectEditorMode = project => project?.editorMode === 'beginner' ?
 const block = (type, extra = {}) => ({kind:'block',type,...extra});
 const category = (name, colour, contents) => ({kind:'category',name,colour,contents});
 const shadow = (type, fields) => ({shadow:{type,fields}});
+export const legacyDriveTypes = new Set(['robot_mecanum','robot_drive_direction','robot_drive_for_time','robot_drive_stop','fast4wd_drive','fast4wd_forward','fast4wd_strafe','fast4wd_turn']);
+export function legacyDriveBlocks(state) {
+  const found = new Set();
+  const visit = value => {
+    if (!value || typeof value !== 'object') return;
+    if (legacyDriveTypes.has(value.type)) found.add(value.type);
+    Object.values(value).forEach(visit);
+  };
+  visit(state);
+  return [...found];
+}
 export function editorToolbox(boardId, mode = 'beginner', devices) {
   const p = getBoardProfile(boardId);
   if (p.capabilities.fast4wd && devices === undefined) devices = defaultRobotDevices(p);
@@ -45,7 +56,7 @@ export function editorToolbox(boardId, mode = 'beginner', devices) {
         block('beginner_led',{fields:{STATE:'LOW'}}), block('beginner_blink'),
         ...['text','text_join','text_print','beginner_serial_ready','codelab_serial_print','codelab_serial_available','codelab_serial_read'].map(type => block(type)),
       ]),
-      ...robotDeviceToolbox(devices, p).map(group => group.name === 'Tay cầm PS4'
+      ...robotDeviceToolbox(devices, p).filter(group => group.name !== 'Di chuyển mecanum').map(group => group.name === 'Tay cầm PS4'
         ? { ...group, contents: [...group.contents, block('fast4wd_connected')] } : group),
     ],
   };

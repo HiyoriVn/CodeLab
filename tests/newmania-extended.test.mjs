@@ -53,7 +53,7 @@ int main() { ${before} setup(); fresh(); fresh(); fresh(1U<<9);
 
 test('exactly 14 software entries unlock; three system LED entries stay locked with reasons',()=>{
   const entries=designToolbox().contents.flatMap(c=>c.contents).filter(e=>e.kind==='block');
-  assert.equal(entries.length,48);assert.equal(entries.filter(e=>e.disabled).length,3);
+  assert.equal(entries.length,44);assert.equal(entries.filter(e=>e.disabled).length,3);
   assert.deepEqual([...unsupported.keys()],['beginner_led','beginner_blink']);
   for(const type of ['controls_whileUntil','controls_for','controls_flow_statements','math_modulo','math_single','math_random_int','math_round','math_constrain','text_join','text_print','beginner_serial_ready','codelab_serial_print','codelab_serial_available','codelab_serial_read'])assert.ok(entries.some(e=>e.type===type&&!e.disabled),type);
 });

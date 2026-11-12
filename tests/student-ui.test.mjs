@@ -22,16 +22,17 @@ test('old projects and legacy workspaces survive every launch', () => {
   assert.equal(data.get('codelab.projects.v1'),'new');
 });
 
-test('Newmania toolbox exposes individual motor, drive, PS4 and math blocks without robot macros', () => {
+test('Newmania toolbox exposes individual motor, PS4 and math blocks without drive macros', () => {
   const profile = getBoardProfile(FAST4WD_BOARD_ID);
   const toolbox = editorToolbox(profile.id, 'advanced', defaultRobotDevices(profile));
   const blocks = toolbox.contents.flatMap(category => category.contents || []);
   for (const type of ['beginner_start','beginner_wait','controls_if','math_number','robot_motor_spin',
-    'robot_drive_direction','robot_mecanum','robot_ps4_button','robot_ps4_axis','robot_ps4_event','fast4wd_connected']) {
+    'robot_motor_power','robot_ps4_button','robot_ps4_axis','robot_ps4_event','fast4wd_connected']) {
     assert.ok(blocks.some(item => item.type === type), type);
   }
   assert.equal(blocks.filter(item => item.type === 'robot_ps4_event').length, 2);
   assert.ok(!blocks.some(item => item.type === 'fast4wd_drive'));
+  assert.ok(!blocks.some(item => ['robot_drive_direction','robot_mecanum','robot_drive_for_time','robot_drive_stop'].includes(item.type)));
   assert.ok(toolbox.contents.some(category => category.custom === 'VARIABLE'));
   assert.ok(toolbox.contents.some(category => category.name === 'Motor'));
 });
@@ -59,7 +60,8 @@ test('new projects use the tested board while imports retain their board ID', ()
   const app = readFileSync('src/App.jsx','utf8');
   assert.match(app, /boardId = FAST4WD_BOARD_ID/);
   assert.match(app, /defaultRobotDevices\(getBoardProfile\(FAST4WD_BOARD_ID\)\)/);
-  assert.match(app, /value=\{FAST4WD_BOARD_ID\} disabled=\{legacyBoard\}/);
+  assert.match(app, /<ProfileToolbar[\s\S]*?boardId=\{boardId\}/);
+  assert.match(app, /onBoard=\{\(\) => \{\}\}/);
   assert.match(app, /projectBoardId\(content\)/);
   assert.match(app, /boardId === FAST4WD_BOARD_ID \? generatedCode.warnings/);
   const workspace = new Blockly.Workspace();
@@ -74,7 +76,7 @@ test('new projects use the tested board while imports retain their board ID', ()
 
 test('Newmania initializes eight groups without stored devices and exposes M1–M4', () => {
   const toolbox = editorToolbox(FAST4WD_BOARD_ID);
-  assert.deepEqual(toolbox.contents.map(c => c.name), ['Bắt đầu & Điều khiển','Logic','Toán học','Biến','Hiển thị / Serial','Motor','Di chuyển mecanum','Tay cầm PS4']);
+  assert.deepEqual(toolbox.contents.map(c => c.name), ['Bắt đầu & Điều khiển','Logic','Toán học','Biến','Hiển thị / Serial','Motor','Tay cầm PS4']);
   assert.deepEqual(toolbox.contents[5].contents.filter(b => b.type === 'robot_motor_spin').map(b => b.fields.MOTOR), ['motor-1','motor-2','motor-3','motor-4']);
   assert.ok(!JSON.stringify(toolbox).includes('beginner_ps4_sim'));
 });

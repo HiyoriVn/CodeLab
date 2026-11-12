@@ -18,9 +18,9 @@ test('design root is unique, not deletable/copyable/duplicatable, and absent fro
   w.dispose();
 });
 
-test('new design has eight categories, one motor entry per action and M1–M4 only',()=>{
+test('new student design has seven categories, one motor entry per action and M1–M4 only',()=>{
   const toolbox=designToolbox();
-  assert.deepEqual(toolbox.contents.map(c=>c.name),['Bắt đầu & Điều khiển','Logic','Toán học','Biến','Hiển thị / Serial','Motor','Di chuyển mecanum','Tay cầm PS4']);
+  assert.deepEqual(toolbox.contents.map(c=>c.name),['Bắt đầu & Điều khiển','Logic','Toán học','Biến','Hiển thị / Serial','Motor','Tay cầm PS4']);
   const motor=toolbox.contents.find(c=>c.name==='Motor').contents.filter(e=>e.kind==='block');
   assert.equal(motor.length,7);assert.equal(new Set(motor.map(b=>b.type)).size,7);
   const w=new Blockly.Workspace();

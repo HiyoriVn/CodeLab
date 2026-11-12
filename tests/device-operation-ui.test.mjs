@@ -129,7 +129,9 @@ test('real React panels lock each other, modal and repeated clicks; recover afte
     await act(async()=>{compile.reject(Error('internal compiler detail'));await tick();});
     assert.match(document.querySelector('.device-panel').textContent,/Thất bại/);
     assert.doesNotMatch(document.querySelector('.device-panel').textContent,/internal compiler detail/);
-    await click(button('Đóng'));assert.equal(document.querySelector('dialog').open,false);
+    await click(button('Đóng'));
+    // Bách's modal keeps the native dialog open through its closing animation.
+    await waitFor(()=>!document.querySelector('dialog').open);
     const beforeRequests=requests.length;
     dom.reconfigure({url:'https://example.pages.dev/'});
     await act(async()=>{root.render(createElement(Harness,{key:'static'}));await tick();});

@@ -106,7 +106,7 @@ function TopBar({
 
       <button className="ib" data-genie="connect" onClick={onConnect} aria-label="Thiết bị" data-tip="Thiết bị"><img src={icon('ket-noi')} alt="" /></button>
       <button className="ib" data-genie="terminal" onClick={onToggleTerminal} aria-pressed={terminalOpen} aria-label="Bảng lệnh" data-tip="Bảng lệnh"><img src={icon('bang-lenh')} alt="" /></button>
-      <button className="ib" data-genie="code" onClick={onToggleCode} aria-pressed={codeOpen} aria-label="Code" data-tip="Code"><img src={icon('hien-code')} alt="" /></button>
+      <button className="ib" data-genie="code" onClick={onToggleCode} aria-pressed={codeOpen} aria-label="Xem mã nguồn" data-tip="Xem mã nguồn"><img src={icon('hien-code')} alt="" /></button>
     </header>
   );
 }

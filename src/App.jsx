@@ -5,7 +5,8 @@ import * as Blockly from 'blockly';
 import { DEFAULT_BOARD_ID, FAST4WD_BOARD_ID, getBoardProfile, projectBoardId } from './boards/profiles.js';
 import { defaultRobotDevices, validateProjectDeviceConfigs } from './boards/robot-devices.js';
 import { robotBlocks } from './blocks/robot-devices.js';
-import { projectEditorMode } from './blocks/beginner-toolbox.js';
+import { projectEditorMode, legacyDriveBlocks } from './blocks/beginner-toolbox.js';
+import { learningCode } from './ui/learning-code.js';
 import { generateArduino } from './generators/arduino.js';
 import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
 import CodePreview from './components/CodePreview.jsx';
@@ -21,10 +22,9 @@ import ProfileToolbar from './ui/ProfileToolbar.jsx';
 import { applyBar, readBar, readTheme, saveBar, saveTheme } from './ui/prefs.js';
 import { NEWMANIA_MODEL, newmaniaWorkspace, usesNewmaniaProgram } from './blocks/newmania.js';
 import { copyToNewmaniaProgram } from './ui/newmania-project.js';
-import mecanumLesson from '../examples/newmania/mecanum/mecanum.codelab.json';
+import { LESSONS, lessonProject } from './lessons/newmania.js';
 import { clearOldProjectsOnce, projectRobotDevices } from './ui/project-storage.js';
 
-const LESSONS = [{ id: 'mecanum', label: 'Robot mecanum 4 bánh bằng PS4' }];
 const STORAGE_KEY = 'codelab.projects.v1';
 const LEGACY_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-project';
@@ -57,7 +57,8 @@ function App() {
   const [projectStore, setProjectStore] = useState(readProjects);
   const [generatedCode, setGeneratedCode] = useState({ code: '', warnings: [] });
   const [blockCount, setBlockCount] = useState(0);
-  const [codeOpen, setCodeOpen] = useState(() => window.innerWidth >= 900);
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [codeSize, setCodeSize] = useState(420);
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(() => Math.round(Math.min(300, window.innerHeight * 0.42)));
   const [dialog, setDialog] = useState(null);
@@ -133,10 +134,10 @@ function App() {
   };
   const openLesson = (event) => {
     if (deviceOperation.isBusy()) return;
-    if (event.target.value !== 'mecanum') return;
-    const nextProject = makeNewProject('Robot mecanum 4 bánh bằng PS4', structuredClone(mecanumLesson.project.workspace));
+    if (!LESSONS.some(lesson => lesson.id === event.target.value)) return;
+    const nextProject = { ...lessonProject(event.target.value), id:crypto.randomUUID(), updatedAt:new Date().toISOString() };
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
-    showToast('Đã mở bài mẫu mecanum');
+    showToast(`Đã mở ${nextProject.name}`);
   };
   const renameProject = (event) => {
     const name = event.target.value;
@@ -213,6 +214,22 @@ function App() {
     if (event.key === 'ArrowUp') { event.preventDefault(); setConsoleHeight((h) => clampConsole(h + 24)); }
   };
   const toggleConsoleSize = () => setConsoleHeight((h) => (h <= CONSOLE_MIN + 4 ? clampConsole(300) : CONSOLE_MIN));
+  const codeVertical = () => window.innerWidth <= 760;
+  const clampCode = value => Math.max(220, Math.min(value, codeVertical() ? window.innerHeight * 0.55 : window.innerWidth - 340));
+  const resizeCode = event => {
+    event.preventDefault();
+    const vertical = codeVertical(), start = vertical ? event.clientY : event.clientX;
+    const initial = codeSize, target = event.currentTarget;
+    target.setPointerCapture?.(event.pointerId);
+    const move = e => setCodeSize(clampCode(initial + start - (vertical ? e.clientY : e.clientX)));
+    const stop = () => { target.removeEventListener('pointermove',move); target.removeEventListener('pointerup',stop); target.removeEventListener('pointercancel',stop); };
+    target.addEventListener('pointermove',move); target.addEventListener('pointerup',stop); target.addEventListener('pointercancel',stop);
+  };
+  const resizeCodeKey = event => {
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    setCodeSize(size => clampCode(size + (['ArrowLeft','ArrowUp'].includes(event.key) ? 24 : -24)));
+  };
 
   return (
     <div className={`app${terminalOpen ? ' has-console' : ''}`} style={{ '--console-h': `${consoleHeight}px` }}>
@@ -237,15 +254,17 @@ function App() {
       {(legacyBoard || legacyProgram) && <div role="alert">{legacyBoard ? `Dự án cũ dùng board ${boardId}. Chưa chuyển sang Newmania; giữ nguyên dữ liệu và board gốc.` : 'Dự án dùng cấu trúc cũ; giữ nguyên các luồng và cách sinh mã hiện có.'}
         <button className="btn" onClick={() => setDialog('convert')}>Tạo bản sao Newmania…</button>
       </div>}
-      <div className="main">
+      {legacyDriveBlocks(project.workspace).length > 0 && <div className="legacy-block-note" role="status">Dự án cũ có block di chuyển tổng hợp ({legacyDriveBlocks(project.workspace).join(', ')}). Block và dữ liệu vẫn được giữ nguyên để mở, sửa và xuất; toolbox học sinh chỉ cung cấp Motor riêng lẻ.</div>}
+      <div className="main" style={{'--code-size':`${codeSize}px`}}>
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
           <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode="beginner" programModel={usesNewmaniaProgram(project) ? NEWMANIA_MODEL : undefined} robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
           <ZoomControls workspaceRef={workspaceRef} />
           <div className="workspace-status"><span><i className="status-dot" />Sẵn sàng chỉnh sửa</span><span>{blockCount} khối đang dùng</span></div>
         </div>
-        <Dock open={codeOpen} genie="code" edge="right" className="code-side" aria-label="Mã được sinh">
-          <h2>Code<button className="x" onClick={() => setCodeOpen(false)} aria-label="Đóng">×</button></h2>
-          <CodePreview code={generatedCode.code} warnings={generatedCode.warnings} />
+        <Dock open={codeOpen} genie="code" edge="right" wrapClassName="code-dock" className="code-side" aria-label="Mã được sinh">
+          <div className="code-grip" role="separator" aria-label="Đổi kích thước mã nguồn" aria-valuenow={codeSize} aria-valuemin={220} tabIndex={0} onPointerDown={resizeCode} onKeyDown={resizeCodeKey} />
+          <h2>Mã nguồn<button className="x" onClick={() => setCodeOpen(false)} aria-label="Đóng mã nguồn">×</button></h2>
+          <CodePreview code={generatedCode.code} warnings={generatedCode.warnings} logic={learningCode(project.workspace)} />
         </Dock>
       </div>
       <Dock open={terminalOpen} genie="terminal" edge="bottom" as="section" className="console" aria-label="Bảng lệnh" wrapStyle={{ '--console-h': `${consoleHeight}px` }}>
