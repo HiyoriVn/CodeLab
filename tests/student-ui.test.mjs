@@ -55,7 +55,7 @@ test('new projects use the tested board while imports retain their board ID', ()
   const app = readFileSync('src/App.jsx','utf8');
   assert.match(app, /boardId = FAST4WD_BOARD_ID/);
   assert.match(app, /defaultRobotDevices\(getBoardProfile\(FAST4WD_BOARD_ID\)\)/);
-  assert.match(app, /value=\{boardId\}/);
+  assert.match(app, /<ProfileToolbar\s+boardId=\{boardId\}/);
   assert.match(app, /projectBoardId\(content\)/);
   assert.match(app, /boardId === FAST4WD_BOARD_ID \? generatedCode.warnings/);
   const workspace = new Blockly.Workspace();

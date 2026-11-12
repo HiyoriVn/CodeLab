@@ -11,10 +11,13 @@ import DevicePanel from './components/DevicePanel.jsx';
 import SerialMonitor from './components/SerialMonitor.jsx';
 import TopBar from './ui/TopBar.jsx';
 import Modal from './ui/Modal.jsx';
+import Dock from './ui/Dock.jsx';
 import ZoomControls from './ui/ZoomControls.jsx';
+import ProfileToolbar from './ui/ProfileToolbar.jsx';
 import { applyBar, readBar, readTheme, saveBar, saveTheme } from './ui/prefs.js';
 import { clearOldProjectsOnce } from './ui/project-storage.js';
 
+const LESSONS = [{ id: 'mecanum', label: 'Robot mecanum 4 bánh bằng PS4' }];
 const STORAGE_KEY = 'codelab.projects.v1';
 const LEGACY_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-project';
@@ -186,33 +189,31 @@ function App() {
         onLanguage={() => showToast('Chưa có bản dịch, hiện chỉ có Tiếng Việt')}
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
-      <div className="board-profile-toolbar">
-        <label>Board <select aria-label="Board profile" value={boardId} onChange={() => {}}><option value={FAST4WD_BOARD_ID}>Newmania ESP32S3 Board</option>{boardId !== FAST4WD_BOARD_ID && <option value={boardId}>Board của dự án đã nhập: {boardId}</option>}</select></label>
-        <label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}>
-          <option value="">Chọn bài mẫu...</option>
-          <option value="mecanum">Robot mecanum 4 bánh bằng PS4</option>
-        </select></label>
-      </div>
+      <ProfileToolbar
+        boardId={boardId}
+        boards={[{ id: FAST4WD_BOARD_ID, name: 'Newmania ESP32S3 Board' }, ...(boardId !== FAST4WD_BOARD_ID ? [{ id: boardId, name: `Board của dự án đã nhập: ${boardId}` }] : [])]}
+        onBoard={() => {}}
+        lessons={LESSONS}
+        onLesson={(value) => openLesson({ target: { value } })}
+      />
       <div className="main">
         <div className="ws" aria-label="Trình chỉnh sửa khối lệnh">
           <BlocklyWorkspace key={project?.id} boardId={boardId} editorMode="beginner" robotDevices={robotDevices} initialState={project?.workspace} dark={theme === 'dark'} onChange={handleWorkspaceChange} onCodeChange={handleCodeChange} workspaceRef={workspaceRef} />
           <ZoomControls workspaceRef={workspaceRef} />
           <div className="workspace-status"><span><i className="status-dot" />Sẵn sàng chỉnh sửa</span><span>{blockCount} khối đang dùng</span></div>
         </div>
-        {codeOpen && (
-          <aside className="code-side" aria-label="Mã được sinh">
-            <h2>Code<button className="x" onClick={() => setCodeOpen(false)} aria-label="Đóng">×</button></h2>
-            <CodePreview code={generatedCode.code} warnings={generatedCode.warnings} />
-          </aside>
-        )}
+        <Dock open={codeOpen} genie="code" edge="right" className="code-side" aria-label="Mã được sinh">
+          <h2>Code<button className="x" onClick={() => setCodeOpen(false)} aria-label="Đóng">×</button></h2>
+          <CodePreview code={generatedCode.code} warnings={generatedCode.warnings} />
+        </Dock>
       </div>
-      <section className="console" hidden={!terminalOpen} aria-label="Bảng lệnh" style={{ '--console-h': `${consoleHeight}px` }}>
+      <Dock open={terminalOpen} genie="terminal" edge="bottom" as="section" className="console" aria-label="Bảng lệnh" wrapStyle={{ '--console-h': `${consoleHeight}px` }}>
         <div className="console-grip" role="separator" aria-orientation="horizontal" aria-label="Kéo để đổi kích thước bảng lệnh" aria-valuemin={CONSOLE_MIN} aria-valuenow={consoleHeight} tabIndex={0} title="Kéo xuống để thu nhỏ, kéo lên để phóng to" onPointerDown={startResize} onKeyDown={resizeByKey} onDoubleClick={toggleConsoleSize} />
         <h2>Bảng lệnh<button className="x" onClick={() => setTerminalOpen(false)} aria-label="Đóng">×</button></h2>
-        {terminalOpen && <SerialMonitor />}
-      </section>
+        <SerialMonitor />
+      </Dock>
 
-      <Modal open={dialog === 'help'} onClose={closeDialog} title="Hướng dẫn nhanh">
+      <Modal open={dialog === 'help'} onClose={closeDialog} title="Hướng dẫn nhanh" genie="help">
         <ol>
           <li>Chọn nhóm block ở cột bên trái.</li>
           <li>Kéo khối vào vùng làm việc; kéo khối vào cột bên trái để xóa.</li>
@@ -224,7 +225,7 @@ function App() {
         </details>
         <button className="btn p" onClick={closeDialog}>Đã hiểu</button>
       </Modal>
-      <Modal open={dialog === 'connect'} onClose={closeDialog} title="Kết nối thiết bị">
+      <Modal open={dialog === 'connect'} onClose={closeDialog} title="Kết nối thiết bị" genie="connect">
         <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
         <DevicePanel key={project.id + boardId} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
         <div className="dialog-actions"><button className="btn" onClick={closeDialog}>Đóng</button></div>
