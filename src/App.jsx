@@ -256,7 +256,7 @@ function App() {
         {compatibility.length ? <ul>{compatibility.map(item => <li key={item.id}>{item.type} ({item.id}): {item.warnings.join(' ')}</li>)}</ul> : <p>Đã tạo bản sao Newmania mới; block và biến đã được kiểm tra.</p>}
         <button className="btn" onClick={closeDialog}>Đóng</button>
       </Modal>
-      <Modal open={dialog === 'help'} onClose={closeDialog} title="Hướng dẫn nhanh">
+      <Modal open={dialog === 'help'} genie="help" onClose={closeDialog} title="Hướng dẫn nhanh">
         <ol>
           <li>Chọn nhóm block ở cột bên trái.</li>
           <li>Kéo khối vào vùng làm việc; kéo khối vào cột bên trái để xóa.</li>
@@ -268,7 +268,7 @@ function App() {
         </details>
         <button className="btn p" onClick={closeDialog}>Đã hiểu</button>
       </Modal>
-      <Modal open={dialog === 'connect'} locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
+      <Modal open={dialog === 'connect'} genie="connect" locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
         <DevicePanel key={project.id + boardId} operation={deviceOperation} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
         <BrowserFlasher boardId={boardId} operation={deviceOperation} />

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { GENIE_MS, setGenieOrigin, usePresence } from './presence.js';
 
-function Modal({ open, onClose, title, children, locked = false }) {
+function Modal({ open, onClose, title, children, locked = false, genie }) {
   const ref = useRef(null);
   const openRef = useRef(open);
   openRef.current = open;
@@ -22,6 +22,7 @@ function Modal({ open, onClose, title, children, locked = false }) {
   return (
     <dialog
       ref={ref}
+      className={closing ? 'is-closing' : undefined}
       aria-label={title}
       onClose={() => { if (!locked) onClose(); }}
       onCancel={(event) => { if (locked) event.preventDefault(); }}
