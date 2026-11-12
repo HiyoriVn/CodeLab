@@ -13,13 +13,18 @@ import DevicePanel from './components/DevicePanel.jsx';
 import SerialMonitor from './components/SerialMonitor.jsx';
 import TopBar from './ui/TopBar.jsx';
 import Modal from './ui/Modal.jsx';
+import Dock from './ui/Dock.jsx';
 import ZoomControls from './ui/ZoomControls.jsx';
+import ChangelogContent from './ui/ChangelogContent.jsx';
+import { hasUnseenChangelog, saveSeenVersion } from './ui/changelog.js';
+import ProfileToolbar from './ui/ProfileToolbar.jsx';
 import { applyBar, readBar, readTheme, saveBar, saveTheme } from './ui/prefs.js';
 import { NEWMANIA_MODEL, newmaniaWorkspace, usesNewmaniaProgram } from './blocks/newmania.js';
 import { copyToNewmaniaProgram } from './ui/newmania-project.js';
 import mecanumLesson from '../examples/newmania/mecanum/mecanum.codelab.json';
 import { clearOldProjectsOnce, projectRobotDevices } from './ui/project-storage.js';
 
+const LESSONS = [{ id: 'mecanum', label: 'Robot mecanum 4 bánh bằng PS4' }];
 const STORAGE_KEY = 'codelab.projects.v1';
 const LEGACY_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-project';
@@ -76,6 +81,11 @@ function App() {
   }, []);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
+  useEffect(() => {
+    if (!hasUnseenChangelog()) return;
+    saveSeenVersion();
+    setDialog('changelog');
+  }, []);
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => { applyBar(barColor); }, [barColor]);
   const changeTheme = (value) => { setTheme(value); saveTheme(value); };
@@ -205,25 +215,25 @@ function App() {
   const toggleConsoleSize = () => setConsoleHeight((h) => (h <= CONSOLE_MIN + 4 ? clampConsole(300) : CONSOLE_MIN));
 
   return (
-    <div className="app">
+    <div className={`app${terminalOpen ? ' has-console' : ''}`} style={{ '--console-h': `${consoleHeight}px` }}>
       <TopBar
         projects={projectStore.projects} activeProjectId={project.id} onSwitchProject={switchProject}
         projectName={project?.name || ''} onRename={renameProject} onRenameCommit={() => persist(projectStore)}
         onNew={createProject} onOpenFile={pickProjectFile} onSave={saveProjectFile}
-        onHelp={() => setDialog('help')} onConnect={openDevice}
+        onHelp={() => setDialog('help')} onChangelog={() => setDialog('changelog')} onConnect={openDevice}
         onToggleTerminal={toggleTerminal} onToggleCode={toggleCode}
         terminalOpen={terminalOpen} codeOpen={codeOpen}
         theme={theme} onTheme={changeTheme} barColor={barColor} onBarColor={changeBar}
         onLanguage={() => showToast('Chưa có bản dịch, hiện chỉ có Tiếng Việt')}
       />
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
-      <div className="board-profile-toolbar">
-        <label>Board <select aria-label="Board profile" value={FAST4WD_BOARD_ID} disabled={legacyBoard} onChange={() => {}}><option value={FAST4WD_BOARD_ID}>Newmania ESP32S3 Board</option></select></label>
-        <label>Bài mẫu <select aria-label="Mở bài mẫu" value="" onChange={openLesson}>
-          <option value="">Chọn bài mẫu...</option>
-          <option value="mecanum">Robot mecanum 4 bánh bằng PS4</option>
-        </select></label>
-      </div>
+      <ProfileToolbar
+        boardId={boardId}
+        boards={[{ id: FAST4WD_BOARD_ID, name: 'Newmania ESP32S3 Board' }, ...(boardId !== FAST4WD_BOARD_ID ? [{ id: boardId, name: `Board của dự án đã nhập: ${boardId}` }] : [])]}
+        onBoard={() => {}}
+        lessons={LESSONS}
+        onLesson={(value) => openLesson({ target: { value } })}
+      />
       {(legacyBoard || legacyProgram) && <div role="alert">{legacyBoard ? `Dự án cũ dùng board ${boardId}. Chưa chuyển sang Newmania; giữ nguyên dữ liệu và board gốc.` : 'Dự án dùng cấu trúc cũ; giữ nguyên các luồng và cách sinh mã hiện có.'}
         <button className="btn" onClick={() => setDialog('convert')}>Tạo bản sao Newmania…</button>
       </div>}
@@ -233,18 +243,16 @@ function App() {
           <ZoomControls workspaceRef={workspaceRef} />
           <div className="workspace-status"><span><i className="status-dot" />Sẵn sàng chỉnh sửa</span><span>{blockCount} khối đang dùng</span></div>
         </div>
-        {codeOpen && (
-          <aside className="code-side" aria-label="Mã được sinh">
-            <h2>Code<button className="x" onClick={() => setCodeOpen(false)} aria-label="Đóng">×</button></h2>
-            <CodePreview code={generatedCode.code} warnings={generatedCode.warnings} />
-          </aside>
-        )}
+        <Dock open={codeOpen} genie="code" edge="right" className="code-side" aria-label="Mã được sinh">
+          <h2>Code<button className="x" onClick={() => setCodeOpen(false)} aria-label="Đóng">×</button></h2>
+          <CodePreview code={generatedCode.code} warnings={generatedCode.warnings} />
+        </Dock>
       </div>
-      <section className="console" hidden={!terminalOpen} aria-label="Bảng lệnh" style={{ '--console-h': `${consoleHeight}px` }}>
+      <Dock open={terminalOpen} genie="terminal" edge="bottom" as="section" className="console" aria-label="Bảng lệnh" wrapStyle={{ '--console-h': `${consoleHeight}px` }}>
         <div className="console-grip" role="separator" aria-orientation="horizontal" aria-label="Kéo để đổi kích thước bảng lệnh" aria-valuemin={CONSOLE_MIN} aria-valuenow={consoleHeight} tabIndex={0} title="Kéo xuống để thu nhỏ, kéo lên để phóng to" onPointerDown={startResize} onKeyDown={resizeByKey} onDoubleClick={toggleConsoleSize} />
         <h2>Bảng lệnh<button className="x" onClick={() => setTerminalOpen(false)} aria-label="Đóng">×</button></h2>
-        {terminalOpen && <SerialMonitor />}
-      </section>
+        <SerialMonitor />
+      </Dock>
 
       <Modal open={dialog === 'convert'} onClose={closeDialog} title="Tạo bản sao Newmania?">
         <p>Bản gốc giữ nguyên board và dữ liệu. Bản sao dùng một luồng mới, khởi tạo lại theo mỗi RUN sau Options ARM. Nếu có block hoặc sự kiện không thể chuyển đúng hành vi, hệ thống báo rõ và không tạo bản sao chuyển đổi một phần.</p>
@@ -255,7 +263,11 @@ function App() {
         {compatibility.length ? <ul>{compatibility.map(item => <li key={item.id}>{item.type} ({item.id}): {item.warnings.join(' ')}</li>)}</ul> : <p>Đã tạo bản sao Newmania mới; block và biến đã được kiểm tra.</p>}
         <button className="btn" onClick={closeDialog}>Đóng</button>
       </Modal>
-      <Modal open={dialog === 'help'} onClose={closeDialog} title="Hướng dẫn nhanh">
+      <Modal open={dialog === 'changelog'} genie="changelog" onClose={closeDialog} title="Changelog">
+        <ChangelogContent />
+        <div className="dialog-actions"><button className="btn p" onClick={closeDialog}>Đã hiểu</button></div>
+      </Modal>
+      <Modal open={dialog === 'help'} genie="help" onClose={closeDialog} title="Hướng dẫn nhanh">
         <ol>
           <li>Chọn nhóm block ở cột bên trái.</li>
           <li>Kéo khối vào vùng làm việc; kéo khối vào cột bên trái để xóa.</li>
@@ -267,7 +279,7 @@ function App() {
         </details>
         <button className="btn p" onClick={closeDialog}>Đã hiểu</button>
       </Modal>
-      <Modal open={dialog === 'connect'} locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
+      <Modal open={dialog === 'connect'} genie="connect" locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch và nạp chương trình vào board ESP32-S3. Để xem dữ liệu serial, dùng nút Bảng lệnh.</p>
         <DevicePanel key={project.id + boardId} operation={deviceOperation} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
         <BrowserFlasher boardId={boardId} operation={deviceOperation} />
