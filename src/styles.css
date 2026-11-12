@@ -362,3 +362,15 @@ dialog[open].is-closing::backdrop{animation:fade-out var(--genie-ms) ease forwar
 .setp .sel-menu{width:100%;max-width:none}
 .setp .sel-lang{margin-top:-4px}
 @media (max-width:650px){.setp{width:min(320px,calc(100vw - 24px))}}
+
+/* ---- changelog ---- */
+dialog:has(.changelog){width:min(560px,92vw)}
+.changelog{max-height:min(54vh,420px);overflow:auto;margin:0 -8px 4px;padding:0 8px;outline-offset:2px}
+.cl-entry+.cl-entry{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.cl-head{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-bottom:6px}
+.cl-ver{font-size:15px}
+.cl-date{margin-left:auto;font-size:12px;color:color-mix(in srgb,var(--ink) 62%,transparent)}
+.cl-title{margin:0 0 10px;font-weight:600}
+.cl-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.cl-list li{display:flex;align-items:flex-start;gap:10px;line-height:1.55}
+.cl-list .sel-tag{margin-top:2px;min-width:66px;justify-content:center}

@@ -19,7 +19,7 @@ function Pop({ open, className = '', children }) {
 function TopBar({
   projects, activeProjectId, onSwitchProject,
   projectName, onRename, onRenameCommit,
-  onNew, onOpenFile, onSave, onHelp, onConnect,
+  onNew, onOpenFile, onSave, onHelp, onChangelog, onConnect,
   onToggleTerminal, onToggleCode, terminalOpen, codeOpen,
   theme, onTheme, barColor, onBarColor, onLanguage,
 }) {
@@ -78,6 +78,7 @@ function TopBar({
       </div>
 
       <button className="nb" data-genie="help" onClick={onHelp}>Hướng dẫn</button>
+      <button className="nb" data-genie="changelog" onClick={onChangelog}>Changelog</button>
       <input className="project-name" aria-label="Tên dự án" value={projectName} onChange={onRename} onBlur={onRenameCommit} />
       <div className="spacer" />
 

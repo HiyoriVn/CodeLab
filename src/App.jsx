@@ -15,6 +15,8 @@ import TopBar from './ui/TopBar.jsx';
 import Modal from './ui/Modal.jsx';
 import Dock from './ui/Dock.jsx';
 import ZoomControls from './ui/ZoomControls.jsx';
+import ChangelogContent from './ui/ChangelogContent.jsx';
+import { hasUnseenChangelog, saveSeenVersion } from './ui/changelog.js';
 import ProfileToolbar from './ui/ProfileToolbar.jsx';
 import { applyBar, readBar, readTheme, saveBar, saveTheme } from './ui/prefs.js';
 import { NEWMANIA_MODEL, newmaniaWorkspace, usesNewmaniaProgram } from './blocks/newmania.js';
@@ -79,6 +81,11 @@ function App() {
   }, []);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
+  useEffect(() => {
+    if (!hasUnseenChangelog()) return;
+    saveSeenVersion();
+    setDialog('changelog');
+  }, []);
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => { applyBar(barColor); }, [barColor]);
   const changeTheme = (value) => { setTheme(value); saveTheme(value); };
@@ -213,7 +220,7 @@ function App() {
         projects={projectStore.projects} activeProjectId={project.id} onSwitchProject={switchProject}
         projectName={project?.name || ''} onRename={renameProject} onRenameCommit={() => persist(projectStore)}
         onNew={createProject} onOpenFile={pickProjectFile} onSave={saveProjectFile}
-        onHelp={() => setDialog('help')} onConnect={openDevice}
+        onHelp={() => setDialog('help')} onChangelog={() => setDialog('changelog')} onConnect={openDevice}
         onToggleTerminal={toggleTerminal} onToggleCode={toggleCode}
         terminalOpen={terminalOpen} codeOpen={codeOpen}
         theme={theme} onTheme={changeTheme} barColor={barColor} onBarColor={changeBar}
@@ -255,6 +262,10 @@ function App() {
       <Modal open={dialog === 'compatibility'} onClose={closeDialog} title={compatibility.length ? "Chưa thể chuyển dự án" : "Kiểm tra bản sao Newmania"}>
         {compatibility.length ? <ul>{compatibility.map(item => <li key={item.id}>{item.type} ({item.id}): {item.warnings.join(' ')}</li>)}</ul> : <p>Đã tạo bản sao Newmania mới; block và biến đã được kiểm tra.</p>}
         <button className="btn" onClick={closeDialog}>Đóng</button>
+      </Modal>
+      <Modal open={dialog === 'changelog'} genie="changelog" onClose={closeDialog} title="Changelog">
+        <ChangelogContent />
+        <div className="dialog-actions"><button className="btn p" onClick={closeDialog}>Đã hiểu</button></div>
       </Modal>
       <Modal open={dialog === 'help'} genie="help" onClose={closeDialog} title="Hướng dẫn nhanh">
         <ol>
