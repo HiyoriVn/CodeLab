@@ -30,7 +30,8 @@ export function isStagingEnvironment() {
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname;
   if (host === 'codelab.hirovn9395.workers.dev') return false; // Production is strictly locked
-  // Match staging / preview domains (e.g. test-*, preview-*, *staging*, *preview*)
+  // Any non-production workers.dev subdomain (temporary preview, preview builds, or staging worker)
+  if (host.endsWith('.workers.dev')) return true;
   return host.includes('staging') || host.includes('preview') || host.startsWith('test-') || host.startsWith('preview-');
 }
 

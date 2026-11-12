@@ -16,21 +16,31 @@ async function sha256Hex(data) {
   return Array.from(new Uint8Array(hashBuf), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function fetchChunkedAsset(baseUrl, fileName, chunks, cacheName) {
+async function fetchChunkedAsset(baseUrl, fileName, chunks, cacheName, onProgress) {
   const cache = 'caches' in self ? await caches.open(cacheName) : undefined;
   const chunkList = chunks && chunks.length > 0 ? chunks : [fileName];
-  const buffers = [];
 
-  for (const chunkName of chunkList) {
-    const chunkUrl = new URL(chunkName, baseUrl).toString();
-    let res = await cache?.match(chunkUrl);
-    if (!res) {
-      res = await fetch(chunkUrl);
-      if (!res.ok) throw new Error(`Không thể tải tệp ${chunkName}: ${res.status}`);
-      await cache?.put(chunkUrl, res.clone());
-    }
-    const buf = new Uint8Array(await res.arrayBuffer());
-    buffers.push(buf);
+  const buffers = new Array(chunkList.length);
+  let completed = 0;
+  const concurrency = 3;
+
+  for (let i = 0; i < chunkList.length; i += concurrency) {
+    const batch = chunkList.slice(i, i + concurrency);
+    await Promise.all(
+      batch.map(async (chunkName, batchIdx) => {
+        const idx = i + batchIdx;
+        const chunkUrl = new URL(chunkName, baseUrl).toString();
+        let res = await cache?.match(chunkUrl);
+        if (!res) {
+          res = await fetch(chunkUrl);
+          if (!res.ok) throw new Error(`Không thể tải tệp ${chunkName}: ${res.status}`);
+          await cache?.put(chunkUrl, res.clone());
+        }
+        buffers[idx] = new Uint8Array(await res.arrayBuffer());
+        completed++;
+        onProgress?.(`Đang tải tài nguyên (${completed}/${chunkList.length})…`);
+      })
+    );
   }
 
   if (buffers.length === 1) return buffers[0];
@@ -56,12 +66,12 @@ async function getToolchain(manifestUrl, onProgress) {
 
   onProgress?.('Đang tải các tệp toolchain WebAssembly…');
   const [clangBytes, ldBytes, sysrootGz, bootloader, partitionTable, bootApp0] = await Promise.all([
-    fetchChunkedAsset(baseUrl, manifest.tools.clang.url, manifest.tools.clang.chunks, cacheName),
-    fetchChunkedAsset(baseUrl, manifest.tools.ld.url, manifest.tools.ld.chunks, cacheName),
-    fetchChunkedAsset(baseUrl, manifest.sysroot, manifest.sysrootChunks, cacheName),
-    fetchChunkedAsset(baseUrl, manifest.bootloader, undefined, cacheName),
-    fetchChunkedAsset(baseUrl, manifest.partitionTable, undefined, cacheName),
-    fetchChunkedAsset(baseUrl, manifest.bootApp0 || 'boot_app0.bin', undefined, cacheName),
+    fetchChunkedAsset(baseUrl, manifest.tools.clang.url, manifest.tools.clang.chunks, cacheName, onProgress),
+    fetchChunkedAsset(baseUrl, manifest.tools.ld.url, manifest.tools.ld.chunks, cacheName, onProgress),
+    fetchChunkedAsset(baseUrl, manifest.sysroot, manifest.sysrootChunks, cacheName, onProgress),
+    fetchChunkedAsset(baseUrl, manifest.bootloader, undefined, cacheName, onProgress),
+    fetchChunkedAsset(baseUrl, manifest.partitionTable, undefined, cacheName, onProgress),
+    fetchChunkedAsset(baseUrl, manifest.bootApp0 || 'boot_app0.bin', undefined, cacheName, onProgress),
   ]);
 
   onProgress?.('Đang biên dịch WebAssembly module (Clang + LD)…');
