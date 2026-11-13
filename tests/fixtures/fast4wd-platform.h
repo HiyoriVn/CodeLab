@@ -6,7 +6,7 @@
 #include "I2CFrame.h"
 
 #define CONFIG_IDF_TARGET_ESP32S3 1
-constexpr int LOW = 0, HIGH = 1, OUTPUT = 1, ESP_OK = 0;
+constexpr int LOW = 0, HIGH = 1, INPUT = 0, OUTPUT = 1, ESP_OK = 0;
 constexpr int CHIP_ESP32S3 = 2, CHIP_FEATURE_EMB_PSRAM = 128, ESP_EFUSE_FLASH_TYPE = 1;
 struct esp_chip_info_t { int model; int features; };
 inline bool embeddedPsram = false;
@@ -36,11 +36,37 @@ inline struct {
   size_t write(uint8_t byte) { if (serialCapacity <= 0) return 0; serialOutput += char(byte); return 1; }
   template<typename... Args> void printf(const char*, Args...) {}
 } Serial;
-inline void pinMode(uint8_t, int mode) { assert(mode == OUTPUT); ++gpioCalls; }
+inline void pinMode(uint8_t, int mode) { assert(mode == OUTPUT || mode == INPUT); ++gpioCalls; }
 inline void digitalWrite(uint8_t pin, int value) {
   ++gpioCalls;
   if (pin == 47) led = value;
   else assert(pin >= 35 && pin <= 42 && value == LOW);
+}
+inline bool ledcAttachedPins[50] = {};
+inline uint32_t ledcDutyPins[50] = {};
+inline unsigned ledcAttachCalls = 0;
+inline unsigned ledcWriteCalls = 0;
+inline unsigned ledcDetachCalls = 0;
+inline bool ledcAttach(uint8_t pin, uint32_t freq, uint8_t resolution) {
+  assert(pin >= 12 && pin <= 15);
+  assert(freq == 50);
+  assert(resolution == 14);
+  ledcAttachedPins[pin] = true;
+  ++ledcAttachCalls;
+  return true;
+}
+inline bool ledcWrite(uint8_t pin, uint32_t duty) {
+  assert(pin >= 12 && pin <= 15);
+  ledcDutyPins[pin] = duty;
+  ++ledcWriteCalls;
+  return true;
+}
+inline bool ledcDetach(uint8_t pin) {
+  assert(pin >= 12 && pin <= 15);
+  ledcAttachedPins[pin] = false;
+  ledcDutyPins[pin] = 0;
+  ++ledcDetachCalls;
+  return true;
 }
 inline struct {
   codelab::ps4i2c::Frame report;

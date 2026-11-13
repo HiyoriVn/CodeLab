@@ -193,6 +193,26 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
         case 'variables_set':action=`${variable(b.getFieldValue('VAR'))} = ${value(b,'VALUE')};`;break;
         case 'math_change':action=`${variable(b.getFieldValue('VAR'))} += ${value(b,'DELTA','number','1.0')};`;break;
         case 'beginner_message':action=`newmania.message(${b.getInputTargetBlock('VALUE')?expr(b.getInputTargetBlock('VALUE')).code:'""'});`;break;
+        case 'robot_servo_write': {
+          const servo = b.getFieldValue('SERVO');
+          if (!['1', '2', '3', '4'].includes(servo)) throw Error(`Kênh servo ${servo} không hợp lệ; chỉ chấp nhận S1–S4.`);
+          const angleBlock = b.getInputTargetBlock('ANGLE');
+          if (angleBlock?.type === 'math_number') {
+            const n = Number(angleBlock.getFieldValue('NUM'));
+            if (!Number.isFinite(n) || n < 0 || n > 180) throw Error('Góc quay servo phải nằm trong khoảng từ 0 đến 180 độ.');
+          }
+          const angle = value(b, 'ANGLE');
+          action = hasEffects(b)
+            ? `{ const double angle = ${angle}; newmania.servoWrite(${servo}, angle); }`
+            : `newmania.servoWrite(${servo}, ${angle});`;
+          break;
+        }
+        case 'robot_servo_disable': {
+          const servo = b.getFieldValue('SERVO');
+          if (!['1', '2', '3', '4'].includes(servo)) throw Error(`Kênh servo ${servo} không hợp lệ; chỉ chấp nhận S1–S4.`);
+          action = `newmania.servoDisable(${servo});`;
+          break;
+        }
         case 'robot_mecanum':
           if(!devices.drivetrain.wheels.length)throw Error('Cần đủ bốn bánh trong cấu hình mecanum.');
           {

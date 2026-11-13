@@ -54,10 +54,10 @@ const fast4wd = {
   flashMB: 16, psramMB: null, psramType: 'Disabled; GPIO35–37 must be free of memory',
   startupPolicy: 'no-board-gpio',
   build: { core: 'esp32:esp32', version: '3.3.7', fqbn: baseFqbn + ':FlashSize=16M,PartitionScheme=default_8MB,PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=cdc' },
-  pins: { motors: [[35,36],[37,38],[39,40],[41,42]], servos: [], encoders: [],
+  pins: { motors: [[35,36],[37,38],[39,40],[41,42]], servos: [12, 13, 14, 15], encoders: [],
     led: 47, i2c: {sda:8,scl:9}, strapping: [0,3,45,46], usb: [19,20] },
   capabilities: { fast4wd: true, digital: false, adc: false, pwm: false,
-    motorChannels: 4, servoChannels: 0, motorControl: false, servoControl: false },
+    motorChannels: 4, servoChannels: 4, motorControl: false, servoControl: true },
   adc: [], digital: [], reserved: Array.from({length:49}, (_,i)=>i),
 };
 function freeze(value) {

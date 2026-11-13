@@ -2,9 +2,12 @@ import * as Blockly from 'blockly';
 import './ps4-axis-fields.js';
 import { motorIds } from '../boards/robot-devices.js';
 
-const colours = { motor: '#3c82bc', drive: '#488459', ps4: '#bd4d86' };
+const colours = { motor: '#3c82bc', servo: '#1fa288', drive: '#488459', ps4: '#bd4d86' };
 const field = (name, options) => ({ type: 'field_dropdown', name, options });
 const motor = field('MOTOR', motorIds.map((id, i) => ['Motor ' + (i + 1), id]));
+const servos = field('SERVO', [
+  ['S1', '1'], ['S2', '2'], ['S3', '3'], ['S4', '4'],
+]);
 const number = name => ({ type: 'input_value', name, check: 'Number' });
 const direction = field('DIRECTION', [['thuận', 'FORWARD'], ['ngược', 'REVERSE']]);
 const driveDirection = field('DIRECTION', [
@@ -44,6 +47,12 @@ export const robotBlocks = [
     'Hủy lệnh độc lập của motor. Nếu có lệnh drivetrain, bánh này nhận lại điều khiển từ drivetrain.', [motor]),
   block('motor', 'motor_pwm', 'Đọc PWM motor', 'PWM đã áp dụng của %1 (%%)',
     'Đọc lệnh PWM phần mềm từ −100 đến 100, theo chiều đã cấu hình. Giá trị không đo tốc độ hay chuyển động thực.', [motor], 'Number'),
+  block('servo', 'servo_write', 'Quay servo', 'Servo %1 quay đến %2 độ',
+    'Điều khiển góc quay servo từ 0–180 độ. Chỉ phát xung PWM 50 Hz khi khối được gọi; tự động ngắt xung khi dừng hoặc mất kết nối.',
+    [servos, number('ANGLE')]),
+  block('servo', 'servo_disable', 'Ngắt tín hiệu servo', 'Ngắt tín hiệu Servo %1',
+    'Dừng phát xung điều khiển trên chân servo đã chọn (không ngắt nguồn điện cấp cho servo).',
+    [servos]),
   block('drive', 'drive_direction', 'Di chuyển theo hướng', 'robot %1 tốc độ %2 %%',
     'Di chuyển robot theo hướng chọn với tốc độ 0–100% và giữ lệnh cho tới khi đổi hướng hoặc dừng.', [driveDirection, number('SPEED')]),
   block('drive', 'mecanum', 'Lái mecanum theo ba trục', 'mecanum tiến %1 ngang trái %2 xoay trái %3 (%%)',
@@ -95,7 +104,7 @@ export function robotDeviceToolbox(devices, profile) {
     kind: 'block', type,
     ...(Object.keys(extraFields).length && { fields: extraFields }),
     inputs: Object.fromEntries((args0 || []).filter(arg => arg.type === 'input_value').map(({ name: input }) => [
-      input, { shadow: { type: 'math_number', fields: { NUM: input === 'POWER' ? 20 : input === 'SPEED' ? 50 : 0 } } },
+      input, { shadow: { type: 'math_number', fields: { NUM: input === 'POWER' ? 20 : input === 'SPEED' ? 50 : input === 'ANGLE' ? 90 : 0 } } },
     ])),
   });
   const group = (id, name) => ({
@@ -115,7 +124,8 @@ export function robotDeviceToolbox(devices, profile) {
   });
   return [
     group('motor', 'Motor'),
+    ...(profile?.capabilities?.servoControl ? [group('servo', 'Servo')] : []),
     ...(devices.drivetrain.wheels.length ? [group('drive', 'Di chuyển mecanum')] : []),
-    ...(devices.controller.enabled && profile.capabilities.fast4wd ? [group('ps4', 'Tay cầm PS4')] : []),
+    ...(devices.controller.enabled && profile?.capabilities?.fast4wd ? [group('ps4', 'Tay cầm PS4')] : []),
   ];
 }

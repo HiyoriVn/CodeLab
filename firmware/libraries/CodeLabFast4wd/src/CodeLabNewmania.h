@@ -11,6 +11,7 @@
 namespace codelab { namespace newmania {
 
 enum class Motor : uint8_t { M1, M2, M3, M4 };
+enum class Servo : uint8_t { S1 = 1, S2 = 2, S3 = 3, S4 = 4 };
 enum class Direction : uint8_t { Forward, Reverse };
 enum class Axis : uint8_t { LeftX, LeftY, RightX, RightY };
 enum class Button : uint8_t {
@@ -69,6 +70,7 @@ class Board {
       driveActive_ = driveTimed_ = false;
       scheduler_.cancelMotions(now);
       clearEdges();
+      detachAllServos();
     }
     scheduler_.safetyPhase(now);
 
@@ -97,7 +99,7 @@ class Board {
       updateDriveTimer(now);
       if (running()) applyDrive();
     }
-    if (!running()) { driveActive_ = driveTimed_ = false; clearEdges(); }
+    if (!running() || !robot_.motionAllowed()) { driveActive_ = driveTimed_ = false; clearEdges(); detachAllServos(); }
     robot_.endLoop(); // Poll/control/STOP/freshness watchdog remain serviced.
     serviceMessages();
   }
@@ -197,6 +199,63 @@ class Board {
     return true;
   }
 
+  bool servoWrite(uint8_t channel, double angle) {
+    if (channel < 1 || channel > 4) return false;
+    if (!running() || !robot_.motionAllowed()) return false;
+    if (!std::isfinite(angle)) return false;
+    if (angle < 0.0) angle = 0.0;
+    else if (angle > 180.0) angle = 180.0;
+
+    const uint8_t index = channel - 1;
+    const uint8_t pin = kServoPins[index];
+    const double pulseUs = 1000.0 + (angle / 180.0) * 1000.0;
+    const uint32_t duty = static_cast<uint32_t>(std::round((pulseUs / 20000.0) * 16383.0));
+
+    if (!servoAttached_[index]) {
+      if (!ledcAttach(pin, 50, 14)) return false;
+    }
+    if (!ledcWrite(pin, duty)) return false;
+
+    servoAttached_[index] = true;
+    servoAngle_[index] = angle;
+    servoDuty_[index] = duty;
+    return true;
+  }
+  bool servoWrite(Servo servo, double angle) {
+    return servoWrite(static_cast<uint8_t>(servo), angle);
+  }
+  bool servoDisable(uint8_t channel) {
+    if (channel < 1 || channel > 4) return false;
+    const uint8_t index = channel - 1;
+    const uint8_t pin = kServoPins[index];
+    if (servoAttached_[index]) {
+      ledcWrite(pin, 0);
+      ledcDetach(pin);
+      pinMode(pin, INPUT);
+      servoAttached_[index] = false;
+      servoAngle_[index] = 0.0;
+      servoDuty_[index] = 0;
+    }
+    return true;
+  }
+  bool servoDisable(Servo servo) {
+    return servoDisable(static_cast<uint8_t>(servo));
+  }
+  void detachAllServos() {
+    for (uint8_t i = 1; i <= 4; ++i) {
+      if (servoAttached_[i - 1]) servoDisable(i);
+    }
+  }
+  bool servoAttached(uint8_t channel) const {
+    return (channel >= 1 && channel <= 4) ? servoAttached_[channel - 1] : false;
+  }
+  double servoAngle(uint8_t channel) const {
+    return (channel >= 1 && channel <= 4) ? servoAngle_[channel - 1] : 0.0;
+  }
+  uint32_t servoDuty(uint8_t channel) const {
+    return (channel >= 1 && channel <= 4) ? servoDuty_[channel - 1] : 0;
+  }
+
   Step wait(Context& ctx, uint32_t ms, uint16_t nextPc) {
     if (!validContext(ctx)) return Step::DONE;
     if (ms > 60000) { scheduler_.fault(v2::FaultCode::INLINE_LIMIT, millis()); return Step::DONE; }
@@ -215,7 +274,7 @@ class Board {
     ctx.waitKind = v2::WaitKind::HANDLE;
     return Step::WAIT;
   }
-  void stop() { scheduler_.stop(millis()); }
+  void stop() { scheduler_.stop(millis()); detachAllServos(); }
 
   // Bounded nonblocking messages. A future integration consumes popMessage();
   // these helpers never flush Serial or wait for a USB reader.
@@ -279,6 +338,7 @@ class Board {
   void resetRun() {
     driveActive_ = driveTimed_ = false;
     clearEdges();
+    detachAllServos();
     messageHead_ = messageTail_ = messageCount_ = 0;
     messageOffset_ = 0;
     messageDrops_ = 0;
@@ -309,6 +369,10 @@ class Board {
     }
   }
 
+  static constexpr uint8_t kServoPins[4] = {12, 13, 14, 15};
+  bool servoAttached_[4]{};
+  double servoAngle_[4]{};
+  uint32_t servoDuty_[4]{};
   fast4wd::Robot robot_;
   fast4wd::SchedulerGate gate_;
   v2::Scheduler scheduler_;
