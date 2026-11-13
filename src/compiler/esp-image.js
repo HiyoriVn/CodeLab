@@ -116,6 +116,19 @@ export async function elfToImage(elfBytes, opts = {}) {
     )
     .sort((a, b) => a.addr - b.addr);
 
+  // Match esptool's app descriptor: the boot log can identify the exact ELF.
+  // Copy first: parseElf() sections are views into the original ELF bytes.
+  const appdesc = loadable.find(s => s.name === '.flash.appdesc');
+  if (appdesc) {
+    if (appdesc.size < 176 || new DataView(appdesc.data.buffer, appdesc.data.byteOffset).getUint32(0, true) !== 0xabcd5432) {
+      throw new Error('Invalid ESP app descriptor');
+    }
+    appdesc.data = appdesc.data.slice();
+    if (appdesc.data.subarray(144, 176).some(b => b !== 0)) throw new Error('ELF digest field must be empty');
+    const copy = Uint8Array.from(elfBytes);
+    appdesc.data.set(new Uint8Array(await crypto.subtle.digest('SHA-256', copy.buffer)), 144);
+  }
+
   const merged = [];
   for (const s of loadable) {
     const last = merged[merged.length - 1];

@@ -4,6 +4,7 @@ import { useDeviceOperation } from '../device/useDeviceOperation.js';
 import { isBrowserCompilerEnabled } from '../compiler/config.js';
 import { compileInBrowser } from '../compiler/browser-compiler-client.js';
 import { flashPackage } from '../device/browser-flash.js';
+import { downloadDebugArtifact } from '../compiler/debug-artifacts.js';
 
 async function request(path, options) {
   const response = await fetch(path, options);
@@ -181,6 +182,12 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation }) {
       </section>
       {message && <p className="device-message" role="alert">{message}</p>}
       {warnings.length > 0 && <p role="alert">Chương trình còn khối cần sửa. Hãy kiểm tra phần Code.</p>}
+      {build?.package?.debug && <details className="device-technical">
+        <summary>Debug firmware</summary>
+        <p>{build.id}</p>
+        <button className="button button-quiet" disabled={busy || !buildId} onClick={() => downloadDebugArtifact(build.package, 'elf')}>Tải app.elf</button>
+        <button className="button button-quiet" disabled={busy || !buildId} onClick={() => downloadDebugArtifact(build.package, 'json')}>Tải thông tin debug</button>
+      </details>}
       {localBridge && <details className="device-technical">
         <summary>Công cụ phát triển local</summary>
         <div className="device-actions">

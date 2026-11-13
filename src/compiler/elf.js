@@ -68,7 +68,7 @@ export function parseElf(bytes) {
     offset: s.offset,
     size: s.size,
     link: s.link,
-    data: bytes.subarray(s.offset, s.offset + s.size),
+    data: s.type === SHT_NOBITS ? new Uint8Array(0) : bytes.subarray(s.offset, s.offset + s.size),
   }));
 
   return { machine, entry, segments, sections };

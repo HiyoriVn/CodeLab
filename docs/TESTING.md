@@ -1,5 +1,17 @@
 # Testing and verification strategy
 
+## ESP32-S3 WASM startup crash — 2026-11-14
+
+Constructor ABI mismatch reproduced and corrected: bundled Xtensa Clang needs
+`-Xclang -fno-use-init-array` for Core 3.3.7's retained `.ctors` startup table.
+Both supplied backtraces resolve against reconstructed pre-Servo ELFs. Exact
+ELF/debug metadata export is available after browser compilation. Run
+`node tools/verify-browser-crash.mjs` for compile-only ELF/image verification.
+Focused regressions 4/4 PASS, production build PASS. Full suite 138/147:
+six localhost EACCES failures and three existing Servo catalog expectation
+failures. Native CLI comparison is blocked by Windows DLL relocation errors;
+hardware boot remains untested. [Evidence and limits](verification/ESP32S3_WASM_CRASH.md).
+
 ## No-ARM/no-Share integration — 2026-11-12
 
 `npm test`: **137/137 PASS**. Production build PASS (existing bundle warning).

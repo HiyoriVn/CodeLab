@@ -3,6 +3,7 @@ import { untar, gunzip } from './tar.js';
 import { runWasi } from './wasi-runner.js';
 import { addPrototypes } from './prototypes.js';
 import { elfToImage } from './esp-image.js';
+import { COMPILER_REVISION, XTENSA_ABI_FLAGS, validateConstructorAbi } from './xtensa-abi.js';
 import { validatePackage, sha256 } from '../device/firmware-package.js';
 import { FAST4WD_BOARD_ID, getBoardProfile } from '../boards/profiles.js';
 
@@ -156,6 +157,7 @@ self.onmessage = async (ev) => {
         'clang',
         ...commonFlags,
         ...cxxflags,
+        ...XTENSA_ABI_FLAGS,
         '-Wno-c++11-narrowing',
         ...libIncludes,
         '-x',
@@ -175,12 +177,13 @@ self.onmessage = async (ev) => {
     }
 
     const objects = ['/build/sketch.o'];
+    validateConstructorAbi(vfs.readFile(objects[0]));
 
     // Compile library sources (with in-worker caching)
     for (const lib of libraries) {
       for (const f of lib.files) {
         if (/\.(cpp|cxx|cc|c|S)$/.test(f.path)) {
-          const cacheKey = `${libraryRevision}:${lib.id}:${f.path}`;
+          const cacheKey = `${COMPILER_REVISION}:${libraryRevision}:${lib.id}:${f.path}`;
           const objVirt = `/build/lib_${objects.length}.o`;
           let cached = libObjectCache.get(cacheKey);
           if (cached) {
@@ -193,6 +196,7 @@ self.onmessage = async (ev) => {
                 'clang',
                 ...commonFlags,
                 ...(isC ? cflags : [...cxxflags, '-Wno-c++11-narrowing']),
+                ...XTENSA_ABI_FLAGS,
                 ...libIncludes,
                 '-w',
                 '-c',
@@ -204,6 +208,7 @@ self.onmessage = async (ev) => {
             );
             if (res.exitCode !== 0) throw new Error(`Lỗi biên dịch thư viện ${f.path}:\n${res.stderr}`);
             cached = vfs.readFile(objVirt);
+            validateConstructorAbi(cached);
             libObjectCache.set(cacheKey, cached);
           }
           objects.push(objVirt);
@@ -268,7 +273,7 @@ self.onmessage = async (ev) => {
     // Perform exact CodeLab validatePackage check
     const validatedSegments = await validatePackage(manifestFlash, filesFlash, sha256);
 
-    const codeHash = await sha256Hex(new TextEncoder().encode(code + '\n' + libraryRevision));
+    const codeHash = await sha256Hex(new TextEncoder().encode(code + '\n' + libraryRevision + '\n' + COMPILER_REVISION));
     const buildId = `wasm-${codeHash.slice(0, 12)}-${boardId}-${manifest.version || '3.3.7'}`;
 
     post({
@@ -278,7 +283,14 @@ self.onmessage = async (ev) => {
       code,
       toolchainVersion: manifest.version,
       libraryRevision,
+      compilerRevision: COMPILER_REVISION,
       manifest: manifestFlash,
+      debug: {
+        elf: elfBytes.slice(),
+        elfSha256: await sha256Hex(elfBytes),
+        appSha256: segHashes[3],
+        source: sketchCode,
+      },
       segments: validatedSegments,
       stats: {
         compileMs,

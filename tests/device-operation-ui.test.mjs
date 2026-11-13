@@ -154,6 +154,39 @@ test('real React panels lock each other, modal and repeated clicks; recover afte
     await act(async()=>{root.render(createElement(Harness,{key:'wasm-no-bridge'}));await tick();});
     assert.equal(button('Biên dịch chương trình').disabled,false);
     assert.doesNotMatch(document.querySelector('.device-panel').textContent,/Chưa kết nối được công cụ phát triển/);
+    // Export the exact ELF returned by this compilation, never rebuild it.
+    const oldWorker=globalThis.Worker, oldCreate=URL.createObjectURL, oldRevoke=URL.revokeObjectURL;
+    const oldAnchorClick=window.HTMLAnchorElement.prototype.click;
+    const elf=Uint8Array.of(0x7f,69,76,70,1,2,3), downloads=[];
+    let exportedBlob;
+    globalThis.Worker=class {
+      handlers=new Set();
+      addEventListener(type,fn){if(type==='message')this.handlers.add(fn);}
+      removeEventListener(type,fn){if(type==='message')this.handlers.delete(fn);}
+      postMessage(){queueMicrotask(()=>{for(const fn of this.handlers)fn({data:{type:'done',buildId:'wasm-debug-exact',boardId:f.manifest.boardId,
+        manifest:f.manifest,stats:{totalMs:1},debug:{elf,elfSha256:'elf-hash',appSha256:'app-hash',source:'compiled source'}}});});}
+    };
+    URL.createObjectURL=blob=>{exportedBlob=blob;return 'blob:exact-elf';};
+    URL.revokeObjectURL=()=>{};
+    window.HTMLAnchorElement.prototype.click=function(){downloads.push({name:this.download,url:this.href});};
+    try {
+      await click(button('Biên dịch chương trình'));
+      assert.equal(document.querySelector('button').disabled,false);
+      assert.equal(button('Tải app.elf').closest('details').open,false);
+      await click(button('Tải app.elf'));
+      assert.deepEqual(new Uint8Array(await exportedBlob.arrayBuffer()),elf);
+      assert.deepEqual(downloads[0],{name:'wasm-debug-exact.elf',url:'blob:exact-elf'});
+      await click(button('Tải thông tin debug'));
+      const metadata=JSON.parse(await exportedBlob.text());
+      assert.equal(metadata.elfSha256,'elf-hash');assert.equal(metadata.appSha256,'app-hash');
+      assert.equal(metadata.source,'compiled source');
+      await act(async()=>{root.render(createElement(Harness,{key:'wasm-no-bridge',code:'edited source'}));await tick();});
+      assert.equal(button('Tải app.elf').disabled,true);
+      assert.equal(button('Tải thông tin debug').disabled,true);
+    } finally {
+      globalThis.Worker=oldWorker;URL.createObjectURL=oldCreate;URL.revokeObjectURL=oldRevoke;
+      window.HTMLAnchorElement.prototype.click=oldAnchorClick;
+    }
     setBrowserCompilerEnabled(false);
   } finally {
     await act(async()=>root.unmount());dom.window.close();globalThis.fetch=oldFetch;
