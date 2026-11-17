@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { getBoardProfile, FAST4WD_BOARD_ID } from '../boards/profiles.js';
 import { useDeviceOperation } from '../device/useDeviceOperation.js';
-import { isBrowserCompilerEnabled } from '../compiler/config.js';
+import { isBrowserCompilerEnabled, isDevEnvironment } from '../compiler/config.js';
 import { compileInBrowser } from '../compiler/browser-compiler-client.js';
 import { flashPackage } from '../device/browser-flash.js';
+import { formatSerialError } from '../device/usb-port.js';
 import { downloadDebugArtifact } from '../compiler/debug-artifacts.js';
 
 async function request(path, options) {
@@ -13,11 +14,12 @@ async function request(path, options) {
   return data;
 }
 
-function DevicePanel({ code, warnings, boardId, onOpenSerial, operation }) {
+function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort, compileCache }) {
   const localOperation = useDeviceOperation();
   const deviceOperation = operation ?? localOperation;
   const board = getBoardProfile(boardId);
   const localBridge = typeof window !== 'undefined' && ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+  const devUi = localBridge || isDevEnvironment();
   const fast4wd = board.capabilities.fast4wd;
   const wasmEnabled = isBrowserCompilerEnabled() && fast4wd;
   const supported = typeof window !== 'undefined' && window.isSecureContext && !!navigator.serial;
@@ -25,10 +27,15 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation }) {
   const [status, setStatus] = useState(null);
   const [ports, setPorts] = useState([]);
   const [port, setPort] = useState('');
-  const [compileState, setCompileState] = useState('Chưa biên dịch');
+  const [localCompileState, setLocalCompileState] = useState('Chưa biên dịch');
   const [uploadState, setUploadState] = useState('Chưa kết nối USB');
-  const [build, setBuild] = useState(null);
+  const [localBuild, setLocalBuild] = useState(null);
+  const build = wasmEnabled && compileCache ? compileCache.effectiveBuild : localBuild;
   const buildId = build?.code === code && build?.boardId === boardId ? build.id : '';
+  const compilingWasm = wasmEnabled && compileCache?.state?.status === 'compiling' && compileCache?.state?.cacheKey === compileCache?.activeCacheKey;
+  const compileState = wasmEnabled && compileCache
+    ? (compilingWasm ? 'Đang biên dịch' : buildId ? 'Thành công' : compileCache.state?.status === 'error' && compileCache.state?.cacheKey === compileCache.activeCacheKey ? 'Thất bại' : 'Chưa biên dịch')
+    : localCompileState;
   const busy = deviceOperation.busy;
   const [message, setMessage] = useState('');
 
@@ -63,19 +70,24 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation }) {
   const compile = async () => {
     if (!code || warnings.length) return;
     if (!wasmEnabled && !status?.ready) return;
+    if (wasmEnabled && compileCache?.onCompile) {
+      setMessage('');
+      await compileCache.onCompile();
+      return;
+    }
     const release = deviceOperation.acquire();
     if (!release) return;
-    setCompileState('Đang biên dịch');
+    setLocalCompileState('Đang biên dịch');
     setMessage('');
-    setBuild(null);
+    setLocalBuild(null);
     try {
       if (wasmEnabled) {
         const result = await compileInBrowser(code, boardId, {
           onProgress: (p) => setMessage(p),
         });
         if (!result.buildId || result.boardId !== boardId) throw Error('Bản biên dịch không phù hợp.');
-        setBuild({ id: result.buildId, code, boardId, package: result });
-        setCompileState('Thành công');
+        setLocalBuild({ id: result.buildId, code, boardId, package: result });
+        setLocalCompileState('Thành công');
         setMessage(`Biên dịch thành công trong trình duyệt (${result.stats.totalMs} ms). Sẵn sàng nạp.`);
       } else {
         const result = await request('/api/compile', {
@@ -84,40 +96,42 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation }) {
           body: JSON.stringify({ code, warnings, boardId }),
         });
         if (!result.buildId || result.boardId !== boardId) throw Error('Bản biên dịch không phù hợp.');
-        setBuild({ id: result.buildId, code, boardId });
-        setCompileState('Thành công');
+        setLocalBuild({ id: result.buildId, code, boardId });
+        setLocalCompileState('Thành công');
       }
     } catch (error) {
-      setCompileState('Thất bại');
+      setLocalCompileState('Thất bại');
       setMessage('Không thể biên dịch chương trình. Hãy kiểm tra các khối và thử lại.');
     } finally {
       release();
     }
   };
 
-  const uploadFromBrowser = async () => {
+  const uploadFromBrowser = async ({ forceNewPort = false } = {}) => {
     if (deviceOperation.isBusy() || !buildId || !build?.package?.segments || boardId !== FAST4WD_BOARD_ID) return;
     const release = deviceOperation.acquire();
     if (!release) return;
     setUploadState('Đang nạp');
-    setMessage('Đang chọn USB…');
+    setMessage(!forceNewPort && usbPort?.port ? `Đang dùng ${usbPort.portLabel}…` : 'Đang chọn USB…');
     try {
-      const selectedPort = await navigator.serial.requestPort();
+      await usbPort?.releaseForFlash?.();
+      const selectedPort = usbPort ? await usbPort.selectPort({ forceNew: forceNewPort }) : await navigator.serial.requestPort();
       if (!window.confirm('Nạp chương trình sẽ thay thế chương trình hiện tại. Hãy ngắt nguồn động cơ và đảm bảo robot ở trạng thái an toàn trước khi tiếp tục.')) {
         setMessage('Đã hủy nạp.');
         setUploadState('Chưa nạp');
         return;
       }
       const log = (text) => setMessage((m) => (m + '\n' + text).slice(-6000));
-      await flashPackage(selectedPort, build.package.segments, log, (_, written, total) => {
+      const progressCb = (_, written, total) => {
         const percent = total > 0 ? Math.min(100, Math.round((written / total) * 100)) : 0;
         setUploadState(`Đang nạp ${percent}%`);
-      });
+      };
+      await flashPackage(selectedPort, build.package.segments, log, progressCb);
       setUploadState('Hoàn tất');
       setMessage('Nạp chương trình thành công!');
     } catch (error) {
       setUploadState('Thất bại');
-      setMessage(error.name === 'NotFoundError' ? 'Đã hủy chọn USB.' : `Nạp thất bại: ${error.message}`);
+      setMessage(error.name === 'NotFoundError' ? 'Đã hủy chọn USB.' : `Nạp thất bại: ${formatSerialError(error)}`);
     } finally {
       release();
     }
@@ -158,31 +172,44 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation }) {
           className="button button-primary"
           onClick={compile}
           aria-describedby={!localBridge && !wasmEnabled ? 'compiler-unavailable' : undefined}
-          disabled={(!localBridge && !wasmEnabled) || busy || (!wasmEnabled && !status?.ready) || !code || warnings.length > 0}
+          disabled={(!localBridge && !wasmEnabled) || busy || compilingWasm || (!wasmEnabled && !status?.ready) || !code || warnings.length > 0}
         >
-          Biên dịch chương trình
+          {compilingWasm ? 'Đang biên dịch…' : 'Biên dịch chương trình'}
         </button>
       </section>
       <section className="device-step" aria-labelledby="upload-step">
         <h4 id="upload-step">Bước 2 — Nạp chương trình</h4>
         <p role="status">{uploadState}</p>
-        <button
-          className="button button-primary"
-          onClick={uploadFromBrowser}
-          disabled={!wasmEnabled || !buildId || !build?.package || busy || !supported}
-          aria-describedby={!wasmEnabled ? 'upload-unavailable' : undefined}
-        >
-          Chọn USB và nạp
-        </button>
+        <div className="device-actions">
+          <button
+            className="button button-primary"
+            onClick={() => uploadFromBrowser({ forceNewPort: false })}
+            disabled={!wasmEnabled || !buildId || !build?.package || busy || !supported}
+            aria-describedby={!wasmEnabled ? 'upload-unavailable' : undefined}
+          >
+            {usbPort?.port ? `Nạp qua ${usbPort.portLabel}` : 'Chọn USB và nạp'}
+          </button>
+          {usbPort?.port && (
+            <button
+              className="button button-quiet"
+              onClick={() => uploadFromBrowser({ forceNewPort: true })}
+              disabled={!wasmEnabled || !buildId || !build?.package || busy || !supported}
+            >
+              Đổi USB
+            </button>
+          )}
+        </div>
         {!wasmEnabled && (
           <p id="upload-unavailable">
             {!localBridge ? 'Hãy chờ chức năng biên dịch trên website hoàn thiện.' : 'Chức năng nạp từ Blockly qua trình duyệt đang được phát triển.'}
           </p>
         )}
       </section>
-      {message && <p className="device-message" role="alert">{message}</p>}
+      {(message || (wasmEnabled && compileCache?.state?.cacheKey === compileCache?.activeCacheKey && compileCache?.state?.message)) && (
+        <p className="device-message" role="alert">{message || compileCache.state.message}</p>
+      )}
       {warnings.length > 0 && <p role="alert">Chương trình còn khối cần sửa. Hãy kiểm tra phần Code.</p>}
-      {build?.package?.debug && <details className="device-technical">
+      {devUi && build?.package?.debug && <details className="device-technical">
         <summary>Debug firmware</summary>
         <p>{build.id}</p>
         <button className="button button-quiet" disabled={busy || !buildId} onClick={() => downloadDebugArtifact(build.package, 'elf')}>Tải app.elf</button>
