@@ -34,8 +34,14 @@ class Board {
   Board(const Board&) = delete;
   Board& operator=(const Board&) = delete;
 
+#if defined(SERIAL_8N1)
+  static constexpr fast4wd::Ps4Transport kDefaultTransport = fast4wd::Ps4Transport::Uart;
+#else
+  static constexpr fast4wd::Ps4Transport kDefaultTransport = fast4wd::Ps4Transport::I2c;
+#endif
+
   void begin(bool blinkOnLoss = true, bool usesPs4 = false, uint32_t buttons = 0x1fcffU, uint8_t axes = 7,
-             fast4wd::Ps4Transport transport = fast4wd::Ps4Transport::Uart) {
+             fast4wd::Ps4Transport transport = kDefaultTransport) {
     if (begun_) return;
     Serial.begin(115200);
     robot_.configureBlockly(usesPs4, buttons, axes);

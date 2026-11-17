@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { build } from 'esbuild';
+import { JSDOM } from 'jsdom';
+import { act, createElement } from 'react';
 import * as Blockly from 'blockly';
+import { inspectElf, verifyImage } from '../src/compiler/inspect-firmware.js';
 import { isBrowserCompilerEnabled } from '../src/compiler/config.js';
 import { formatSerialError } from '../src/device/usb-port.js';
 import { flashPackage } from '../src/device/browser-flash.js';
@@ -109,4 +115,181 @@ test('flashPackage blocks mismatched board/partition layout with clear error and
     /Bảng phân vùng hoặc cấu hình board trên mạch không khớp CodeLab/
   );
   assert.equal(writes.length, 0);
+});
+
+test('WASM toolchain packages PS4 UART and compiles a real PS4 + Servo sketch into valid ESP32-S3 firmware', async () => {
+  const pocData = JSON.parse(readFileSync('public/toolchain-337/codelab-poc-data.json', 'utf8'));
+  const ps4Lib = pocData.libraries.find((l) => l.id === 'CodeLabPs4I2C');
+  const uartFile = ps4Lib?.files.find((f) => f.path === 'src/UartFrame.h');
+  assert.ok(uartFile, 'UartFrame.h must be packaged in CodeLabPs4I2C');
+  assert.match(uartFile.content, /uartRxPin\s*=\s*8/);
+  assert.match(uartFile.content, /uartTxPin\s*=\s*9/);
+  assert.match(uartFile.content, /uartBaud\s*=\s*115200/);
+
+  const w = new Blockly.Workspace();
+  Blockly.serialization.workspaces.load(newmaniaWorkspace(), w);
+  const root = w.getBlocksByType('newmania_design_program', false)[0];
+  const connect = w.newBlock('newmania_design_ps4_connect');
+  const servoWrite = w.newBlock('robot_servo_write');
+  const angle = w.newBlock('math_number');
+  angle.setFieldValue(90, 'NUM');
+  servoWrite.getInput('ANGLE').connection.connect(angle.outputConnection);
+  const servoDisable = w.newBlock('robot_servo_disable');
+  const forever = w.getBlocksByType('newmania_design_forever', false)[0] || w.newBlock('newmania_design_forever');
+  const ifBtn = w.newBlock('controls_if');
+  const btn = w.newBlock('newmania_design_ps4_button');
+  ifBtn.getInput('IF0').connection.connect(btn.outputConnection);
+  ifBtn.getInput('DO0').connection.connect(servoWrite.previousConnection);
+  servoWrite.nextConnection.connect(servoDisable.previousConnection);
+  forever.getInput('DO').connection.connect(ifBtn.previousConnection);
+  root.getInput('DO').connection.connect(connect.previousConnection);
+  connect.nextConnection.connect(forever.previousConnection);
+
+  const devices = defaultRobotDevices(getBoardProfile(FAST4WD_BOARD_ID));
+  const generated = generateNewmania(w, FAST4WD_BOARD_ID, devices);
+  w.dispose();
+  assert.deepEqual(generated.warnings, []);
+  assert.match(generated.code, /newmania\.connectPs4\(\)/);
+  assert.match(generated.code, /newmania\.servoWrite\(1, 90\.0\)/);
+  assert.match(generated.code, /newmania\.servoDisable\(1\)/);
+
+  const oldSelf = globalThis.self;
+  const oldFetch = globalThis.fetch;
+  globalThis.self = globalThis;
+  self.location = { href: 'http://localhost/' };
+  globalThis.fetch = async (url) => {
+    const filename = join(process.cwd(), 'public', new URL(url, self.location.href).pathname);
+    try { return new Response(readFileSync(filename)); }
+    catch { return new Response('', { status: 404 }); }
+  };
+  let workerResult;
+  self.postMessage = (msg) => { if (msg.type !== 'progress') workerResult = msg; };
+  try {
+    await import('../src/compiler/browser-compiler.worker.js');
+    await self.onmessage({ data: { action: 'compile', requestId: 99, code: generated.code, boardId: FAST4WD_BOARD_ID } });
+    assert.equal(workerResult?.type, 'done', workerResult?.error || 'WASM compile failed');
+    assert.equal(workerResult.requestId, 99);
+    assert.equal(workerResult.segments.length, 4);
+    const elf = workerResult.debug.elf;
+    const app = workerResult.segments.find((s) => s.address === 0x10000).data;
+    const info = inspectElf(elf);
+    assert.ok(info.constructors.some((c) => c.name === '_GLOBAL__sub_I_sketch.ino'));
+    await verifyImage(elf, app);
+  } finally {
+    globalThis.self = oldSelf;
+    globalThis.fetch = oldFetch;
+  }
+});
+
+test('browser UI keeps background compile across popup close, reuses cache, and shares single USB between Flash and Serial', async () => {
+  const folder = resolve('firmware/tests/build-output/release-ui');
+  mkdirSync(folder, { recursive: true });
+  await build({
+    stdin: {
+      contents: `
+        import React from 'react';
+        import DevicePanel from './src/components/DevicePanel.jsx';
+        import SerialMonitor from './src/components/SerialMonitor.jsx';
+        import { useDeviceOperation } from './src/device/useDeviceOperation.js';
+        import { useSharedUsbPort } from './src/device/usb-port.js';
+        import { FAST4WD_BOARD_ID } from './src/boards/profiles.js';
+        export function Harness({ code, configKey = 'cfg', compileFn }) {
+          const operation = useDeviceOperation();
+          const usbPort = useSharedUsbPort();
+          const cacheRef = React.useRef(new Map());
+          const [open, setOpen] = React.useState(true);
+          const [compileState, setCompileState] = React.useState({ status: 'idle', cacheKey: '', message: '', build: null });
+          const cacheKey = code ? FAST4WD_BOARD_ID + '\\0' + configKey + '\\0' + code : '';
+          const effectiveBuild = compileState.cacheKey === cacheKey && compileState.build
+            ? compileState.build : (cacheRef.current.get(cacheKey) ?? null);
+          const onCompile = async () => {
+            const hit = cacheRef.current.get(cacheKey);
+            if (hit) { setCompileState({ status: 'ready', cacheKey, message: 'cached', build: hit }); return hit; }
+            setCompileState({ status: 'compiling', cacheKey, message: 'compiling', build: null });
+            const res = await compileFn(code);
+            const entry = { id: res.buildId, code, boardId: FAST4WD_BOARD_ID, package: res };
+            cacheRef.current.set(cacheKey, entry);
+            setCompileState({ status: 'ready', cacheKey, message: 'done', build: entry });
+            return entry;
+          };
+          return <>
+            <button onClick={() => setOpen((v) => !v)}>{open ? 'Đóng popup' : 'Mở popup'}</button>
+            {open && <DevicePanel operation={operation} usbPort={usbPort} compileCache={{ state: compileState, activeCacheKey: cacheKey, effectiveBuild, onCompile }} boardId={FAST4WD_BOARD_ID} code={code} warnings={[]} />}
+            <SerialMonitor usbPort={usbPort} />
+          </>;
+        }
+      `,
+      resolveDir: process.cwd(),
+      loader: 'jsx',
+    },
+    bundle: true,
+    packages: 'external',
+    format: 'esm',
+    platform: 'node',
+    jsx: 'automatic',
+    outfile: join(folder, 'harness.mjs'),
+  });
+  const { Harness } = await import(pathToFileURL(join(folder, 'harness.mjs')));
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://codelab.hirovn9395.workers.dev/' });
+  const saved = new Map();
+  for (const [name, value] of Object.entries({ window: dom.window, document: dom.window.document, navigator: dom.window.navigator, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true })) {
+    saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+    Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
+  }
+  Object.defineProperty(window, 'isSecureContext', { value: true });
+  let requestPortCalls = 0;
+  let portOpenCalls = 0;
+  let portCloseCalls = 0;
+  const mockPort = {
+    getInfo: () => ({ usbVendorId: 0x303a, usbProductId: 0x1001 }),
+    readable: { getReader: () => ({ read: () => new Promise(() => {}), releaseLock() {}, cancel: async () => {} }) },
+    open: async () => { portOpenCalls++; },
+    close: async () => { portCloseCalls++; },
+  };
+  navigator.serial = {
+    requestPort: async () => { requestPortCalls++; return mockPort; },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  let resolveCompile;
+  let compileCount = 0;
+  const compileFn = () => {
+    compileCount++;
+    return new Promise((r) => { resolveCompile = r; });
+  };
+  const tick = () => new Promise((r) => setTimeout(r, 15));
+  const { createRoot } = await import('react-dom/client');
+  const root = createRoot(document.getElementById('root'));
+  const btn = (label) => [...document.querySelectorAll('button')].find((b) => b.textContent.includes(label));
+
+  try {
+    await act(async () => { root.render(createElement(Harness, { code: 'void setup(){}', compileFn })); await tick(); });
+    // Start compile, then immediately close popup while compile is in-flight
+    await act(async () => { btn('Biên dịch chương trình').click(); await tick(); });
+    assert.equal(compileCount, 1);
+    await act(async () => { btn('Đóng popup').click(); await tick(); });
+    // Finish compile while popup is closed, then reopen popup
+    await act(async () => {
+      resolveCompile({ buildId: 'b1', boardId: FAST4WD_BOARD_ID, segments: [], stats: { totalMs: 10 }, manifest: { fqbn: 'esp32' } });
+      await tick();
+    });
+    await act(async () => { btn('Mở popup').click(); await tick(); });
+    assert.equal(btn('Chọn USB và nạp').disabled, false, 'Cached build must remain ready after reopening popup');
+    // Clicking compile again with unchanged code reuses cache
+    await act(async () => { btn('Biên dịch chương trình').click(); await tick(); });
+    assert.equal(compileCount, 1, 'Unchanged code must reuse cached build without recompiling');
+
+    // Connect Serial Monitor (1st and only requestPort call)
+    await act(async () => { btn('Chọn cổng & kết nối').click(); await tick(); });
+    assert.equal(requestPortCalls, 1);
+    assert.equal(portOpenCalls, 1);
+    // DevicePanel now sees shared USB port without asking again
+    assert.ok(btn('Nạp qua USB 303A:1001'), 'DevicePanel must reuse the shared USB port');
+  } finally {
+    await act(async () => { root.unmount(); });
+    for (const [name, desc] of saved) {
+      if (desc) Object.defineProperty(globalThis, name, desc);
+      else delete globalThis[name];
+    }
+  }
 });
