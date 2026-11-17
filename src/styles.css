@@ -385,16 +385,28 @@ dialog[open].is-closing::backdrop{animation:fade-out var(--genie-ms) ease forwar
 @media (max-width:650px){.setp{width:min(320px,calc(100vw - 24px))}}
 
 /* ---- changelog ---- */
-dialog:has(.changelog){width:min(560px,92vw)}
-.changelog{max-height:min(54vh,420px);overflow:auto;margin:0 -8px 4px;padding:0 8px;outline-offset:2px}
-.cl-entry+.cl-entry{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+dialog:has(.changelog){width:min(700px,94vw)}
+.changelog{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;height:min(54vh,400px);margin:0 0 4px}
+.cl-nav{display:flex;flex-direction:column;gap:8px;overflow:auto;padding:2px}
+.cl-tile{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--pan);text-align:left;transition:background-color .15s,border-color .15s,transform .15s}
+.cl-tile strong{font-size:13px}
+.cl-tile span:not(.sel-tag){font-size:11.5px;color:color-mix(in srgb,var(--ink) 62%,transparent)}
+.cl-tile .sel-tag{margin-top:2px}
+.cl-tile:hover{border-color:var(--bar);transform:translateX(2px)}
+.cl-tile.is-active{border-color:var(--bar);background:color-mix(in srgb,var(--bar) 14%,var(--bg))}
+.cl-entry{min-width:0;overflow:auto;padding:14px 16px;border-radius:12px;background:var(--pan);outline-offset:2px;animation:fade-in .2s ease}
 .cl-head{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-bottom:6px}
 .cl-ver{font-size:15px}
 .cl-date{margin-left:auto;font-size:12px;color:color-mix(in srgb,var(--ink) 62%,transparent)}
-.cl-title{margin:0 0 10px;font-weight:600}
+.cl-title{margin:0 0 12px;font-weight:600}
 .cl-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .cl-list li{display:flex;align-items:flex-start;gap:10px;line-height:1.55}
 .cl-list .sel-tag{margin-top:2px;min-width:66px;justify-content:center}
+@media (max-width:560px){
+  .changelog{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);height:min(64vh,480px)}
+  .cl-nav{flex-direction:row;overflow-x:auto}
+  .cl-tile{width:auto;flex:none}
+}
 
 /* ---- floating panels  ---- */
 :root{--float-gap:14px}
@@ -431,3 +443,15 @@ dialog:has(.changelog){width:min(560px,92vw)}
   .topbar{height:auto;min-height:56px;flex-wrap:wrap;padding-bottom:4px}
   .topbar .spacer{display:none}
 }
+
+/* ---- fix coding pannel bg ---- */
+.main{background-image:radial-gradient(var(--dot) 1.2px,transparent 1.2px);background-size:24px 24px;background-color:var(--bg)}
+.ws{background-image:none}
+.dock-right.code-dock{margin-left:var(--float-gap)}
+@media(max-width:760px){.dock-right.code-dock{margin-left:var(--float-gap)}}
+.topbar>.ib[data-tip]:last-child::after{left:auto;right:0;transform:translate(0,-4px)}
+.topbar>.ib[data-tip]:last-child:hover::after,.topbar>.ib[data-tip]:last-child:focus-visible::after{transform:translate(0,0)}
+.code-side{border:0}
+.code-output{border-radius:0 0 16px 16px}
+.blockly-host .blocklyMainBackground{stroke:none!important;stroke-width:0!important}
+.blockly-host .blocklySvg{border:0!important}

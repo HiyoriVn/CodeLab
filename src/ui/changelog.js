@@ -1,5 +1,14 @@
 export const CHANGELOG = [
   {
+    version: '1.2.0',
+    date: '17/11/2026',
+    title: 'Hỗ trợ servo và tùy biến kết nối module PS4',
+    items: [
+      { type: 'new', text: 'Hỗ trợ servo: điều khiển servo trực tiếp bằng khối lệnh.' },
+      { type: 'new', text: 'Tùy biến kết nối module PS4 bằng UART hoặc I2C, chọn kiểu kết nối phù hợp với mạch của bạn.' },
+    ],
+  },
+  {
     version: '1.1.0',
     date: '12/11/2026',
     title: 'Giao diện mới và nạp firmware ngay trên trình duyệt',
