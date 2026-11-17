@@ -3,7 +3,9 @@ import { useDeviceOperation } from '../device/useDeviceOperation.js';
 import { FAST4WD_BOARD_ID } from '../boards/profiles.js';
 import { validatePackage, sha256 } from '../device/firmware-package.js';
 import { flashPackage } from '../device/browser-flash.js';
-export default function BrowserFlasher({boardId,operation}) {
+import { formatSerialError } from '../device/usb-port.js';
+
+export default function BrowserFlasher({boardId,operation,usbPort}) {
   const [segments,setSegments]=useState(null), [message,setMessage]=useState('Chọn manifest JSON và đủ 4 tệp .bin từ cùng một bản build.');
   const [progress,setProgress]=useState(null);
   const localOperation=useDeviceOperation();
@@ -26,12 +28,13 @@ export default function BrowserFlasher({boardId,operation}) {
     const log=text=>setMessage(m=>(m+'\n'+text).slice(-6000));
     setProgress(null);
     try {
-      setMessage('Đang chọn USB…');
-      const port=await navigator.serial.requestPort();
+      setMessage(usbPort?.port ? `Đang dùng ${usbPort.portLabel}…` : 'Đang chọn USB…');
+      await usbPort?.releaseForFlash?.();
+      const port=usbPort ? await usbPort.selectPort() : await navigator.serial.requestPort();
       if(!window.confirm('Nạp chương trình sẽ thay thế chương trình hiện tại. Hãy ngắt nguồn động cơ và đảm bảo robot ở trạng thái an toàn trước khi tiếp tục.')) {setMessage('Đã hủy nạp.');return;}
       await flashPackage(port,segments,log,(_,written,total)=>{const percent=total>0?Math.min(100,Math.round(written/total*100)):0;setProgress(percent);setMessage('Đang nạp '+percent+'%');});
     }
-    catch(e){log(e.name==='NotFoundError'?'Đã hủy chọn USB.':'Nạp thất bại: '+e.message);}
+    catch(e){log(e.name==='NotFoundError'?'Đã hủy chọn USB.':'Nạp thất bại: '+formatSerialError(e));}
     finally{release();setProgress(null);}
   };
   return <details className="device-technical" onToggle={event=>{if(busy)event.currentTarget.open=true;}}>

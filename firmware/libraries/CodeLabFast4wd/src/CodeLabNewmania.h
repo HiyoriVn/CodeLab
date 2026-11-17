@@ -34,11 +34,18 @@ class Board {
   Board(const Board&) = delete;
   Board& operator=(const Board&) = delete;
 
-  void begin(bool blinkOnLoss = true, bool usesPs4 = false, uint32_t buttons = 0x1fcffU, uint8_t axes = 7) {
+#if defined(SERIAL_8N1)
+  static constexpr fast4wd::Ps4Transport kDefaultTransport = fast4wd::Ps4Transport::Uart;
+#else
+  static constexpr fast4wd::Ps4Transport kDefaultTransport = fast4wd::Ps4Transport::I2c;
+#endif
+
+  void begin(bool blinkOnLoss = true, bool usesPs4 = false, uint32_t buttons = 0x1fcffU, uint8_t axes = 7,
+             fast4wd::Ps4Transport transport = kDefaultTransport) {
     if (begun_) return;
     Serial.begin(115200);
     robot_.configureBlockly(usesPs4, buttons, axes);
-    robot_.begin(blinkOnLoss); // Existing wiring, frequency, startup and safety.
+    robot_.begin(blinkOnLoss, transport); // Existing wiring, frequency, startup and safety.
     begun_ = true;
   }
 

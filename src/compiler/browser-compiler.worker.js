@@ -8,6 +8,7 @@ import { validatePackage, sha256 } from '../device/firmware-package.js';
 import { FAST4WD_BOARD_ID, getBoardProfile } from '../boards/profiles.js';
 
 let toolchainCache = null;
+let toolchainPromise = null;
 const libObjectCache = new Map();
 
 async function sha256Hex(data) {
@@ -18,7 +19,12 @@ async function sha256Hex(data) {
 }
 
 async function fetchChunkedAsset(baseUrl, fileName, chunks, cacheName, onProgress) {
-  const cache = 'caches' in self ? await caches.open(cacheName) : undefined;
+  let cache;
+  try {
+    if ('caches' in self) cache = await caches.open(cacheName);
+  } catch {
+    cache = undefined;
+  }
   const chunkList = chunks && chunks.length > 0 ? chunks : [fileName];
 
   const buffers = new Array(chunkList.length);
@@ -31,11 +37,16 @@ async function fetchChunkedAsset(baseUrl, fileName, chunks, cacheName, onProgres
       batch.map(async (chunkName, batchIdx) => {
         const idx = i + batchIdx;
         const chunkUrl = new URL(chunkName, baseUrl).toString();
-        let res = await cache?.match(chunkUrl);
+        let res;
+        if (cache) {
+          try { res = await cache.match(chunkUrl); } catch { res = undefined; }
+        }
         if (!res) {
           res = await fetch(chunkUrl);
           if (!res.ok) throw new Error(`Không thể tải tệp ${chunkName}: ${res.status}`);
-          await cache?.put(chunkUrl, res.clone());
+          if (cache) {
+            try { await cache.put(chunkUrl, res.clone()); } catch {}
+          }
         }
         buffers[idx] = new Uint8Array(await res.arrayBuffer());
         completed++;
@@ -57,55 +68,64 @@ async function fetchChunkedAsset(baseUrl, fileName, chunks, cacheName, onProgres
 
 async function getToolchain(manifestUrl, onProgress) {
   if (toolchainCache) return toolchainCache;
+  if (toolchainPromise) return toolchainPromise;
 
-  onProgress?.('Đang tải manifest toolchain Core 3.3.7…');
-  const manifestRes = await fetch(manifestUrl);
-  if (!manifestRes.ok) throw new Error(`Lỗi tải manifest: ${manifestRes.status}`);
-  const manifest = await manifestRes.json();
-  const cacheName = `codelab-toolchain-${manifest.version || '3.3.7'}`;
-  const baseUrl = new URL(manifestUrl, self.location.href).toString();
+  toolchainPromise = (async () => {
+    onProgress?.('Đang tải manifest toolchain Core 3.3.7…');
+    const manifestRes = await fetch(manifestUrl, { cache: 'no-cache' });
+    if (!manifestRes.ok) throw new Error(`Lỗi tải manifest: ${manifestRes.status}`);
+    const manifest = await manifestRes.json();
+    const cacheName = `codelab-toolchain-${manifest.version || '3.3.7'}`;
+    const baseUrl = new URL(manifestUrl, self.location.href).toString();
 
-  onProgress?.('Đang tải các tệp toolchain WebAssembly…');
-  const [clangBytes, ldBytes, sysrootGz, bootloader, partitionTable, bootApp0] = await Promise.all([
-    fetchChunkedAsset(baseUrl, manifest.tools.clang.url, manifest.tools.clang.chunks, cacheName, onProgress),
-    fetchChunkedAsset(baseUrl, manifest.tools.ld.url, manifest.tools.ld.chunks, cacheName, onProgress),
-    fetchChunkedAsset(baseUrl, manifest.sysroot, manifest.sysrootChunks, cacheName, onProgress),
-    fetchChunkedAsset(baseUrl, manifest.bootloader, undefined, cacheName, onProgress),
-    fetchChunkedAsset(baseUrl, manifest.partitionTable, undefined, cacheName, onProgress),
-    fetchChunkedAsset(baseUrl, manifest.bootApp0 || 'boot_app0.bin', undefined, cacheName, onProgress),
-  ]);
+    onProgress?.('Đang tải các tệp toolchain WebAssembly…');
+    const [clangBytes, ldBytes, sysrootGz, bootloader, partitionTable, bootApp0] = await Promise.all([
+      fetchChunkedAsset(baseUrl, manifest.tools.clang.url, manifest.tools.clang.chunks, cacheName, onProgress),
+      fetchChunkedAsset(baseUrl, manifest.tools.ld.url, manifest.tools.ld.chunks, cacheName, onProgress),
+      fetchChunkedAsset(baseUrl, manifest.sysroot, manifest.sysrootChunks, cacheName, onProgress),
+      fetchChunkedAsset(baseUrl, manifest.bootloader, undefined, cacheName, onProgress),
+      fetchChunkedAsset(baseUrl, manifest.partitionTable, undefined, cacheName, onProgress),
+      fetchChunkedAsset(baseUrl, manifest.bootApp0 || 'boot_app0.bin', undefined, cacheName, onProgress),
+    ]);
 
-  onProgress?.('Đang biên dịch WebAssembly module (Clang + LD)…');
-  const [clangMod, ldMod, sysrootTar] = await Promise.all([
-    WebAssembly.compile(clangBytes),
-    WebAssembly.compile(ldBytes),
-    gunzip(sysrootGz),
-  ]);
+    onProgress?.('Đang biên dịch WebAssembly module (Clang + LD)…');
+    const [clangMod, ldMod, sysrootTar] = await Promise.all([
+      WebAssembly.compile(clangBytes),
+      WebAssembly.compile(ldBytes),
+      gunzip(sysrootGz),
+    ]);
 
-  onProgress?.('Đang giải nén sysroot vào bộ nhớ VFS…');
-  const vfs = new Vfs(untar(sysrootTar));
+    onProgress?.('Đang giải nén sysroot vào bộ nhớ VFS…');
+    const vfs = new Vfs(untar(sysrootTar));
 
-  onProgress?.('Đang tải thư viện CodeLab…');
-  const pocDataRes = await fetch(new URL('codelab-poc-data.json', baseUrl).toString());
-  if (!pocDataRes.ok) throw new Error('Không thể tải thư viện CodeLab từ toolchain.');
-  const pocData = await pocDataRes.json();
-  const libraryRevision = await sha256Hex(new TextEncoder().encode(JSON.stringify(pocData.libraries)));
-  if (manifest.libraryRevision !== libraryRevision || pocData.libraryRevision !== libraryRevision) {
-    throw new Error('Thư viện runtime và manifest không cùng revision. Hãy tải lại bộ toolchain.');
+    onProgress?.('Đang tải thư viện CodeLab…');
+    const pocDataRes = await fetch(new URL('codelab-poc-data.json', baseUrl).toString(), { cache: 'no-cache' });
+    if (!pocDataRes.ok) throw new Error('Không thể tải thư viện CodeLab từ toolchain.');
+    const pocData = await pocDataRes.json();
+    const libraryRevision = await sha256Hex(new TextEncoder().encode(JSON.stringify(pocData.libraries)));
+    if (manifest.libraryRevision !== libraryRevision || pocData.libraryRevision !== libraryRevision) {
+      throw new Error('Thư viện runtime và manifest không cùng revision. Hãy tải lại bộ toolchain.');
+    }
+
+    toolchainCache = {
+      manifest,
+      clangMod,
+      ldMod,
+      vfs,
+      bootloader,
+      partitionTable,
+      bootApp0,
+      libraries: pocData.libraries,
+      libraryRevision,
+    };
+    return toolchainCache;
+  })();
+
+  try {
+    return await toolchainPromise;
+  } finally {
+    toolchainPromise = null;
   }
-
-  toolchainCache = {
-    manifest,
-    clangMod,
-    ldMod,
-    vfs,
-    bootloader,
-    partitionTable,
-    bootApp0,
-    libraries: pocData.libraries,
-    libraryRevision,
-  };
-  return toolchainCache;
 }
 
 self.onmessage = async (ev) => {
@@ -113,7 +133,8 @@ self.onmessage = async (ev) => {
   if (!req || req.action !== 'compile') return;
 
   const t0 = performance.now();
-  const post = (msg) => self.postMessage(msg);
+  const requestId = req.requestId;
+  const post = (msg) => self.postMessage(requestId !== undefined ? { ...msg, requestId } : msg);
 
   try {
     const { code, boardId, toolchainUrl = '/toolchain-337/manifest.json' } = req;

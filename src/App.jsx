@@ -1,5 +1,8 @@
 import BrowserFlasher from './components/BrowserFlasher.jsx';
 import { useDeviceOperation } from './device/useDeviceOperation.js';
+import { useSharedUsbPort } from './device/usb-port.js';
+import { compileInBrowser } from './compiler/browser-compiler-client.js';
+import { isBrowserCompilerEnabled } from './compiler/config.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
 import { DEFAULT_BOARD_ID, FAST4WD_BOARD_ID, getBoardProfile, projectBoardId } from './boards/profiles.js';
@@ -64,6 +67,10 @@ function App() {
   const [dialog, setDialog] = useState(null);
   const deviceOperation = useDeviceOperation();
   const deviceBusy = deviceOperation.busy;
+  const usbPort = useSharedUsbPort();
+  const compileCacheRef = useRef(new Map());
+  const compileRunRef = useRef(0);
+  const [compileState, setCompileState] = useState({ status: 'idle', cacheKey: '', message: '', build: null });
   const [toast, setToast] = useState('');
   const [theme, setTheme] = useState(readTheme);
   const [barColor, setBarColor] = useState(readBar);
@@ -71,6 +78,52 @@ function App() {
 
   const boardId = projectBoardId(project);
   const robotDevices = useMemo(() => projectRobotDevices(project), [boardId, project.deviceConfigs]);
+  const configKey = useMemo(() => JSON.stringify(robotDevices ?? null), [robotDevices]);
+  const activeCode = generatedCode.boardId === boardId ? generatedCode.code : '';
+  const activeCacheKey = activeCode ? `${boardId}\0${configKey}\0${activeCode}` : '';
+  const cachedBuild = activeCacheKey ? (compileCacheRef.current.get(activeCacheKey) ?? null) : null;
+  const effectiveBuild = compileState.cacheKey === activeCacheKey && compileState.build
+    ? compileState.build
+    : cachedBuild;
+  const startCompile = useCallback(async () => {
+    const profile = getBoardProfile(boardId);
+    if (!isBrowserCompilerEnabled() || !profile?.capabilities?.fast4wd) return null;
+    if (!activeCode || generatedCode.warnings.length > 0) return null;
+    const key = activeCacheKey;
+    const hit = compileCacheRef.current.get(key);
+    if (hit) {
+      setCompileState({ status: 'ready', cacheKey: key, message: `Dùng bản biên dịch đã lưu (${hit.package.stats.totalMs} ms). Sẵn sàng nạp.`, build: hit });
+      return hit;
+    }
+    const runId = ++compileRunRef.current;
+    setCompileState({ status: 'compiling', cacheKey: key, message: 'Đang chuẩn bị biên dịch…', build: null });
+    try {
+      const result = await compileInBrowser(activeCode, boardId, {
+        onProgress: (progress) => {
+          if (compileRunRef.current === runId) {
+            setCompileState((prev) => ({ ...prev, status: 'compiling', message: progress }));
+          }
+        },
+      });
+      if (!result.buildId || result.boardId !== boardId) throw new Error('Bản biên dịch không phù hợp.');
+      const entry = { id: result.buildId, code: activeCode, boardId, configKey, package: result };
+      compileCacheRef.current.set(key, entry);
+      if (compileRunRef.current === runId) {
+        setCompileState({
+          status: 'ready',
+          cacheKey: key,
+          message: `Biên dịch thành công trong trình duyệt (${result.stats.totalMs} ms). Sẵn sàng nạp.`,
+          build: entry,
+        });
+      }
+      return entry;
+    } catch (error) {
+      if (compileRunRef.current === runId) {
+        setCompileState({ status: 'error', cacheKey: key, message: 'Không thể biên dịch chương trình. Hãy kiểm tra các khối và thử lại.', build: null });
+      }
+      return null;
+    }
+  }, [activeCacheKey, activeCode, boardId, configKey, generatedCode.warnings.length]);
   const legacyBoard = boardId !== FAST4WD_BOARD_ID;
   const legacyProgram = !legacyBoard && !usesNewmaniaProgram(project);
   const [compatibility, setCompatibility] = useState([]);
@@ -270,7 +323,7 @@ function App() {
       <Dock open={terminalOpen} genie="terminal" edge="bottom" as="section" className="console" aria-label="Bảng lệnh" wrapStyle={{ '--console-h': `${consoleHeight}px` }}>
         <div className="console-grip" role="separator" aria-orientation="horizontal" aria-label="Kéo để đổi kích thước bảng lệnh" aria-valuemin={CONSOLE_MIN} aria-valuenow={consoleHeight} tabIndex={0} title="Kéo xuống để thu nhỏ, kéo lên để phóng to" onPointerDown={startResize} onKeyDown={resizeByKey} onDoubleClick={toggleConsoleSize} />
         <h2>Bảng lệnh<button className="x" onClick={() => setTerminalOpen(false)} aria-label="Đóng">×</button></h2>
-        <SerialMonitor />
+        <SerialMonitor usbPort={usbPort} />
       </Dock>
 
       <Modal open={dialog === 'convert'} onClose={closeDialog} title="Tạo bản sao Newmania?">
@@ -300,8 +353,8 @@ function App() {
       </Modal>
       <Modal open={dialog === 'connect'} genie="connect" locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch chương trình, sau đó chọn USB và nạp vào robot. Để xem dữ liệu Serial, dùng nút Bảng lệnh.</p>
-        <DevicePanel key={project.id + boardId} operation={deviceOperation} boardId={boardId} code={generatedCode.boardId === boardId ? generatedCode.code : ''} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
-        <BrowserFlasher boardId={boardId} operation={deviceOperation} />
+        <DevicePanel key={project.id + boardId} operation={deviceOperation} usbPort={usbPort} compileCache={{ state: compileState, activeCacheKey, effectiveBuild, onCompile: startCompile }} boardId={boardId} code={activeCode} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
+        <BrowserFlasher boardId={boardId} operation={deviceOperation} usbPort={usbPort} />
         <div className="dialog-actions"><button className="btn" disabled={deviceBusy} onClick={closeDialog}>Đóng</button></div>
       </Modal>
       <div className={`toast ${toast ? 'on' : ''}`} role="status">{toast}</div>
