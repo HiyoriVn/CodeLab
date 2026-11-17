@@ -6,6 +6,7 @@ import './robotics.js';
 import { robotBlocks } from './robot-devices.js';
 import { editorToolbox } from './beginner-toolbox.js';
 import { FAST4WD_BOARD_ID } from '../boards/profiles.js';
+import { lockCapHat } from './start-hat.js';
 
 export const TYPES = Object.freeze({ root: 'newmania_design_program', forever: 'newmania_design_forever', connect: 'newmania_design_ps4_connect', button: 'newmania_design_ps4_button' });
 loops.loopTypes.add(TYPES.forever);
@@ -19,7 +20,7 @@ Blockly.defineBlocksWithJsonArray([
 const rootInit=Blockly.Blocks[TYPES.root].init;
 Blockly.Blocks[TYPES.root].init=function() {
   rootInit.call(this);
-  this.hat='cap';
+  lockCapHat(this);
   this.setDeletable(false);
   this.isCopyable=()=>false;
   this.isDuplicatable=()=>false;
