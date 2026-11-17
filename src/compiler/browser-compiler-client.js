@@ -1,6 +1,7 @@
 import { FAST4WD_BOARD_ID } from '../boards/profiles.js';
 
 let sharedWorker = null;
+let nextRequestId = 1;
 
 function getWorker() {
   if (!sharedWorker) {
@@ -21,27 +22,32 @@ export function compileInBrowser(code, boardId = FAST4WD_BOARD_ID, { onProgress,
     }
 
     const worker = getWorker();
+    const requestId = nextRequestId++;
+
+    const cleanup = () => {
+      worker.removeEventListener('message', handler);
+      worker.removeEventListener('error', errorHandler);
+    };
 
     const handler = (ev) => {
       const data = ev.data;
       if (!data) return;
+      if (data.requestId !== undefined && data.requestId !== requestId) return;
 
       if (data.type === 'progress') {
         onProgress?.(data.message);
       } else if (data.type === 'done') {
-        worker.removeEventListener('message', handler);
-        worker.removeEventListener('error', errorHandler);
+        cleanup();
         resolve(data);
       } else if (data.type === 'error') {
-        worker.removeEventListener('message', handler);
-        worker.removeEventListener('error', errorHandler);
+        cleanup();
         reject(new Error(data.error || 'Biên dịch thất bại'));
       }
     };
 
     const errorHandler = (err) => {
-      worker.removeEventListener('message', handler);
-      worker.removeEventListener('error', errorHandler);
+      cleanup();
+      if (sharedWorker === worker) sharedWorker = null;
       reject(new Error(err?.message || 'Lỗi trong Web Worker'));
     };
 
@@ -50,6 +56,7 @@ export function compileInBrowser(code, boardId = FAST4WD_BOARD_ID, { onProgress,
 
     worker.postMessage({
       action: 'compile',
+      requestId,
       code,
       boardId,
       toolchainUrl,

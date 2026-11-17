@@ -33,6 +33,7 @@ const response = data => ({ok:true,json:async()=>data});
 const tick = () => new Promise(resolve=>setTimeout(resolve,10));
 
 test('real React panels lock each other, modal and repeated clicks; recover after USB cancel/error', async () => {
+  setBrowserCompilerEnabled(false);
   const dom = new JSDOM('<div id="root"></div>', {url:'http://localhost/'});
   const saved = new Map();
   for (const [name,value] of Object.entries({window:dom.window,document:dom.window.document,navigator:dom.window.navigator,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true})) {

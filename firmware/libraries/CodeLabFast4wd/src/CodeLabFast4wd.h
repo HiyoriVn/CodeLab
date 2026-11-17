@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <CodeLabRobot.h>
 #include <I2CReceiver.h>
+#include <UartFrame.h>
 #include "QuadMotors.h"
 #include "CodeLabV2Scheduler.hpp"
 
@@ -11,6 +12,7 @@
 #endif
 
 namespace codelab { namespace fast4wd {
+enum class Ps4Transport : uint8_t { I2c = 0, Uart = 1 };
 struct MotorLayout {
   uint8_t wheelAtPort[4] = {0, 1, 2, 3};
   uint8_t reversed = 3;
@@ -36,6 +38,8 @@ class Robot : private robot::MotorInterface {
   robot::RobotController controller_;
   robot::Ps4ControlMapping controls_;
   ps4i2c::Receiver receiver_;
+  ps4i2c::UartParser uartParser_;
+  Ps4Transport transport_ = Ps4Transport::I2c;
   bool busReady_ = false, initialized_ = false, blink_ = false;
   bool armAfterClear_ = false, stopRequested_ = false;
   Drive drive_ = Drive::Idle;
@@ -164,7 +168,19 @@ class Robot : private robot::MotorInterface {
 
   void poll(uint32_t now) {
     receiver_.watchdog(now);
-    if (!busReady_ || uint32_t(now - polledAt_) < 6) return;
+    if (!busReady_) return;
+    if (transport_ == Ps4Transport::Uart) {
+#if defined(SERIAL_8N1)
+      size_t budget = 128;
+      while (Serial1.available() > 0 && budget--) {
+        const int c = Serial1.read();
+        if (c < 0) break;
+        uartParser_.feed(uint8_t(c), receiver_, millis());
+      }
+#endif
+      return;
+    }
+    if (uint32_t(now - polledAt_) < 6) return;
     polledAt_ = now;
     const size_t count = Wire.requestFrom(uint8_t(0x30), ps4i2c::frameSize);
     uint8_t bytes[ps4i2c::frameSize];
@@ -196,20 +212,29 @@ class Robot : private robot::MotorInterface {
   Robot(const Robot&) = delete;
   Robot& operator=(const Robot&) = delete;
 
-  void begin(bool blinkOnLoss) {
+  void begin(bool blinkOnLoss, Ps4Transport transport = Ps4Transport::I2c) {
     if (initialized_) return;
+    transport_ = transport;
     blink_ = blinkOnLoss;
     if (blink_) {
       pinMode(ledPin, OUTPUT);
       digitalWrite(ledPin, LOW);
     }
     delay(300);
-    busReady_ = Wire.begin(8, 9, uint32_t(100000));
-    Wire.setTimeOut(20);
+    if (transport_ == Ps4Transport::Uart) {
+#if defined(SERIAL_8N1)
+      Serial1.begin(ps4i2c::uartBaud, SERIAL_8N1, ps4i2c::uartRxPin, ps4i2c::uartTxPin);
+#endif
+      busReady_ = true;
+    } else {
+      busReady_ = Wire.begin(8, 9, uint32_t(100000));
+      Wire.setTimeOut(20);
+    }
     initialized_ = true;
     const bool motorReady = motors_.begin();
-    if (blockly_) Serial.printf("Blockly I2C=%u MCPWM=%u. Program starts at boot.\n", unsigned(busReady_), unsigned(motorReady));
-    else Serial.printf("4WD I2C=%u MCPWM=%u. Options=ARM, Share=STOP.\n", unsigned(busReady_), unsigned(motorReady));
+    const char* busName = (transport_ == Ps4Transport::Uart) ? "UART" : "I2C";
+    if (blockly_) Serial.printf("Blockly %s=%u MCPWM=%u. Program starts at boot.\n", busName, unsigned(busReady_), unsigned(motorReady));
+    else Serial.printf("4WD %s=%u MCPWM=%u. Options=ARM, Share=STOP.\n", busName, unsigned(busReady_), unsigned(motorReady));
   }
 
   void beginLoop() {

@@ -8,6 +8,7 @@ export const LESSONS = [
   { id:'motor_test', label:'Bài 03 — Kiểm tra từng Motor' },
   { id:'four_wheels', label:'Bài 04 — Di chuyển 4 bánh cơ bản' },
   { id:'joystick_math', label:'Bài 05 — Mecanum bằng hai Joystick' },
+  { id:'servo_test', label:'Bài 06 — Kiểm tra Servo S1–S4' },
 ];
 
 // Baseline sources: defaultRobotDevices, fast4wdConstructor, MotorLayout and
@@ -86,8 +87,23 @@ export function lessonProject(id) {
       ...[1,2,3,4].map(i=>motor(i,b('math_constrain',{}, {
         VALUE:op('MULTIPLY',op('DIVIDE',get('m'+i),get('dinh')),num(100)),LOW:num(-100),HIGH:num(100),
       }))));
+  } else if (id === 'servo_test') {
+    const servoSteps = ['1','2','3','4'].flatMap(ch => [
+      b('beginner_message', {}, {VALUE:text('Test Servo S'+ch)}),
+      b('robot_servo_write', {SERVO:ch}, {ANGLE:num(60)}),
+      b('beginner_wait', {SECONDS:0.5}),
+      b('robot_servo_write', {SERVO:ch}, {ANGLE:num(90)}),
+      b('beginner_wait', {SECONDS:0.5}),
+      b('robot_servo_write', {SERVO:ch}, {ANGLE:num(120)}),
+      b('beginner_wait', {SECONDS:0.5}),
+      b('robot_servo_disable', {SERVO:ch}),
+      b('beginner_wait', {SECONDS:0.3}),
+    ]);
+    setup=join(...servoSteps, b('beginner_message', {}, {VALUE:text('Hoan tat kiem tra Servo S1-S4')}));
   }
-  const root=b(TYPES.root,{}, {DO:join(id==='serial_counter'?null:b(TYPES.connect),setup,b(TYPES.forever,{}, {DO:body}))});
+  const root=b(TYPES.root,{}, {DO:id==='servo_test'
+    ? setup
+    : join(id==='serial_counter'?null:b(TYPES.connect),setup,b(TYPES.forever,{}, {DO:body}))});
   root.x=40;root.y=40;root.deletable=false;
   const devices=defaultRobotDevices(getBoardProfile(FAST4WD_BOARD_ID));
   return {name:lesson.label,boardId:FAST4WD_BOARD_ID,programModel:NEWMANIA_MODEL,editorMode:'beginner',

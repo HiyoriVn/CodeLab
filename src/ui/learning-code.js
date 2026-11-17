@@ -25,7 +25,7 @@ export function learningCode(workspace) {
       case 'newmania_design_ps4_button': return `nút ${buttons[f.BUTTON] || f.BUTTON} ${{PRESS:'vừa nhấn',HELD:'đang giữ',RELEASE:'vừa thả'}[f.STATE]}?`;
       case 'robot_ps4_button': return `nút ${buttons[f.BUTTON] || f.BUTTON} đang giữ?`;
       case 'robot_ps4_axis': return ['cần trái ngang','cần trái dọc','cần phải ngang','cần phải dọc'][f.AXIS];
-      case 'fast4wd_connected': return 'S3 nhận dữ liệu PS4 I²C còn mới?';
+      case 'fast4wd_connected': return 'S3 nhận dữ liệu PS4 UART còn mới?';
       case 'beginner_serial_ready': return 'Serial có dữ liệu?';
       case 'codelab_serial_available': return 'số byte Serial sẵn có';
       case 'codelab_serial_read': return 'đọc một byte Serial';
@@ -44,7 +44,7 @@ export function learningCode(workspace) {
       switch (type) {
         case 'newmania_design_program': case 'beginner_start': emit(level,'Khi bắt đầu chương trình:'); body('DO'); break;
         case 'newmania_design_forever': case 'beginner_forever': emit(level,'Lặp mãi mãi:'); body('DO'); break;
-        case 'newmania_design_ps4_connect': emit(level,'Chuẩn bị đọc tay cầm PS4 từ D1 qua I²C'); break;
+        case 'newmania_design_ps4_connect': emit(level,'Chuẩn bị đọc tay cầm PS4 từ D1 qua UART'); break;
         case 'variables_set': emit(level,`${variable(b)} ← ${e('VALUE')}`); break;
         case 'math_change': emit(level,`${variable(b)} ← ${variable(b)} + ${e('DELTA')}`); break;
         case 'beginner_wait': emit(level,`Đợi ${f.SECONDS} giây (vẫn phục vụ an toàn)`); break;
@@ -56,6 +56,8 @@ export function learningCode(workspace) {
         case 'robot_motor_stop': emit(level,`Dừng ${motor}`); break;
         case 'robot_motor_stop_all': emit(level,'Dừng tất cả motor'); break;
         case 'robot_motor_release': emit(level,`Trả quyền điều khiển ${motor} về drivetrain`); break;
+        case 'robot_servo_write': emit(level,`Servo S${f.SERVO} quay đến ${e('ANGLE')} độ`); break;
+        case 'robot_servo_disable': emit(level,`Ngắt tín hiệu Servo S${f.SERVO}`); break;
         case 'controls_if':
           for (let i=0; b.inputs?.['IF'+i]; i++) { emit(level,`${i ? 'Nếu không, nếu' : 'Nếu'} ${e('IF'+i)}:`); body('DO'+i); }
           if (b.inputs?.ELSE) { emit(level,'Nếu không:'); body('ELSE'); } break;

@@ -76,7 +76,7 @@ test('new projects use the tested board while imports retain their board ID', ()
 
 test('Newmania initializes eight groups without stored devices and exposes M1–M4', () => {
   const toolbox = editorToolbox(FAST4WD_BOARD_ID);
-  assert.deepEqual(toolbox.contents.map(c => c.name), ['Bắt đầu & Điều khiển','Logic','Toán học','Biến','Hiển thị / Serial','Motor','Tay cầm PS4']);
+  assert.deepEqual(toolbox.contents.map(c => c.name), ['Bắt đầu & Điều khiển','Logic','Toán học','Biến','Hiển thị / Serial','Motor','Servo','Tay cầm PS4']);
   assert.deepEqual(toolbox.contents[5].contents.filter(b => b.type === 'robot_motor_spin').map(b => b.fields.MOTOR), ['motor-1','motor-2','motor-3','motor-4']);
   assert.ok(!JSON.stringify(toolbox).includes('beginner_ps4_sim'));
 });
