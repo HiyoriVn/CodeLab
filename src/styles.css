@@ -431,3 +431,15 @@ dialog:has(.changelog){width:min(560px,92vw)}
   .topbar{height:auto;min-height:56px;flex-wrap:wrap;padding-bottom:4px}
   .topbar .spacer{display:none}
 }
+
+/* ---- fix coding pannel bg ---- */
+.main{background-image:radial-gradient(var(--dot) 1.2px,transparent 1.2px);background-size:24px 24px;background-color:var(--bg)}
+.ws{background-image:none}
+.dock-right.code-dock{margin-left:var(--float-gap)}
+@media(max-width:760px){.dock-right.code-dock{margin-left:var(--float-gap)}}
+.topbar>.ib[data-tip]:last-child::after{left:auto;right:0;transform:translate(0,-4px)}
+.topbar>.ib[data-tip]:last-child:hover::after,.topbar>.ib[data-tip]:last-child:focus-visible::after{transform:translate(0,0)}
+.code-side{border:0}
+.code-output{border-radius:0 0 16px 16px}
+.blockly-host .blocklyMainBackground{stroke:none!important;stroke-width:0!important}
+.blockly-host .blocklySvg{border:0!important}
