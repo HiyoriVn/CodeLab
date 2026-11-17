@@ -10,6 +10,7 @@ import { refreshRobotMotorLabels } from '../blocks/robot-devices.js';
 import '../blocks/beginner.js';
 import '../blocks/controller.js';
 import '../blocks/palette-apply.js';
+import '../blocks/start-hat.js';
 import { RENDERER, FALLBACK_RENDERER } from '../blocks/renderer.js';
 import { themes } from '../blocks/theme.js';
 import { NEWMANIA_MODEL, designToolbox, workspaceOptions, initializeDesign, designDiagnostics, protectNewmaniaRoots } from '../blocks/newmania.js';
