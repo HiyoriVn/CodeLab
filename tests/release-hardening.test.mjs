@@ -86,7 +86,7 @@ test('Servo S1-S4 (GPIO12-15) blocks are present on Newmania toolbox', () => {
 });
 
 test('formatSerialError reports clear message when COM port is occupied', () => {
-  const err = new Error('Failed to open serial port.');
+  const err = new Error('Serial port is busy.');
   err.name = 'NetworkError';
   assert.match(formatSerialError(err), /Cổng COM đang bị phần mềm khác chiếm/);
 });

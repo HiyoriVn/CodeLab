@@ -2,12 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function formatSerialError(error) {
   const message = String(error?.message || error || '');
-  const name = String(error?.name || '');
   const lower = message.toLowerCase();
   if (
-    name === 'NetworkError' ||
-    lower.includes('failed to open serial port') ||
-    lower.includes('already open') ||
     lower.includes('access denied') ||
     lower.includes('in use') ||
     lower.includes('busy') ||

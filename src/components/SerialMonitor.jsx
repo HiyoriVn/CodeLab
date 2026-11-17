@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatSerialError } from '../device/usb-port.js';
+import { createSerialSession } from '../device/serial-lifecycle.js';
 
 const MAX_LINES = 500;
 
-async function closeSerialPort(port, reader) {
-  try { await reader?.cancel(); } catch {}
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  try { await port?.close(); } catch {}
-}
-
 function SerialMonitor({ usbPort }) {
   const portRef = useRef(null);
-  const readerRef = useRef(null);
+  const sessionRef = useRef(null);
+  if (!sessionRef.current) sessionRef.current = createSerialSession();
+  const connectingRef = useRef(false);
+  const epochRef = useRef(0);
   const outputRef = useRef(null);
   const [connected, setConnected] = useState(false);
   const [baud, setBaud] = useState('115200');
@@ -23,29 +21,25 @@ function SerialMonitor({ usbPort }) {
   }, []);
 
   const disconnect = useCallback(async ({ silent = false } = {}) => {
-    const port = portRef.current;
+    epochRef.current++;
     portRef.current = null;
-    if (port) {
-      await closeSerialPort(port, readerRef.current);
-      setConnected(false);
-      if (!silent) append('Đã ngắt kết nối.');
-    }
+    await sessionRef.current.disconnect();
+    setConnected(false);
+    if (!silent) append('Đã ngắt kết nối.');
   }, [append]);
 
   useEffect(() => {
     usbPort?.registerSerialCloser?.(async () => {
-      if (portRef.current) {
-        await disconnect({ silent: true });
-        append('Đã tạm ngắt Serial để nạp/kiểm tra thiết bị.');
-      }
+      await disconnect({ silent: true });
+      append('Đã tạm ngắt Serial để nạp/kiểm tra thiết bị.');
     });
     return () => { usbPort?.registerSerialCloser?.(null); };
   }, [usbPort, disconnect, append]);
 
   useEffect(() => () => {
-    const port = portRef.current;
+    epochRef.current++;
     portRef.current = null;
-    void closeSerialPort(port, readerRef.current);
+    void sessionRef.current.disconnect().catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -60,7 +54,7 @@ function SerialMonitor({ usbPort }) {
     const onDisconnect = (event) => {
       if (event?.target && event.target === portRef.current) {
         portRef.current = null;
-        readerRef.current = null;
+        void sessionRef.current.disconnect().catch(() => {});
         setConnected(false);
         append('Thiết bị USB đã ngắt kết nối.');
       }
@@ -74,60 +68,49 @@ function SerialMonitor({ usbPort }) {
       append('Trình duyệt này chưa hỗ trợ Web Serial. Hãy dùng Chrome hoặc Edge trên máy tính.');
       return;
     }
+    if (connectingRef.current) return;
+    connectingRef.current = true;
     try {
       if (portRef.current) await disconnect({ silent: true });
+      const epoch = epochRef.current;
       const port = usbPort ? await usbPort.selectPort({ forceNew }) : await navigator.serial.requestPort();
-      await port.open({ baudRate: Number(baud) });
+      if (epoch !== epochRef.current) return;
+      const decoder = new TextDecoder();
+      await sessionRef.current.connect(port, { baudRate: Number(baud) }, (value) => {
+        const text = decoder.decode(value, { stream: true });
+        if (!text) return;
+        setLines((current) => {
+          const parts = text.split(/\r?\n/);
+          const prior = current.slice();
+          const last = prior.pop() || '';
+          const combined = last + parts[0];
+          if (parts.length > 1) prior.push(combined, ...parts.slice(1, -1));
+          prior.push(parts.length > 1 ? parts.at(-1) : combined);
+          return prior.slice(-MAX_LINES);
+        });
+      }, (error) => append(`Đọc cổng thất bại: ${formatSerialError(error)}`));
+      if (epoch !== epochRef.current) {
+        await sessionRef.current.disconnect();
+        return;
+      }
       portRef.current = port;
       setConnected(true);
       append(`Đã kết nối · ${baud} baud`);
-      const decoder = new TextDecoder();
-      while (port.readable && portRef.current === port) {
-        const reader = port.readable.getReader();
-        readerRef.current = reader;
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            if (value) {
-              const text = decoder.decode(value, { stream: true });
-              if (!text) continue;
-              setLines((current) => {
-                const parts = text.split(/\r?\n/);
-                const prior = current.slice();
-                const last = prior.pop() || '';
-                const combined = last + parts[0];
-                if (parts.length > 1) prior.push(combined, ...parts.slice(1, -1));
-                prior.push(parts.length > 1 ? parts.at(-1) : combined);
-                return prior.slice(-MAX_LINES);
-              });
-            }
-          }
-        } catch (error) {
-          if (portRef.current === port) append(`Đọc cổng thất bại: ${formatSerialError(error)}`);
-        } finally {
-          reader.releaseLock();
-          if (readerRef.current === reader) readerRef.current = null;
-        }
-      }
     } catch (error) {
       if (error.name !== 'NotFoundError') append(`Không thể kết nối: ${formatSerialError(error)}`);
-    }
+    } finally { connectingRef.current = false; }
   };
 
   const send = async (event) => {
     event.preventDefault();
     const port = portRef.current;
     if (!port?.writable || !command.trim()) return;
-    const writer = port.writable.getWriter();
     try {
-      await writer.write(new TextEncoder().encode(`${command}\n`));
+      await sessionRef.current.write(new TextEncoder().encode(`${command}\n`));
       append(`› ${command}`);
       setCommand('');
     } catch (error) {
       append(`Gửi lệnh thất bại: ${formatSerialError(error)}`);
-    } finally {
-      writer.releaseLock();
     }
   };
 

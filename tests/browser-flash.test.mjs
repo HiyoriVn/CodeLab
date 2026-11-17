@@ -26,8 +26,7 @@ test('disconnect failure preserves the original connection error',async()=>{
   class Transport { async disconnect(){throw Error('close failure');} }
   class ESPLoader {async main(){throw Error('initial failure');}}
   await assert.rejects(flashPackage({},[],()=>{},()=>{},async()=>({Transport,ESPLoader})), error=>{
-    assert.ok(error instanceof AggregateError);
-    assert.deepEqual(error.errors.map(e=>e.message),['initial failure','close failure']);
+    assert.equal(error.message, 'initial failure');
     assert.match(error.message,/initial failure/);return true;
   });
 });

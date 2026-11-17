@@ -235,3 +235,22 @@ Blockly upload, closed technical tools and confirmation/USB lock checks.
 Live Chrome/Edge and responsive layout acceptance remain unverified because
 the saved browser permission/managed policy blocks localhost access. No compiler
 integration, hardware flash or deployment is part of this acceptance.
+
+## Web Serial lifecycle - 2026-11-18
+
+Serial Monitor and browser flashing share a per-port operation queue. Handoff
+waits for reader cancellation, completion of the read loop (including releaseLock),
+and pending writes before closing. Repeated disconnects reuse the same cleanup;
+flash holds the queue through transport disconnect. Pending chooser/open results
+are invalidated when Serial disconnects. Generic NetworkError/open failures retain
+their actual diagnostic instead of asserting another application owns the port.
+Upload errors remain primary; already-closed InvalidStateError cleanup is ignored,
+while other cleanup failures are logged or propagated when no upload error exists.
+
+Verification: `node --test tests/serial-lifecycle.test.mjs tests/browser-flash.test.mjs`
+11/11 PASS. Extended browser-flash/release-hardening/lifecycle run 19/19 PASS
+(before the final additional in-flight-open regression, which passed in the 11/11 run).
+`npm test`: 158/164 PASS; six bridge tests fail with localhost connection EACCES
+under the managed environment. `npm run build`: PASS (existing chunk-size warning).
+`git diff --check`: PASS. No live USB, hardware flash or deployment performed.
+Branch creation/commit blocked: repository .git is read-only in this session.
