@@ -14,6 +14,8 @@ import { flashPackage } from '../src/device/browser-flash.js';
 import { validatePackage, sha256 } from '../src/device/firmware-package.js';
 import { fixture } from './fixtures/browser-firmware.mjs';
 import { designToolbox, newmaniaWorkspace } from '../src/blocks/newmania.js';
+import { LESSONS, lessonProject } from '../src/lessons/newmania.js';
+import { learningCode } from '../src/ui/learning-code.js';
 import { generateNewmania } from '../src/generators/newmania.js';
 import { FAST4WD_BOARD_ID, getBoardProfile } from '../src/boards/profiles.js';
 import { defaultRobotDevices } from '../src/boards/robot-devices.js';
@@ -292,4 +294,26 @@ test('browser UI keeps background compile across popup close, reuses cache, and 
       else delete globalThis[name];
     }
   }
+});
+
+test('Lesson 06 tests Servo S1-S4 at 60/90/120 deg without PS4 or motors, and pseudocode uses UART', () => {
+  assert.ok(LESSONS.some((l) => l.id === 'servo_test' && l.label === 'Bài 06 — Kiểm tra Servo S1–S4'));
+  const proj = lessonProject('servo_test');
+  const w = new Blockly.Workspace();
+  Blockly.serialization.workspaces.load(proj.workspace, w);
+  const generated = generateNewmania(w, proj.boardId, proj.deviceConfigs[proj.boardId]);
+  w.dispose();
+  assert.deepEqual(generated.warnings, []);
+  for (const ch of [1, 2, 3, 4]) {
+    assert.match(generated.code, new RegExp(`newmania\\.servoWrite\\(${ch}, 60\\.0\\)`));
+    assert.match(generated.code, new RegExp(`newmania\\.servoWrite\\(${ch}, 90\\.0\\)`));
+    assert.match(generated.code, new RegExp(`newmania\\.servoWrite\\(${ch}, 120\\.0\\)`));
+    assert.match(generated.code, new RegExp(`newmania\\.servoDisable\\(${ch}\\)`));
+  }
+  assert.doesNotMatch(generated.code, /connectPs4/);
+  assert.doesNotMatch(generated.code, /newmania\.spin|newmania\.power|newmania\.mecanum/);
+
+  const pseudo = learningCode({ blocks: { blocks: [{ type: 'newmania_design_ps4_connect' }] } });
+  assert.match(pseudo, /UART/);
+  assert.doesNotMatch(pseudo, /I²C/);
 });
