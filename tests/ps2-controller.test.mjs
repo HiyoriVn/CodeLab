@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import * as Blockly from 'blockly';
 import { FAST4WD_BOARD_ID, V2_BOARD_ID, getBoardProfile } from '../src/boards/profiles.js';
 import { defaultRobotDevices } from '../src/boards/robot-devices.js';
-import { TYPES, designToolbox, newmaniaWorkspace } from '../src/blocks/newmania.js';
+import { TYPES, designToolbox, newmaniaWorkspace, previewMotorTypes } from '../src/blocks/newmania.js';
 import { generateNewmania } from '../src/generators/newmania.js';
+import { inspectElf, verifyImage } from '../src/compiler/inspect-firmware.js';
 
 function project(boardId) {
   const workspace = new Blockly.Workspace();
@@ -60,11 +62,49 @@ test('PS2 SPI driver is bundled with the browser firmware libraries and existing
   const ps2 = readFileSync('firmware/libraries/CodeLabPs4I2C/src/Ps2Spi.h', 'utf8');
   const fast = readFileSync('firmware/libraries/CodeLabFast4wd/src/CodeLabFast4wd.h', 'utf8');
   const library = payload.libraries.find(item => item.id === 'CodeLabPs4I2C');
-  assert.equal(library.files.find(item => item.path === 'src/Ps2Spi.h').content, ps2);
+  assert.equal(library.files.find(item => item.path === 'src/Ps2Spi.h').content, ps2.replaceAll('\r\n', '\n'));
   assert.match(ps2, /decodePs2Analog/);
   for (const pin of ['kClock = 12','kCommand = 11','kData = 13','kAttention = 10'])
     assert.ok(ps2.includes(pin));
   assert.match(fast, /transport_ == Ps4Transport::Ps2Spi/);
   assert.match(fast, /receiver_\.ingest\(bytes, sizeof\(bytes\), millis\(\)\)/);
   assert.match(fast, /updateBlocklyLink\(millis\(\)\)/);
+});
+
+test('V2 PS2 SPI sketch compiles via WASM into valid 8MB ESP32-S3 firmware', async () => {
+  const { workspace, connect } = project(V2_BOARD_ID);
+  connect.setFieldValue('PS2', 'TRANSPORT');
+  const m5 = workspace.newBlock(previewMotorTypes.get('robot_motor_power'));
+  m5.setFieldValue('motor-5', 'MOTOR');
+  const p5 = workspace.newBlock('math_number'); p5.setFieldValue(40, 'NUM');
+  m5.getInput('POWER').connection.connect(p5.outputConnection);
+  connect.nextConnection.connect(m5.previousConnection);
+  const generated = generateNewmania(workspace, V2_BOARD_ID, defaultRobotDevices(getBoardProfile(V2_BOARD_ID)));
+  workspace.dispose();
+  assert.deepEqual(generated.warnings, []);
+  assert.match(generated.code, /Ps4Transport::Ps2Spi/);
+
+  const oldSelf = globalThis.self;
+  const oldFetch = globalThis.fetch;
+  globalThis.self = globalThis;
+  self.location = { href: 'http://localhost/' };
+  globalThis.fetch = async (url) => {
+    const filename = join(process.cwd(), 'public', new URL(url, self.location.href).pathname);
+    try { return new Response(readFileSync(filename)); }
+    catch { return new Response('', { status: 404 }); }
+  };
+  let workerResult;
+  self.postMessage = (msg) => { if (msg.type !== 'progress') workerResult = msg; };
+  try {
+    await import('../src/compiler/browser-compiler.worker.js');
+    await self.onmessage({ data: { action: 'compile', requestId: 303, code: generated.code, boardId: V2_BOARD_ID } });
+    assert.equal(workerResult?.type, 'done', workerResult?.error || 'V2 PS2 WASM compile failed');
+    const elf = workerResult.debug.elf;
+    const app = workerResult.segments.find((s) => s.address === 0x10000).data;
+    assert.ok(inspectElf(elf).constructors.some((c) => c.name === '_GLOBAL__sub_I_sketch.ino'));
+    await verifyImage(elf, app);
+  } finally {
+    globalThis.self = oldSelf;
+    globalThis.fetch = oldFetch;
+  }
 });
