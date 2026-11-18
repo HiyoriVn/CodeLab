@@ -22,9 +22,12 @@ export function learningCode(workspace) {
       case 'logic_compare': return `${e('A')} ${{EQ:'=',NEQ:'≠',LT:'<',LTE:'≤',GT:'>',GTE:'≥'}[f.OP]} ${e('B')}`;
       case 'logic_operation': return `(${e('A')} ${f.OP === 'AND' ? 'và' : 'hoặc'} ${e('B')})`;
       case 'logic_negate': return `không (${e('BOOL')})`;
-      case 'newmania_design_ps4_button': return `nút ${buttons[f.BUTTON] || f.BUTTON} ${{PRESS:'vừa nhấn',HELD:'đang giữ',RELEASE:'vừa thả'}[f.STATE]}?`;
+      case 'newmania_design_ps4_button': return `nút PS4 ${buttons[f.BUTTON] || f.BUTTON} ${{PRESS:'vừa nhấn',HELD:'đang giữ',RELEASE:'vừa thả'}[f.STATE]}?`;
       case 'robot_ps4_button': return `nút ${buttons[f.BUTTON] || f.BUTTON} đang giữ?`;
       case 'robot_ps4_axis': return ['cần trái ngang','cần trái dọc','cần phải ngang','cần phải dọc'][f.AXIS];
+      case 'newmania_design_ps2_button': return `nút PS2 ${({8:'SELECT',9:'START',...buttons})[f.BUTTON] || f.BUTTON} ${{PRESS:'vừa nhấn',HELD:'đang giữ',RELEASE:'vừa thả'}[f.STATE]}?`;
+      case 'newmania_design_ps2_axis': return 'PS2 ' + (['cần trái ngang','cần trái dọc','cần phải ngang','cần phải dọc'][f.AXIS] || 'joystick');
+      case 'newmania_design_ps2_connected': return 'tay cầm PS2 đã kết nối?';
       case 'fast4wd_connected': return 'S3 nhận dữ liệu PS4 UART còn mới?';
       case 'beginner_serial_ready': return 'Serial có dữ liệu?';
       case 'codelab_serial_available': return 'số byte Serial sẵn có';
