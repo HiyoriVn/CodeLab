@@ -1,4 +1,22 @@
 export const CHANGELOG = [
+    {
+    version: '1.3.0',
+    date: '18/11/2026',
+    title: 'Hỗ trợ bo Newmania V2 và tay cầm PS2',
+    items: [
+      { type: 'new', text: 'Hỗ trợ bo Newmania V2 (ESP32-S3): 6 động cơ, 6 servo và tay cầm PS4 qua UART hoặc I2C.' },
+      { type: 'new', text: 'Hỗ trợ tay cầm PS2 (kết nối SPI) trên Newmania V2, có khối riêng cho joystick, nút bấm và trạng thái kết nối.' },
+      { type: 'new', text: 'Danh mục khối PS4 và PS2 được tách riêng trên Newmania V2. Không thể dùng lẫn hai loại tay cầm trong cùng một chương trình.' },
+      { type: 'new', text: 'Bài 06: Kiểm tra Servo. Bo V2 kiểm tra được S1–S6, bo V1 vẫn giữ S1–S4.' },
+      { type: 'improved', text: 'Mã giả hiển thị giao thức tay cầm đang chọn, các lệnh đọc PS2 có nhãn riêng dễ phân biệt.' },
+      { type: 'improved', text: 'Nhãn nút kết nối tay cầm PS4 và chú thích ví dụ rõ ràng hơn, không còn nhầm với PS2.' },
+      { type: 'improved', text: 'PS4 UART và servo hoạt động ổn định hơn, biên dịch nhanh hơn nhờ bộ nhớ đệm build, các chức năng dùng chung kết nối USB.' },
+      { type: 'fixed', text: 'Sửa lỗi cổng Web Serial khi mở/đóng kết nối giữa nạp firmware và Serial Monitor.' },
+      { type: 'fixed', text: 'Sửa lỗi bảng khối lệnh bị trống sau khi đổi bo Newmania.' },
+      { type: 'fixed', text: 'Sửa lỗi hiển thị phần mũ của khối "Bắt đầu chương trình".' },
+      { type: 'fixed', text: 'Sửa nền phía sau khung lập trình.' },
+    ],
+  },
   {
     version: '1.2.0',
     date: '17/11/2026',
