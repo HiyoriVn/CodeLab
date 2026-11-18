@@ -15,9 +15,9 @@ test('PS4 labels, examples and Boolean/Number shapes are student friendly', () =
   const w = new Blockly.Workspace();
   const connect = w.newBlock(TYPES.connect), button = w.newBlock(TYPES.button);
   const axis = w.newBlock('robot_ps4_axis'), connected = w.newBlock('fast4wd_connected');
-  assert.equal(text(connect), 'Kết nối tay cầm qua PS4 UART');
+  assert.equal(text(connect), 'Kết nối tay cầm PS4 qua PS4 UART');
   button.setFieldValue('HELD', 'STATE');
-  assert.equal(text(button), 'Nút X Đang giữ ?');
+  assert.equal(text(button), 'Nút PS4 X Đang giữ ?');
   assert.deepEqual(button.getField('STATE').getOptions(false), [['Vừa nhấn', 'PRESS'], ['Đang giữ', 'HELD'], ['Vừa thả', 'RELEASE']]);
   assert.equal(text(axis), 'Độ nghiêng cần Trái theo Ngang');
   assert.equal(text(connected), 'Tay cầm PS4 đã kết nối?');
