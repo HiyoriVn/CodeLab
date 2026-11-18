@@ -184,6 +184,7 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
         // Compatibility-only STOP retained in confirmed copies. Not catalogued.
         case 'fast4wd_stop':return add('newmania.stop(); return Board::Step::DONE;',b);
         case TYPES.connect:action=b.getFieldValue('TRANSPORT')==='PS2' ? 'newmania.connectController();' : 'newmania.connectPs4();';break;
+        case TYPES.ps2Connect:action='newmania.connectController();';break;
         case 'controls_flow_statements': {
           const loop=loopStack.at(-1);if(!loop)throw Error('Thoát/tiếp tục phải nằm trong một vòng lặp.');
           return add(`ctx.pc = ${dropdown(b,'FLOW',{BREAK:loop.breakPc,CONTINUE:loop.continuePc})}; return Board::Step::YIELD;`,b);
@@ -260,8 +261,10 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
     for(const state of forLoops)reset.push(`  ${state}.reset();`);
     for(const cursor of cursors.values())reset.push(`  ${cursor} = {};`);
     const body=cases.map(c=>`    case ${c.pc}: { // ${c.block.type} · ${c.block.id.replace(/[^\w-]/g,'_')}\n      ${c.body.replaceAll('\n','\n      ')}\n    }`).join('\n');
-    const connectBlock = workspace.getBlocksByType(TYPES.connect, false)[0];
-    const selectedTransport = connectBlock?.getFieldValue('TRANSPORT') || (devices.controller.transport === 'i2c' ? 'I2C' : 'UART');
+    const ps4Block = workspace.getBlocksByType(TYPES.connect, false)[0];
+    const ps2Block = workspace.getBlocksByType(TYPES.ps2Connect, false)[0];
+    if (ps4Block && ps2Block) throw Error('Chỉ dùng một khối Kết nối tay cầm (PS4 hoặc PS2).');
+    const selectedTransport = ps2Block ? 'PS2' : (ps4Block?.getFieldValue('TRANSPORT') || (devices.controller.transport === 'i2c' ? 'I2C' : 'UART'));
     if (!['UART','I2C','PS2'].includes(selectedTransport)) throw Error('Phương thức kết nối tay cầm không hợp lệ.');
     if (selectedTransport === 'PS2' && boardId !== V2_BOARD_ID) throw Error('PS2 SPI chỉ hỗ trợ Newmania V2 ESP32S3.');
     const transportArg = selectedTransport === 'I2C' ? ', codelab::fast4wd::Ps4Transport::I2c'

@@ -9,30 +9,41 @@ import { TYPES, designToolbox, newmaniaWorkspace, previewMotorTypes } from '../s
 import { generateNewmania } from '../src/generators/newmania.js';
 import { inspectElf, verifyImage } from '../src/compiler/inspect-firmware.js';
 
-function project(boardId) {
+function project(boardId, connectType = TYPES.connect) {
   const workspace = new Blockly.Workspace();
   workspace.codelabBoardId = boardId;
   workspace.codelabRobotDevices = defaultRobotDevices(getBoardProfile(boardId));
   Blockly.serialization.workspaces.load(newmaniaWorkspace(), workspace);
   const root = workspace.getBlocksByType(TYPES.root, false)[0];
-  const connect = workspace.newBlock(TYPES.connect);
+  const connect = workspace.newBlock(connectType);
   root.getInput('DO').connection.connect(connect.previousConnection);
   return { workspace, connect };
 }
 
-test('PS2 controller appears only on Newmania V2 and uses the V2 SPI pins', () => {
+test('PS2 controller appears only on Newmania V2 as a separate category and uses the V2 SPI pins', () => {
   const v2 = getBoardProfile(V2_BOARD_ID);
   assert.deepEqual(v2.pins.spi, { sck:12, mosi:11, miso:13, cs:10 });
-  const toolbox = designToolbox(V2_BOARD_ID);
-  assert.ok(toolbox.contents.some(category => category.name === 'Tay cầm PS4 / PS2'));
+  const v2Toolbox = designToolbox(V2_BOARD_ID);
+  const ps4Cat = v2Toolbox.contents.find(category => category.name === 'Tay cầm PS4');
+  const ps2Cat = v2Toolbox.contents.find(category => category.name === 'Tay cầm PS2');
+  assert.ok(ps4Cat && ps2Cat, 'V2 toolbox must separate Tay cầm PS4 and Tay cầm PS2');
+  assert.ok(ps4Cat.contents.some(b => b.type === TYPES.connect));
+  assert.ok(ps2Cat.contents.some(b => b.type === TYPES.ps2Connect));
+  assert.ok(ps2Cat.contents.some(b => b.type === TYPES.button));
+
   const { workspace, connect } = project(V2_BOARD_ID);
   assert.deepEqual(connect.getField('TRANSPORT').getOptions(false).map(([, value]) => value),
-    ['UART', 'I2C', 'PS2']);
-  connect.setFieldValue('PS2', 'TRANSPORT');
-  assert.equal(connect.getFieldValue('TRANSPORT'), 'PS2');
-  const saved = Blockly.serialization.workspaces.save(workspace);
-  assert.match(JSON.stringify(saved), /"TRANSPORT":"PS2"/);
+    ['UART', 'I2C']);
   workspace.dispose();
+
+  const v2Ps2 = project(V2_BOARD_ID, TYPES.ps2Connect);
+  const saved = Blockly.serialization.workspaces.save(v2Ps2.workspace);
+  assert.match(JSON.stringify(saved), /"type":"newmania_design_ps2_connect"/);
+  v2Ps2.workspace.dispose();
+
+  const v1Toolbox = designToolbox(FAST4WD_BOARD_ID);
+  assert.ok(v1Toolbox.contents.some(category => category.name === 'Tay cầm PS4'));
+  assert.ok(!v1Toolbox.contents.some(category => category.name === 'Tay cầm PS2'));
   const v1 = project(FAST4WD_BOARD_ID);
   assert.deepEqual(v1.connect.getField('TRANSPORT').getOptions(false).map(([,value]) => value),
     ['UART','I2C']);
@@ -45,16 +56,21 @@ test('PS2 generates dedicated PS2 SPI transport while PS4 UART/I2C stay unchange
   for (const [choice, expected] of [
     ['UART', /newmania\.begin\([^;]*\);/],
     ['I2C', /codelab::fast4wd::Ps4Transport::I2c/],
-    ['PS2', /codelab::fast4wd::Ps4Transport::Ps2Spi/],
   ]) {
     connect.setFieldValue(choice, 'TRANSPORT');
     const result = generateNewmania(workspace, V2_BOARD_ID, devices);
     assert.deepEqual(result.warnings, [], result.code || result.warnings.join('\n'));
     assert.match(result.code, expected);
-    if (choice === 'PS2') assert.match(result.code, /newmania\.connectController\(\);/);
-    else assert.match(result.code, /newmania\.connectPs4\(\);/);
+    assert.match(result.code, /newmania\.connectPs4\(\);/);
   }
   workspace.dispose();
+
+  const ps2Proj = project(V2_BOARD_ID, TYPES.ps2Connect);
+  const ps2Result = generateNewmania(ps2Proj.workspace, V2_BOARD_ID, devices);
+  assert.deepEqual(ps2Result.warnings, [], ps2Result.code || ps2Result.warnings.join('\n'));
+  assert.match(ps2Result.code, /codelab::fast4wd::Ps4Transport::Ps2Spi/);
+  assert.match(ps2Result.code, /newmania\.connectController\(\);/);
+  ps2Proj.workspace.dispose();
 });
 
 test('PS2 SPI driver is bundled with the browser firmware libraries and existing input failsafe', () => {
@@ -72,8 +88,7 @@ test('PS2 SPI driver is bundled with the browser firmware libraries and existing
 });
 
 test('V2 PS2 SPI sketch compiles via WASM into valid 8MB ESP32-S3 firmware', async () => {
-  const { workspace, connect } = project(V2_BOARD_ID);
-  connect.setFieldValue('PS2', 'TRANSPORT');
+  const { workspace, connect } = project(V2_BOARD_ID, TYPES.ps2Connect);
   const m5 = workspace.newBlock(previewMotorTypes.get('robot_motor_power'));
   m5.setFieldValue('motor-5', 'MOTOR');
   const p5 = workspace.newBlock('math_number'); p5.setFieldValue(40, 'NUM');
