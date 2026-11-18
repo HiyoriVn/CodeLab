@@ -4,9 +4,9 @@ export function ps4Usage(workspace) {
   let dependent=false,buttons=0,axes=0;
   for (const b of workspace.getAllBlocks(false)) {
     if (!b.isEnabled() || b.getInheritedDisabled()) continue;
-    if (['newmania_design_ps4_connect','newmania_design_ps2_connect','newmania_design_ps4_button','robot_ps4_axis','robot_ps4_button','robot_ps4_event','fast4wd_connected','fast4wd_connect','fast4wd_drive'].includes(b.type)) dependent=true;
-    if (['newmania_design_ps4_button','robot_ps4_button','robot_ps4_event'].includes(b.type)) buttons |= 1 << Number(b.getFieldValue('BUTTON'));
-    if (b.type==='robot_ps4_axis') axes |= 1 << Number(b.getFieldValue('AXIS'));
+    if (['newmania_design_ps4_connect','newmania_design_ps2_connect','newmania_design_ps4_button','newmania_design_ps2_button','newmania_design_ps2_axis','newmania_design_ps2_connected','robot_ps4_axis','robot_ps4_button','robot_ps4_event','fast4wd_connected','fast4wd_connect','fast4wd_drive'].includes(b.type)) dependent=true;
+    if (['newmania_design_ps4_button','newmania_design_ps2_button','robot_ps4_button','robot_ps4_event'].includes(b.type)) buttons |= 1 << Number(b.getFieldValue('BUTTON'));
+    if (b.type==='robot_ps4_axis' || b.type==='newmania_design_ps2_axis') axes |= 1 << Number(b.getFieldValue('AXIS'));
     if (b.type==='fast4wd_drive') axes |= 7;
   }
   // Connection-only programs still require neutral + a new controller action
