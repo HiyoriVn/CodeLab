@@ -63,7 +63,7 @@ export const unsupported = new Map(
 
 export const workspaceOptions = { maxInstances:{ [TYPES.root]:1, [TYPES.forever]:1, [TYPES.connect]:1 } };
 export function designToolbox(boardId = FAST4WD_BOARD_ID) {
-  const toolbox=structuredClone(editorToolbox(boardId));
+  const toolbox=structuredClone(editorToolbox(boardId, 'beginner', undefined, { newmania: true }));
   for (const category of toolbox.contents) {
     const seenMotors=new Set();
     category.contents=(category.contents||[]).flatMap(entry=>{

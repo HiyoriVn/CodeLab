@@ -21,11 +21,11 @@ export function legacyDriveBlocks(state) {
   visit(state);
   return [...found];
 }
-export function editorToolbox(boardId, mode = 'beginner', devices) {
+export function editorToolbox(boardId, mode = 'beginner', devices, { newmania = false } = {}) {
   const p = getBoardProfile(boardId);
-  const newmania = Boolean(p.capabilities.fast4wd || p.capabilities.newmaniaV2);
-  if (newmania && devices === undefined) devices = defaultRobotDevices(p);
-  if (newmania) return {
+  const useNewmania = Boolean(p.capabilities.fast4wd || newmania);
+  if (useNewmania && devices === undefined) devices = defaultRobotDevices(p);
+  if (useNewmania) return {
     kind: 'categoryToolbox',
     contents: [
       category('Bắt đầu & Điều khiển', '#e79b23', [
