@@ -114,6 +114,31 @@ test('PS2 generates dedicated PS2 SPI transport while PS4 UART/I2C stay unchange
   ps2Proj.workspace.dispose();
 });
 
+test('PS2 and PS4 blocks cannot be mixed in a new V2 project', () => {
+  const devices = defaultRobotDevices(getBoardProfile(V2_BOARD_ID));
+  const ps2 = project(V2_BOARD_ID, TYPES.ps2Connect);
+  const oldPs4Read = ps2.workspace.newBlock(TYPES.button);
+  const ps2Loop = ps2.workspace.newBlock(TYPES.forever);
+  const ps2If = ps2.workspace.newBlock('controls_if');
+  ps2.connect.nextConnection.connect(ps2Loop.previousConnection);
+  ps2Loop.getInput('DO').connection.connect(ps2If.previousConnection);
+  ps2If.getInput('IF0').connection.connect(oldPs4Read.outputConnection);
+  const badPs2 = generateNewmania(ps2.workspace, V2_BOARD_ID, devices);
+  assert.match(badPs2.warnings.join(' '), /Không dùng block PS4 cùng chương trình PS2/);
+  ps2.workspace.dispose();
+
+  const ps4 = project(V2_BOARD_ID);
+  const newPs2Read = ps4.workspace.newBlock(TYPES.ps2Button);
+  const ps4Loop = ps4.workspace.newBlock(TYPES.forever);
+  const ps4If = ps4.workspace.newBlock('controls_if');
+  ps4.connect.nextConnection.connect(ps4Loop.previousConnection);
+  ps4Loop.getInput('DO').connection.connect(ps4If.previousConnection);
+  ps4If.getInput('IF0').connection.connect(newPs2Read.outputConnection);
+  const badPs4 = generateNewmania(ps4.workspace, V2_BOARD_ID, devices);
+  assert.match(badPs4.warnings.join(' '), /Khối đọc PS2 yêu cầu Kết nối tay cầm PS2/);
+  ps4.workspace.dispose();
+});
+
 test('PS2 SPI driver is bundled with the browser firmware libraries and existing input failsafe', () => {
   const payload = JSON.parse(readFileSync('public/toolchain-337/codelab-poc-data.json', 'utf8'));
   const ps2 = readFileSync('firmware/libraries/CodeLabPs4I2C/src/Ps2Spi.h', 'utf8');
