@@ -23,8 +23,9 @@ export function legacyDriveBlocks(state) {
 }
 export function editorToolbox(boardId, mode = 'beginner', devices) {
   const p = getBoardProfile(boardId);
-  if (p.capabilities.fast4wd && devices === undefined) devices = defaultRobotDevices(p);
-  if (p.capabilities.fast4wd) return {
+  const newmania = Boolean(p.capabilities.fast4wd || p.capabilities.newmaniaV2);
+  if (newmania && devices === undefined) devices = defaultRobotDevices(p);
+  if (newmania) return {
     kind: 'categoryToolbox',
     contents: [
       category('Bắt đầu & Điều khiển', '#e79b23', [

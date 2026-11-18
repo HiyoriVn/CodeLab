@@ -19,15 +19,16 @@ const v1 = {
   adc: [1,2,4,5,6,7,10,11,3,16], digital: [1,2,4,5,6,7,10,11,3,16,47],
   reserved: [0,3,8,9,12,13,14,15,17,18,19,20,21,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46],
 };
+export const V2_BOARD_ID = 'steam-mainboard-v2';
 const v2 = {
-  id: 'steam-mainboard-v2', name: 'STEAM Robotics Mainboard V2.0 (target board)',
+  id: V2_BOARD_ID, name: 'Newmania V2 ESP32S3',
   mcu: 'ESP32-S3-MINI-1-N8', flashMB: 8, psramMB: 0, psramType: 'none',
-  build: { core: 'esp32:esp32', version: '3.3.7', fqbn: baseFqbn + ':FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled' },
+  build: { core: 'esp32:esp32', version: '3.3.7', fqbn: baseFqbn + ':FlashSize=8M,PartitionScheme=default_8MB,PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=cdc' },
   pins: { motors: [[42,41],[40,39],[38,37],[36,35],[48,34],[33,47]], servos: [14,15,16,17,18,21],
     encoders: [[1,2],[4,5]], i2c: {sda:8,scl:9}, imuAddress: 0x6A,
     uart1: {tx:6,rx:7}, uart0: {tx:43,rx:44}, spi: {sck:12,mosi:11,miso:13,cs:10},
     buzzer:26, boot:0, usb:[19,20], expansion:[3,46,45,6,7,10], strapping:[0,3,45,46] },
-  capabilities: { digital: true, adc: false, pwm: false, motorChannels: 6, servoChannels: 6, motorControl: false, servoControl: false },
+  capabilities: { digital: true, adc: false, pwm: false, motorChannels: 6, servoChannels: 6, motorControl: true, servoControl: true, newmaniaV2: true },
   adc: [], digital: [3,45,46], reserved: Array.from({length:49},(_,i)=>i),
 };
 // Separate observed-memory candidate. PCB wiring/module suffix are not verified.
@@ -47,6 +48,7 @@ const v1Opi = {
   reserved: Array.from({length:49}, (_,i)=>i).filter(pin=>pin!==47),
 };
 export const FAST4WD_BOARD_ID = 'newmania-fast100-4wd';
+export const isNewmaniaBoard = (id) => id === FAST4WD_BOARD_ID || id === V2_BOARD_ID;
 const fast4wd = {
   id: FAST4WD_BOARD_ID,
   name: 'Newmania 4WD fast100 (16 MB, PSRAM tắt)',

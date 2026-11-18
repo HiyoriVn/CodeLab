@@ -10,8 +10,8 @@
 // Optional facade. Legacy sketches keep using CodeLabFast4wd unchanged.
 namespace codelab { namespace newmania {
 
-enum class Motor : uint8_t { M1, M2, M3, M4 };
-enum class Servo : uint8_t { S1 = 1, S2 = 2, S3 = 3, S4 = 4 };
+enum class Motor : uint8_t { M1, M2, M3, M4, M5, M6 };
+enum class Servo : uint8_t { S1 = 1, S2 = 2, S3 = 3, S4 = 4, S5 = 5, S6 = 6 };
 enum class Direction : uint8_t { Forward, Reverse };
 enum class Axis : uint8_t { LeftX, LeftY, RightX, RightY };
 enum class Button : uint8_t {
@@ -29,8 +29,9 @@ class Board {
   using Step = v2::StepResult;
   using Reset = void (*)();
 
-  explicit Board(uint8_t limit = 100, fast4wd::MotorLayout layout = {})
-      : robot_(limit, layout), gate_(robot_), scheduler_(gate_) {}
+  explicit Board(uint8_t limit = 100, fast4wd::MotorLayout layout = {},
+                 fast4wd::BoardVariant variant = fast4wd::BoardVariant::V1)
+      : variant_(variant), robot_(limit, layout, variant), gate_(robot_), scheduler_(gate_) {}
   Board(const Board&) = delete;
   Board& operator=(const Board&) = delete;
 
@@ -207,14 +208,14 @@ class Board {
   }
 
   bool servoWrite(uint8_t channel, double angle) {
-    if (channel < 1 || channel > 4) return false;
+    if (channel < 1 || channel > servoCount()) return false;
     if (!running() || !robot_.motionAllowed()) return false;
     if (!std::isfinite(angle)) return false;
     if (angle < 0.0) angle = 0.0;
     else if (angle > 180.0) angle = 180.0;
 
     const uint8_t index = channel - 1;
-    const uint8_t pin = kServoPins[index];
+    const uint8_t pin = servoPin(index);
     const double pulseUs = 1000.0 + (angle / 180.0) * 1000.0;
     const uint32_t duty = static_cast<uint32_t>(std::round((pulseUs / 20000.0) * 16383.0));
 
@@ -232,9 +233,9 @@ class Board {
     return servoWrite(static_cast<uint8_t>(servo), angle);
   }
   bool servoDisable(uint8_t channel) {
-    if (channel < 1 || channel > 4) return false;
+    if (channel < 1 || channel > servoCount()) return false;
     const uint8_t index = channel - 1;
-    const uint8_t pin = kServoPins[index];
+    const uint8_t pin = servoPin(index);
     if (servoAttached_[index]) {
       ledcWrite(pin, 0);
       ledcDetach(pin);
@@ -249,18 +250,18 @@ class Board {
     return servoDisable(static_cast<uint8_t>(servo));
   }
   void detachAllServos() {
-    for (uint8_t i = 1; i <= 4; ++i) {
+    for (uint8_t i = 1; i <= servoCount(); ++i) {
       if (servoAttached_[i - 1]) servoDisable(i);
     }
   }
   bool servoAttached(uint8_t channel) const {
-    return (channel >= 1 && channel <= 4) ? servoAttached_[channel - 1] : false;
+    return (channel >= 1 && channel <= servoCount()) ? servoAttached_[channel - 1] : false;
   }
   double servoAngle(uint8_t channel) const {
-    return (channel >= 1 && channel <= 4) ? servoAngle_[channel - 1] : 0.0;
+    return (channel >= 1 && channel <= servoCount()) ? servoAngle_[channel - 1] : 0.0;
   }
   uint32_t servoDuty(uint8_t channel) const {
-    return (channel >= 1 && channel <= 4) ? servoDuty_[channel - 1] : 0;
+    return (channel >= 1 && channel <= servoCount()) ? servoDuty_[channel - 1] : 0;
   }
 
   Step wait(Context& ctx, uint32_t ms, uint16_t nextPc) {
@@ -337,7 +338,7 @@ class Board {
   }
   static float finitePercent(double n) { return std::isfinite(n) ? static_cast<float>(n / 100.0) : 0; }
   bool canCommand(Motor motor) const {
-    return port(motor) < 4 && running() && robot_.motionAllowed();
+    return port(motor) < robot_.motorCount() && running() && robot_.motionAllowed();
   }
   bool validContext(const Context& ctx) const {
     return running() && ctx.scriptUid == mainUid_ && ctx.runGeneration == runGeneration();
@@ -376,10 +377,17 @@ class Board {
     }
   }
 
+  uint8_t servoCount() const { return variant_ == fast4wd::BoardVariant::V2 ? 6 : 4; }
+  uint8_t servoPin(uint8_t index) const {
+    return variant_ == fast4wd::BoardVariant::V2 ? kServoPinsV2[index] : kServoPins[index];
+  }
+
   static constexpr uint8_t kServoPins[4] = {12, 13, 14, 15};
-  bool servoAttached_[4]{};
-  double servoAngle_[4]{};
-  uint32_t servoDuty_[4]{};
+  static constexpr uint8_t kServoPinsV2[6] = {14, 15, 16, 17, 18, 21};
+  const fast4wd::BoardVariant variant_;
+  bool servoAttached_[6]{};
+  double servoAngle_[6]{};
+  uint32_t servoDuty_[6]{};
   fast4wd::Robot robot_;
   fast4wd::SchedulerGate gate_;
   v2::Scheduler scheduler_;

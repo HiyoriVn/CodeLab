@@ -6,7 +6,7 @@ const colours = { motor: '#3c82bc', servo: '#1fa288', drive: '#488459', ps4: '#b
 const field = (name, options) => ({ type: 'field_dropdown', name, options });
 const motor = field('MOTOR', motorIds.map((id, i) => ['Motor ' + (i + 1), id]));
 const servos = field('SERVO', [
-  ['S1', '1'], ['S2', '2'], ['S3', '3'], ['S4', '4'],
+  ['S1', '1'], ['S2', '2'], ['S3', '3'], ['S4', '4'], ['S5', '5'], ['S6', '6'],
 ]);
 const number = name => ({ type: 'input_value', name, check: 'Number' });
 const direction = field('DIRECTION', [['thuận', 'FORWARD'], ['ngược', 'REVERSE']]);
@@ -98,6 +98,18 @@ for (const { type, args0 } of robotBlocks.filter(item => item.group === 'motor' 
   };
 }
 
+for (const type of ['robot_servo_write', 'robot_servo_disable']) {
+  const original = Blockly.Blocks[type].init;
+  Blockly.Blocks[type].init = function () {
+    original.call(this);
+    const selector = this.getField('SERVO');
+    selector.setOptions(() => {
+      const count = this.workspace?.codelabBoardId === 'steam-mainboard-v2' ? 6 : 4;
+      return Array.from({ length: count }, (_, i) => ['S' + (i + 1), String(i + 1)]);
+    });
+  };
+}
+
 export function robotDeviceToolbox(devices, profile) {
   if (!devices?.motors.length) return [];
   const makeEntry = (type, args0, extraFields = {}) => ({
@@ -126,6 +138,6 @@ export function robotDeviceToolbox(devices, profile) {
     group('motor', 'Motor'),
     ...(profile?.capabilities?.servoControl ? [group('servo', 'Servo')] : []),
     ...(devices.drivetrain.wheels.length ? [group('drive', 'Di chuyển mecanum')] : []),
-    ...(devices.controller.enabled && profile?.capabilities?.fast4wd ? [group('ps4', 'Tay cầm PS4')] : []),
+    ...(devices.controller.enabled && (profile?.capabilities?.fast4wd || profile?.capabilities?.newmaniaV2) ? [group('ps4', 'Tay cầm PS4')] : []),
   ];
 }

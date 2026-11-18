@@ -102,7 +102,7 @@ test('device configurations validate board ports, distinct enabled wheels and ve
     const devices = defaultRobotDevices(profile);
     assert.equal(devices.motors.length, count);
     assert.deepEqual(robotDeviceWarnings(devices, profile), []);
-    assert.ok(!robotDeviceToolbox(devices, profile).some(group => group.name === 'Tay cầm PS4'));
+    if (!profile.capabilities.newmaniaV2) assert.ok(!robotDeviceToolbox(devices, profile).some(group => group.name === 'Tay cầm PS4'));
     if (!count) continue;
     devices.motors[1].port = devices.motors[0].port;
     assert.match(robotDeviceWarnings(devices, profile).join(), /chung một cổng/);

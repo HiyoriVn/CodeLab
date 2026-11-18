@@ -1,5 +1,5 @@
 import { TYPES, previewMotorTypes, designDiagnostics, unsupported } from '../blocks/newmania.js';
-import { FAST4WD_BOARD_ID, getBoardProfile } from '../boards/profiles.js';
+import { FAST4WD_BOARD_ID, V2_BOARD_ID, isNewmaniaBoard, getBoardProfile } from '../boards/profiles.js';
 import { defaultRobotDevices, robotDeviceWarnings } from '../boards/robot-devices.js';
 import { fast4wdConstructor } from './fast4wd.js';
 import { ps4Usage } from './ps4-usage.js';
@@ -15,8 +15,9 @@ const cppString = text => '"'+String(text).replace(/[\\"\x00-\x1f]/g,c=>c==='\\'
 const uidOf = id => { let n=2166136261;for(const c of id)n=Math.imul(n^c.charCodeAt(0),16777619);return (n>>>0)||1; };
 
 export function generateNewmania(workspace, boardId, deviceConfig) {
-  if(boardId!==FAST4WD_BOARD_ID)return {code:'',warnings:['Chương trình Newmania mới chỉ dùng board newmania-fast100-4wd; giữ nguyên board gốc.'],boardId};
+  if(!isNewmaniaBoard(boardId))return {code:'',warnings:['Chương trình Newmania chỉ dùng board newmania-fast100-4wd hoặc steam-mainboard-v2; giữ nguyên board gốc.'],boardId};
   const profile=getBoardProfile(boardId),devices=deviceConfig??defaultRobotDevices(profile);
+  const maxServos=profile.capabilities.servoChannels||4;
   const warnings=robotDeviceWarnings(devices,profile);
   if(warnings.length)return {code:'',warnings,boardId};
   const issues=designDiagnostics(workspace);
@@ -195,7 +196,8 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
         case 'beginner_message':action=`newmania.message(${b.getInputTargetBlock('VALUE')?expr(b.getInputTargetBlock('VALUE')).code:'""'});`;break;
         case 'robot_servo_write': {
           const servo = b.getFieldValue('SERVO');
-          if (!['1', '2', '3', '4'].includes(servo)) throw Error(`Kênh servo ${servo} không hợp lệ; chỉ chấp nhận S1–S4.`);
+          const nServo = Number(servo);
+          if (!Number.isInteger(nServo) || nServo < 1 || nServo > maxServos) throw Error(`Kênh servo ${servo} không hợp lệ; chỉ chấp nhận S1–S${maxServos}.`);
           const angleBlock = b.getInputTargetBlock('ANGLE');
           if (angleBlock?.type === 'math_number') {
             const n = Number(angleBlock.getFieldValue('NUM'));
@@ -209,7 +211,8 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
         }
         case 'robot_servo_disable': {
           const servo = b.getFieldValue('SERVO');
-          if (!['1', '2', '3', '4'].includes(servo)) throw Error(`Kênh servo ${servo} không hợp lệ; chỉ chấp nhận S1–S4.`);
+          const nServo = Number(servo);
+          if (!Number.isInteger(nServo) || nServo < 1 || nServo > maxServos) throw Error(`Kênh servo ${servo} không hợp lệ; chỉ chấp nhận S1–S${maxServos}.`);
           action = `newmania.servoDisable(${servo});`;
           break;
         }
@@ -257,8 +260,11 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
     for(const state of forLoops)reset.push(`  ${state}.reset();`);
     for(const cursor of cursors.values())reset.push(`  ${cursor} = {};`);
     const body=cases.map(c=>`    case ${c.pc}: { // ${c.block.type} · ${c.block.id.replace(/[^\w-]/g,'_')}\n      ${c.body.replaceAll('\n','\n      ')}\n    }`).join('\n');
-    const transportArg = devices.controller.transport === 'i2c' ? ', fast4wd::Ps4Transport::I2c' : '';
-    const code=`// Newmania ESP32S3 Board — một chương trình chính, chờ không chặn.\n#include <CodeLabNewmania.h>\nusing namespace codelab::newmania;\nstatic Board newmania(${constructor});\n${declarations.join('\n')}\n\nstatic void resetStudent() {\n${reset.join('\n')}\n}\n\nstatic Board::Step studentProgram(Board::Context& ctx, uint32_t) {\n  switch (ctx.pc) {\n    case 0: ctx.pc = ${entry}; return Board::Step::YIELD;\n${body}\n    default: return Board::Step::DONE;\n  }\n}\n\nvoid setup() {\n  newmania.begin(${devices.controller.blink}, ${usage.dependent}, ${usage.buttons}UL, ${usage.axes}${transportArg});\n  newmania.registerProgram(${uidOf(root.id)}UL, studentProgram, resetStudent);\n}\n\nvoid loop() {\n  newmania.update();\n}\n`;
+    const connectBlock = workspace.getBlocksByType(TYPES.connect, false)[0];
+    const selectedTransport = connectBlock?.getFieldValue('TRANSPORT') || (devices.controller.transport === 'i2c' ? 'I2C' : 'UART');
+    const transportArg = selectedTransport === 'I2C' ? ', codelab::fast4wd::Ps4Transport::I2c' : '';
+    const variantArg = boardId === V2_BOARD_ID ? ', codelab::fast4wd::BoardVariant::V2' : '';
+    const code=`// Newmania ESP32S3 Board — một chương trình chính, chờ không chặn.\n#include <CodeLabNewmania.h>\nusing namespace codelab::newmania;\nstatic Board newmania(${constructor}${variantArg});\n${declarations.join('\n')}\n\nstatic void resetStudent() {\n${reset.join('\n')}\n}\n\nstatic Board::Step studentProgram(Board::Context& ctx, uint32_t) {\n  switch (ctx.pc) {\n    case 0: ctx.pc = ${entry}; return Board::Step::YIELD;\n${body}\n    default: return Board::Step::DONE;\n  }\n}\n\nvoid setup() {\n  newmania.begin(${devices.controller.blink}, ${usage.dependent}, ${usage.buttons}UL, ${usage.axes}${transportArg});\n  newmania.registerProgram(${uidOf(root.id)}UL, studentProgram, resetStudent);\n}\n\nvoid loop() {\n  newmania.update();\n}\n`;
     return {code,warnings:[],boardId};
   } catch(error) {
     return {code:'',warnings:[`${error.message}${current?` (${current.type} · ${current.id})`:''}`],boardId};

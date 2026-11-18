@@ -5,14 +5,15 @@ export const wheelNames = ['Trước trái', 'Trước phải', 'Sau trái', 'Sa
 
 export function defaultRobotDevices(profile) {
   const count = profile.pins.motors.length;
+  const newmania = Boolean(profile.capabilities.fast4wd || profile.capabilities.newmaniaV2);
   return {
     version: 1,
     motors: motorIds.slice(0, count).map((id, i) => ({
       id, name: 'Motor ' + (i + 1), port: i + 1,
-      reversed: Boolean(profile.capabilities.fast4wd && i < 2), enabled: true,
+      reversed: Boolean(newmania && i < 2), enabled: true,
     })),
     drivetrain: { wheels: count >= 4 ? motorIds.slice(0, 4) : [], limit: 100 },
-    controller: { enabled: Boolean(profile.capabilities.fast4wd), blink: true },
+    controller: { enabled: newmania, blink: !profile.capabilities.newmaniaV2 },
   };
 }
 
@@ -36,7 +37,7 @@ export function robotDeviceWarnings(devices, profile) {
     warnings.push('Drivetrain cần bốn motor khác nhau đang bật, hoặc chọn tắt drivetrain.');
   }
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) warnings.push('Giới hạn PWM phải là số nguyên từ 1–100%.');
-  if (devices.controller.enabled && !profile.capabilities.fast4wd) warnings.push('PS4 I2C của cấu hình robot chỉ dành cho fast100.');
+  if (devices.controller.enabled && !profile.capabilities.fast4wd && !profile.capabilities.newmaniaV2) warnings.push('PS4 I2C của cấu hình robot chỉ dành cho board Newmania.');
   return warnings;
 }
 

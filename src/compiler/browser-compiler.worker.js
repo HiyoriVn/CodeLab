@@ -5,7 +5,7 @@ import { addPrototypes } from './prototypes.js';
 import { elfToImage } from './esp-image.js';
 import { COMPILER_REVISION, XTENSA_ABI_FLAGS, validateConstructorAbi } from './xtensa-abi.js';
 import { validatePackage, sha256 } from '../device/firmware-package.js';
-import { FAST4WD_BOARD_ID, getBoardProfile } from '../boards/profiles.js';
+import { isNewmaniaBoard, getBoardProfile } from '../boards/profiles.js';
 
 let toolchainCache = null;
 let toolchainPromise = null;
@@ -138,9 +138,11 @@ self.onmessage = async (ev) => {
 
   try {
     const { code, boardId, toolchainUrl = '/toolchain-337/manifest.json' } = req;
-    if (boardId !== FAST4WD_BOARD_ID) {
-      throw new Error(`Browser compiler chỉ hỗ trợ board ${FAST4WD_BOARD_ID} (Core 3.3.7).`);
+    if (!isNewmaniaBoard(boardId)) {
+      throw new Error(`Browser compiler chỉ hỗ trợ Newmania V1/V2 (Core 3.3.7).`);
     }
+    const profile = getBoardProfile(boardId);
+    const flashSize = `${profile.flashMB || 16}MB`;
     if (!code || typeof code !== 'string') {
       throw new Error('Mã nguồn C++ không hợp lệ.');
     }
@@ -251,11 +253,11 @@ self.onmessage = async (ev) => {
 
     const elfBytes = vfs.readFile('/build/app.elf');
 
-    post({ type: 'progress', message: 'Đang tạo ảnh nhị phân ESP32-S3 (16MB DIO)…' });
+    post({ type: 'progress', message: `Đang tạo ảnh nhị phân ESP32-S3 (${flashSize} DIO)…` });
     const appBin = await elfToImage(elfBytes, {
       flashMode: 'dio',
       flashFreq: '80m',
-      flashSize: '16MB',
+      flashSize,
       appendSha256: true,
     });
 
@@ -270,10 +272,10 @@ self.onmessage = async (ev) => {
     const segHashes = await Promise.all(segBuffers.map((s) => sha256Hex(s.data)));
     const manifestFlash = {
       version: 1,
-      boardId: FAST4WD_BOARD_ID,
+      boardId,
       chip: 'ESP32-S3',
       core: '3.3.7',
-      fqbn: getBoardProfile(FAST4WD_BOARD_ID).build.fqbn,
+      fqbn: profile.build.fqbn,
       segments: segBuffers.map((s, idx) => ({
         file: s.name,
         address: s.address,

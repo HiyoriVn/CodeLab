@@ -174,7 +174,7 @@ export function fast4wdConstructor({ speed, devices }) {
   if (!devices) return String(speed);
   const byPort = [...devices.motors].sort((a, b) => a.port - b.port);
   const wheels = devices.drivetrain.wheels;
-  const slots = byPort.map((motor, i) => wheels.length ? wheels.indexOf(motor.id) : i);
+  const slots = byPort.slice(0, 4).map((motor, i) => wheels.length ? wheels.indexOf(motor.id) : i);
   const mask = flag => byPort.reduce((result, motor, i) => result | (motor[flag] ? 1 << i : 0), 0);
   return `${speed}, {{${slots.join(', ')}}, ${mask('reversed')}, ${mask('enabled')}}`;
 }

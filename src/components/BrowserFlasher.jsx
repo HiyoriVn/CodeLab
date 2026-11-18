@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDeviceOperation } from '../device/useDeviceOperation.js';
-import { FAST4WD_BOARD_ID } from '../boards/profiles.js';
+import { isNewmaniaBoard, getBoardProfile } from '../boards/profiles.js';
 import { validatePackage, sha256 } from '../device/firmware-package.js';
 import { flashPackage } from '../device/browser-flash.js';
 import { formatSerialError } from '../device/usb-port.js';
@@ -22,8 +22,10 @@ export default function BrowserFlasher({boardId,operation,usbPort}) {
       setSegments(data);setMessage(data.map(s=>'0x'+s.address.toString(16)+' · '+s.data.length+' byte').join('\n'));
     } catch(e) {if(generation===revision.current)setMessage(e.message);}
   };
+  const newmaniaBoard = isNewmaniaBoard(boardId);
+  const expectedFlashSize = `${getBoardProfile(boardId).flashMB || 16}MB`;
   const flash=async()=>{
-    if(deviceOperation.isBusy()||!supported||!segments||boardId!==FAST4WD_BOARD_ID)return;
+    if(deviceOperation.isBusy()||!supported||!segments||!newmaniaBoard)return;
     const release=deviceOperation.acquire(); if(!release)return;
     const log=text=>setMessage(m=>(m+'\n'+text).slice(-6000));
     setProgress(null);
@@ -32,7 +34,7 @@ export default function BrowserFlasher({boardId,operation,usbPort}) {
       await usbPort?.releaseForFlash?.();
       const port=usbPort ? await usbPort.selectPort() : await navigator.serial.requestPort();
       if(!window.confirm('Nạp chương trình sẽ thay thế chương trình hiện tại. Hãy ngắt nguồn động cơ và đảm bảo robot ở trạng thái an toàn trước khi tiếp tục.')) {setMessage('Đã hủy nạp.');return;}
-      await flashPackage(port,segments,log,(_,written,total)=>{const percent=total>0?Math.min(100,Math.round(written/total*100)):0;setProgress(percent);setMessage('Đang nạp '+percent+'%');});
+      await flashPackage(port,segments,log,(_,written,total)=>{const percent=total>0?Math.min(100,Math.round(written/total*100)):0;setProgress(percent);setMessage('Đang nạp '+percent+'%');},undefined,{expectedFlashSize});
     }
     catch(e){log(e.name==='NotFoundError'?'Đã hủy chọn USB.':'Nạp thất bại: '+formatSerialError(e));}
     finally{release();setProgress(null);}
@@ -42,10 +44,10 @@ export default function BrowserFlasher({boardId,operation,usbPort}) {
     <section aria-label="Nạp firmware từ trình duyệt"><h4>Nạp firmware có sẵn (nâng cao)</h4>
     <p>Chỉ dành cho người có chuyên môn. Gói này độc lập với chương trình Blockly đang mở.</p>
     {!supported && <p role="alert">Cần Chrome/Edge trên máy tính và HTTPS hoặc localhost để dùng Web Serial.</p>}
-    <input aria-label="Gói firmware đã biên dịch" type="file" multiple accept=".json,.bin" disabled={busy||boardId!==FAST4WD_BOARD_ID} onChange={pick}/>
+    <input aria-label="Gói firmware đã biên dịch" type="file" multiple accept=".json,.bin" disabled={busy||!newmaniaBoard} onChange={pick}/>
     <pre role="status" style={{whiteSpace:'pre-wrap',maxHeight:200,overflow:'auto'}}>{message}</pre>
     {busy && <progress aria-label="Tiến độ nạp firmware" max="100" value={progress??undefined}/>}
-    <p><button className="button button-primary" disabled={busy||!supported||!segments||boardId!==FAST4WD_BOARD_ID} onClick={flash}>Chọn USB và nạp firmware có sẵn</button></p>
+    <p><button className="button button-primary" disabled={busy||!supported||!segments||!newmaniaBoard} onClick={flash}>Chọn USB và nạp firmware có sẵn</button></p>
     <small>Không xóa toàn bộ flash. Ghi bootloader, bảng phân vùng, metadata OTA và app0; giữ vùng NVS/filesystem nếu layout hiện có trùng khớp. Không tự reset chạy robot sau nạp.</small>
   </section></details>;
 }

@@ -5,7 +5,7 @@ import { compileInBrowser } from './compiler/browser-compiler-client.js';
 import { isBrowserCompilerEnabled } from './compiler/config.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
-import { DEFAULT_BOARD_ID, FAST4WD_BOARD_ID, getBoardProfile, projectBoardId } from './boards/profiles.js';
+import { DEFAULT_BOARD_ID, FAST4WD_BOARD_ID, V2_BOARD_ID, isNewmaniaBoard, getBoardProfile, projectBoardId } from './boards/profiles.js';
 import { defaultRobotDevices, validateProjectDeviceConfigs } from './boards/robot-devices.js';
 import { robotBlocks } from './blocks/robot-devices.js';
 import { projectEditorMode, legacyDriveBlocks } from './blocks/beginner-toolbox.js';
@@ -87,7 +87,7 @@ function App() {
     : cachedBuild;
   const startCompile = useCallback(async () => {
     const profile = getBoardProfile(boardId);
-    if (!isBrowserCompilerEnabled() || !profile?.capabilities?.fast4wd) return null;
+    if (!isBrowserCompilerEnabled() || (!profile?.capabilities?.fast4wd && !profile?.capabilities?.newmaniaV2)) return null;
     if (!activeCode || generatedCode.warnings.length > 0) return null;
     const key = activeCacheKey;
     const hit = compileCacheRef.current.get(key);
@@ -124,7 +124,7 @@ function App() {
       return null;
     }
   }, [activeCacheKey, activeCode, boardId, configKey, generatedCode.warnings.length]);
-  const legacyBoard = boardId !== FAST4WD_BOARD_ID;
+  const legacyBoard = !isNewmaniaBoard(boardId);
   const legacyProgram = !legacyBoard && !usesNewmaniaProgram(project);
   const [compatibility, setCompatibility] = useState([]);
   const editorMode = projectEditorMode(project);
@@ -170,6 +170,22 @@ function App() {
     if (deviceOperation.isBusy()) return;
     if (id === project.id || !projectStore.projects.some((item) => item.id === id)) return;
     persist({ activeId: id, projects: snapshotProjects() });
+  };
+  const switchBoard = (nextBoardId) => {
+    if (deviceOperation.isBusy() || nextBoardId === boardId || !isNewmaniaBoard(nextBoardId)) return;
+    const profile = getBoardProfile(nextBoardId);
+    const projects = snapshotProjects().map((item) => {
+      if (item.id !== project.id) return item;
+      const existingConfig = item.deviceConfigs?.[nextBoardId];
+      return {
+        ...item,
+        boardId: nextBoardId,
+        deviceConfigs: { ...item.deviceConfigs, [nextBoardId]: existingConfig || defaultRobotDevices(profile) },
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    persist({ activeId: project.id, projects });
+    showToast(`Đã chuyển sang ${profile.name}`);
   };
   const convertProject = () => {
     if (deviceOperation.isBusy()) return;
@@ -299,8 +315,12 @@ function App() {
       <input ref={fileInputRef} className="visually-hidden" type="file" accept=".json,.codelab.json,application/json" onChange={openProjectFile} />
       <ProfileToolbar
         boardId={boardId}
-        boards={[{ id: FAST4WD_BOARD_ID, name: 'Newmania ESP32S3 Board' }, ...(boardId !== FAST4WD_BOARD_ID ? [{ id: boardId, name: `Board của dự án đã nhập: ${boardId}` }] : [])]}
-        onBoard={() => {}}
+        boards={[
+          { id: FAST4WD_BOARD_ID, name: 'Newmania ESP32S3 Board' },
+          { id: V2_BOARD_ID, name: getBoardProfile(V2_BOARD_ID).name },
+          ...(!isNewmaniaBoard(boardId) ? [{ id: boardId, name: `Board của dự án đã nhập: ${boardId}` }] : []),
+        ]}
+        onBoard={switchBoard}
         lessons={LESSONS}
         onLesson={(value) => openLesson({ target: { value } })}
       />
@@ -353,7 +373,7 @@ function App() {
       </Modal>
       <Modal open={dialog === 'connect'} genie="connect" locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch chương trình, sau đó chọn USB và nạp vào robot. Để xem dữ liệu Serial, dùng nút Bảng lệnh.</p>
-        <DevicePanel key={project.id + boardId} operation={deviceOperation} usbPort={usbPort} compileCache={{ state: compileState, activeCacheKey, effectiveBuild, onCompile: startCompile }} boardId={boardId} code={activeCode} warnings={boardId === FAST4WD_BOARD_ID ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
+        <DevicePanel key={project.id + boardId} operation={deviceOperation} usbPort={usbPort} compileCache={{ state: compileState, activeCacheKey, effectiveBuild, onCompile: startCompile }} boardId={boardId} code={activeCode} warnings={isNewmaniaBoard(boardId) ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
         <BrowserFlasher boardId={boardId} operation={deviceOperation} usbPort={usbPort} />
         <div className="dialog-actions"><button className="btn" disabled={deviceBusy} onClick={closeDialog}>Đóng</button></div>
       </Modal>

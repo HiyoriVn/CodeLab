@@ -35,7 +35,7 @@ test('forever is a terminal statement; PS4 has one parameter-free setup and thre
   const w=new Blockly.Workspace();
   const loop=w.newBlock(TYPES.forever),connect=w.newBlock(TYPES.connect),button=w.newBlock(TYPES.button);
   assert.ok(loop.previousConnection);assert.equal(loop.nextConnection,null);assert.ok(loop.getInput('DO'));
-  assert.equal(connect.inputList.flatMap(i=>i.fieldRow).filter(f=>f.name).length,0);
+  assert.deepEqual(connect.getField('TRANSPORT').getOptions(false).map(([,v])=>v),['UART','I2C']);
   assert.deepEqual(button.getField('STATE').getOptions(false).map(([,value])=>value),['PRESS','HELD','RELEASE']);
   for(const state of ['PRESS','HELD','RELEASE']){button.setFieldValue(state,'STATE');assert.equal(button.getFieldValue('STATE'),state);}
   assert.equal(button.outputConnection.getCheck()[0],'Boolean');w.dispose();

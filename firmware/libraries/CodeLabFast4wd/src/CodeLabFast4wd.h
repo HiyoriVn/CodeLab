@@ -13,6 +13,7 @@
 
 namespace codelab { namespace fast4wd {
 enum class Ps4Transport : uint8_t { I2c = 0, Uart = 1 };
+enum class BoardVariant : uint8_t { V1 = 0, V2 = 1 };
 struct MotorLayout {
   uint8_t wheelAtPort[4] = {0, 1, 2, 3};
   uint8_t reversed = 3;
@@ -30,9 +31,10 @@ class Robot : private robot::MotorInterface {
   QuadMotors motors_;
   const MotorLayout layout_;
   const float limit_;
-  MotorCommand commands_[4];
-  float applied_[4] = {};
-  bool returning_[4] = {};
+  const BoardVariant variant_;
+  MotorCommand commands_[6];
+  float applied_[6] = {};
+  bool returning_[6] = {};
   uint32_t lastOutputAt_ = 0;
   robot::MockServo servo_;
   robot::RobotController controller_;
@@ -89,7 +91,7 @@ class Robot : private robot::MotorInterface {
       if (!robot::MecanumMixer::mix(intent, config(limit_,layout_).mixer, mixed)) { motorFault_=true; disable(); return; }
     }
     bool requested = drive_ != Drive::Idle;
-    for (const auto& command:commands_) requested = requested || command.active;
+    for (unsigned i = 0; i < motorCount(); ++i) requested = requested || commands_[i].active;
     if (!requested) return; // Boot never permits PWM without a student command.
     if (!motors_.permitted() && !motors_.permit(now)) { motorFault_=true; disable(); return; }
     motors_.renew(now);
@@ -112,11 +114,11 @@ class Robot : private robot::MotorInterface {
     return c;
   }
 
-  bool motorEnabled(unsigned port) const { return port < 4 && (layout_.enabled & (1U << port)); }
+  bool motorEnabled(unsigned port) const { return port < motorCount() && (layout_.enabled & (1U << port)); }
   bool ready() const override { return motors_.ready(); }
   void disable() override {
     motors_.disable();
-    for (unsigned port = 0; port < 4; ++port) {
+    for (unsigned port = 0; port < 6; ++port) {
       commands_[port] = {};
       applied_[port] = 0;
       returning_[port] = false;
@@ -128,23 +130,24 @@ class Robot : private robot::MotorInterface {
     const uint32_t elapsed = now - lastOutputAt_;
     lastOutputAt_ = now;
     const float ramp = 0.012f * (elapsed < 50 ? elapsed : 50);
-    float output[4];
-    for (unsigned port = 0; port < 4; ++port) {
+    float output[6] = {};
+    for (unsigned port = 0; port < motorCount(); ++port) {
       auto& command = commands_[port];
       if (command.duration && uint32_t(now - command.startedAt) >= command.duration) {
         command = {true, 0, 0, 0};
       }
-      output[port] = mixed[port];
+      const float base = port < 4 ? mixed[port] : 0.0f;
+      output[port] = base;
       if (!motorEnabled(port) || (command.active && command.target == 0)) output[port] = 0;
       else if (command.active || returning_[port]) {
-        const float target = command.active ? command.target : mixed[port];
+        const float target = command.active ? command.target : base;
         const float delta = target - applied_[port];
         output[port] = fabsf(delta) <= ramp ? target : applied_[port] + robot::clamp(delta, -ramp, ramp);
         if (!command.active && output[port] == target) returning_[port] = false;
       }
     }
-    if (!motors_.write(output)) return false;
-    for (unsigned port = 0; port < 4; ++port) applied_[port] = output[port];
+    if (!motors_.write6(output)) return false;
+    for (unsigned port = 0; port < motorCount(); ++port) applied_[port] = output[port];
     return true;
   }
 
@@ -205,9 +208,10 @@ class Robot : private robot::MotorInterface {
   }
   bool motionAllowed() const { return canCommand(); }
   uint32_t motionEpoch() const { return motionEpoch_; }
+  uint8_t motorCount() const { return variant_ == BoardVariant::V2 ? 6 : 4; }
   void haltMotorOutputs() { if (blockly_) { disable(); drive_=Drive::Idle; fixed_={}; } stopRequested_=true; }
-  explicit Robot(uint8_t speedPercent = 100, MotorLayout layout = {}) :
-    layout_(layout), limit_(robot::clamp(speedPercent, 1, 100) / 100.0f),
+  explicit Robot(uint8_t speedPercent = 100, MotorLayout layout = {}, BoardVariant variant = BoardVariant::V1) :
+    layout_(layout), limit_(robot::clamp(speedPercent, 1, 100) / 100.0f), variant_(variant),
     controller_(*this, servo_, config(limit_, layout_)) {}
   Robot(const Robot&) = delete;
   Robot& operator=(const Robot&) = delete;
@@ -215,7 +219,8 @@ class Robot : private robot::MotorInterface {
   void begin(bool blinkOnLoss, Ps4Transport transport = Ps4Transport::I2c) {
     if (initialized_) return;
     transport_ = transport;
-    blink_ = blinkOnLoss;
+    // GPIO47 is M6 IN2 on V2; never drive link LED on GPIO47 when running V2.
+    blink_ = (variant_ == BoardVariant::V1) && blinkOnLoss;
     if (blink_) {
       pinMode(ledPin, OUTPUT);
       digitalWrite(ledPin, LOW);
@@ -223,7 +228,9 @@ class Robot : private robot::MotorInterface {
     delay(300);
     if (transport_ == Ps4Transport::Uart) {
 #if defined(SERIAL_8N1)
-      Serial1.begin(ps4i2c::uartBaud, SERIAL_8N1, ps4i2c::uartRxPin, ps4i2c::uartTxPin);
+      const int8_t rxPin = (variant_ == BoardVariant::V2) ? 7 : ps4i2c::uartRxPin;
+      const int8_t txPin = (variant_ == BoardVariant::V2) ? 6 : ps4i2c::uartTxPin;
+      Serial1.begin(ps4i2c::uartBaud, SERIAL_8N1, rxPin, txPin);
 #endif
       busReady_ = true;
     } else {
@@ -231,7 +238,7 @@ class Robot : private robot::MotorInterface {
       Wire.setTimeOut(20);
     }
     initialized_ = true;
-    const bool motorReady = motors_.begin();
+    const bool motorReady = motors_.begin(variant_ == BoardVariant::V2);
     const char* busName = (transport_ == Ps4Transport::Uart) ? "UART" : "I2C";
     if (blockly_) Serial.printf("Blockly %s=%u MCPWM=%u. Program starts at boot.\n", busName, unsigned(busReady_), unsigned(motorReady));
     else Serial.printf("4WD %s=%u MCPWM=%u. Options=ARM, Share=STOP.\n", busName, unsigned(busReady_), unsigned(motorReady));
@@ -300,7 +307,8 @@ class Robot : private robot::MotorInterface {
   float motorPwm(unsigned port) const {
     if (!motorEnabled(port) || !motors_.permitted()) return 0;
     const int duty[] = {motors_.m1FI() - motors_.m1BI(), motors_.m2FI() - motors_.m2BI(),
-      motors_.m3FI() - motors_.m3BI(), motors_.m4FI() - motors_.m4BI()};
+      motors_.m3FI() - motors_.m3BI(), motors_.m4FI() - motors_.m4BI(),
+      motors_.m5FI() - motors_.m5BI(), motors_.m6FI() - motors_.m6BI()};
     return duty[port] * (100.0f / 255) * ((layout_.reversed & (1U << port)) ? -1 : 1);
   }
   bool waitForMotor(unsigned port) {

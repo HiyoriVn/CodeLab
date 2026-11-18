@@ -2,7 +2,7 @@ import { sha256 } from './firmware-package.js';
 import { formatSerialError } from './usb-port.js';
 import { withSerialPort, stopSerialSession, isPortAlreadyClosed } from './serial-lifecycle.js';
 
-export async function flashPackage(port, segments, log, progress, load = () => import('esptool-js')) {
+export async function flashPackage(port, segments, log, progress, load = () => import('esptool-js'), { expectedFlashSize = '16MB' } = {}) {
   return withSerialPort(port, async () => {
     await stopSerialSession(port);
     let transport;
@@ -19,10 +19,10 @@ export async function flashPackage(port, segments, log, progress, load = () => i
         throw connectError;
       }
       if(loader.chip?.CHIP_NAME!=='ESP32-S3') throw new Error('Sai chip: chỉ hỗ trợ ESP32-S3. Chưa ghi flash.');
-      if(await loader.detectFlashSize()!=='16MB') throw new Error('Flash không phải 16 MB. Chưa ghi.');
+      if(await loader.detectFlashSize()!==expectedFlashSize) throw new Error(`Flash không phải ${expectedFlashSize}. Chưa ghi.`);
       const table=segments.find(s=>s.address===0x8000);
       if(!table || await sha256(await loader.readFlash(0x8000,table.data.length))!==await sha256(table.data)) {
-        throw new Error('Bảng phân vùng hoặc cấu hình board trên mạch không khớp CodeLab (cần ESP32-S3, Flash 16MB, PartitionScheme=default_8MB). Chưa ghi flash.');
+        throw new Error(`Bảng phân vùng hoặc cấu hình board trên mạch không khớp CodeLab (cần ESP32-S3, Flash ${expectedFlashSize}, PartitionScheme=default_8MB). Chưa ghi flash.`);
       }
       await loader.writeFlash({fileArray:segments,flashMode:'keep',flashFreq:'keep',flashSize:'keep',eraseAll:false,compress:true,reportProgress:progress});
       for(const segment of segments) {

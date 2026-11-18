@@ -45,7 +45,7 @@ test('Unit Test: newmania-fast100-4wd profile maps 4 servos to GPIO12, 13, 14, 1
 
   const v2 = getBoardProfile('steam-mainboard-v2');
   assert.deepEqual(v2.pins.servos, [14, 15, 16, 17, 18, 21]);
-  assert.equal(v2.capabilities.servoControl, false);
+  assert.equal(v2.capabilities.servoControl, true);
 
   const generic = getBoardProfile(DEFAULT_BOARD_ID);
   assert.equal(Boolean(generic.capabilities.servoControl), false);

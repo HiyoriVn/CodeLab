@@ -56,7 +56,7 @@ test('PS4 UART protocol header specifies A5 5A + 13 byte + CRC8 0x07 on RX8/TX9 
 
   const fast4wdHeader = readFileSync('firmware/libraries/CodeLabFast4wd/src/CodeLabFast4wd.h', 'utf8');
   assert.match(fast4wdHeader, /enum class Ps4Transport : uint8_t \{ I2c = 0, Uart = 1 \}/);
-  assert.match(fast4wdHeader, /Serial1\.begin\(ps4i2c::uartBaud, SERIAL_8N1, ps4i2c::uartRxPin, ps4i2c::uartTxPin\)/);
+  assert.match(fast4wdHeader, /Serial1\.begin\(ps4i2c::uartBaud, SERIAL_8N1, rxPin, txPin\)/);
   assert.match(fast4wdHeader, /Wire\.begin\(8, 9, uint32_t\(100000\)\)/);
 });
 

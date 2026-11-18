@@ -61,9 +61,9 @@ test('new projects use the tested board while imports retain their board ID', ()
   assert.match(app, /boardId = FAST4WD_BOARD_ID/);
   assert.match(app, /defaultRobotDevices\(getBoardProfile\(FAST4WD_BOARD_ID\)\)/);
   assert.match(app, /<ProfileToolbar[\s\S]*?boardId=\{boardId\}/);
-  assert.match(app, /onBoard=\{\(\) => \{\}\}/);
+  assert.match(app, /onBoard=\{switchBoard\}/);
   assert.match(app, /projectBoardId\(content\)/);
-  assert.match(app, /boardId === FAST4WD_BOARD_ID \? generatedCode.warnings/);
+  assert.match(app, /isNewmaniaBoard\(boardId\) \? generatedCode\.warnings/);
   const workspace = new Blockly.Workspace();
   const generated = generateArduino(workspace, FAST4WD_BOARD_ID, defaultRobotDevices(getBoardProfile(FAST4WD_BOARD_ID)));
   assert.deepEqual(generated.warnings, []);

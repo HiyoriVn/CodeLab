@@ -1,7 +1,7 @@
-import { FAST4WD_BOARD_ID, getBoardProfile } from '../boards/profiles.js';
+import { isNewmaniaBoard, getBoardProfile } from '../boards/profiles.js';
 export async function validatePackage(manifest, files, digest) {
   const fail = () => { throw new Error('Gói firmware không khớp Newmania/Core 3.3.7 hoặc offsets/hash không hợp lệ.'); };
-  if (!manifest || manifest.version !== 1 || manifest.boardId !== FAST4WD_BOARD_ID || manifest.fqbn !== getBoardProfile(FAST4WD_BOARD_ID).build.fqbn || manifest.core !== '3.3.7' || manifest.chip !== 'ESP32-S3' || !Array.isArray(manifest.segments) || manifest.segments.length !== 4) fail();
+  if (!manifest || manifest.version !== 1 || !isNewmaniaBoard(manifest.boardId) || manifest.fqbn !== getBoardProfile(manifest.boardId).build.fqbn || manifest.core !== '3.3.7' || manifest.chip !== 'ESP32-S3' || !Array.isArray(manifest.segments) || manifest.segments.length !== 4) fail();
   const addresses = [0, 0x8000, 0xe000, 0x10000], limits = [0x8000,0x1000,0x2000,0x330000];
   const result=[];
   for (let i=0;i<4;i++) {

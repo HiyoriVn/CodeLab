@@ -1,4 +1,4 @@
-import { FAST4WD_BOARD_ID } from '../boards/profiles.js';
+import { FAST4WD_BOARD_ID, isNewmaniaBoard } from '../boards/profiles.js';
 
 let sharedWorker = null;
 let nextRequestId = 1;
@@ -14,8 +14,8 @@ function getWorker() {
 
 export function compileInBrowser(code, boardId = FAST4WD_BOARD_ID, { onProgress, toolchainUrl } = {}) {
   return new Promise((resolve, reject) => {
-    if (boardId !== FAST4WD_BOARD_ID) {
-      return reject(new Error(`Trình biên dịch trình duyệt chỉ hỗ trợ ${FAST4WD_BOARD_ID} (Core 3.3.7).`));
+    if (!isNewmaniaBoard(boardId)) {
+      return reject(new Error(`Trình biên dịch trình duyệt chỉ hỗ trợ Newmania V1/V2 (Core 3.3.7).`));
     }
     if (!code || typeof code !== 'string') {
       return reject(new Error('Mã nguồn C++ không được để trống.'));

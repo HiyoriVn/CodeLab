@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getBoardProfile, FAST4WD_BOARD_ID } from '../boards/profiles.js';
+import { getBoardProfile, FAST4WD_BOARD_ID, isNewmaniaBoard } from '../boards/profiles.js';
 import { useDeviceOperation } from '../device/useDeviceOperation.js';
 import { isBrowserCompilerEnabled, isDevEnvironment } from '../compiler/config.js';
 import { compileInBrowser } from '../compiler/browser-compiler-client.js';
@@ -21,7 +21,8 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
   const localBridge = typeof window !== 'undefined' && ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
   const devUi = localBridge || isDevEnvironment();
   const fast4wd = board.capabilities.fast4wd;
-  const wasmEnabled = isBrowserCompilerEnabled() && fast4wd;
+  const newmaniaBoard = isNewmaniaBoard(boardId);
+  const wasmEnabled = isBrowserCompilerEnabled() && newmaniaBoard;
   const supported = typeof window !== 'undefined' && window.isSecureContext && !!navigator.serial;
 
   const [status, setStatus] = useState(null);
@@ -108,7 +109,7 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
   };
 
   const uploadFromBrowser = async ({ forceNewPort = false } = {}) => {
-    if (deviceOperation.isBusy() || !buildId || !build?.package?.segments || boardId !== FAST4WD_BOARD_ID) return;
+    if (deviceOperation.isBusy() || !buildId || !build?.package?.segments || !newmaniaBoard) return;
     const release = deviceOperation.acquire();
     if (!release) return;
     setUploadState('Đang nạp');
@@ -126,7 +127,7 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
         const percent = total > 0 ? Math.min(100, Math.round((written / total) * 100)) : 0;
         setUploadState(`Đang nạp ${percent}%`);
       };
-      await flashPackage(selectedPort, build.package.segments, log, progressCb);
+      await flashPackage(selectedPort, build.package.segments, log, progressCb, undefined, { expectedFlashSize: `${board.flashMB || 16}MB` });
       setUploadState('Hoàn tất');
       setMessage('Nạp chương trình thành công!');
     } catch (error) {

@@ -5,7 +5,7 @@ import './controller.js';
 import './robotics.js';
 import { robotBlocks } from './robot-devices.js';
 import { editorToolbox } from './beginner-toolbox.js';
-import { FAST4WD_BOARD_ID } from '../boards/profiles.js';
+import { FAST4WD_BOARD_ID, V2_BOARD_ID } from '../boards/profiles.js';
 import { lockCapHat } from './start-hat.js';
 
 export const TYPES = Object.freeze({ root: 'newmania_design_program', forever: 'newmania_design_forever', connect: 'newmania_design_ps4_connect', button: 'newmania_design_ps4_button' });
@@ -14,7 +14,7 @@ const field = (name, options) => ({ type: 'field_dropdown', name, options });
 Blockly.defineBlocksWithJsonArray([
   { type:TYPES.root, message0:'Khi bắt đầu chương trình %1 %2', args0:[{type:'input_dummy'},{type:'input_statement',name:'DO'}], colour:'#e79b23', tooltip:'Chạy một lần sau khi board khởi động. Đây là khối gốc duy nhất của chương trình.' },
   { type:TYPES.forever, message0:'Lặp mãi mãi %1 %2', args0:[{type:'input_dummy'},{type:'input_statement',name:'DO'}], previousStatement:null, colour:'#e79b23', tooltip:'Đặt cuối luồng chính, bên trong Khi bắt đầu chương trình.' },
-  { type:TYPES.connect, message0:'Kết nối tay cầm PS4', previousStatement:null, nextStatement:null, colour:'#bd4d86', tooltip:'Đặt trước Lặp mãi mãi để chuẩn bị dùng tay cầm qua UART (D1 TX16 → S3 RX8, 115200 baud, gói A5 5A + 13 byte + CRC8 0x07). Ví dụ: Kết nối tay cầm PS4 → Lặp mãi mãi → kiểm tra nút X. Không đợi kết nối, không tự cho phép chạy hay khởi động motor. Ghép đôi Bluetooth với D1 là thao tác riêng.' },
+  { type:TYPES.connect, message0:'Kết nối tay cầm PS4 qua %1', args0:[field('TRANSPORT', [['UART', 'UART'], ['I²C', 'I2C']])], previousStatement:null, nextStatement:null, colour:'#bd4d86', tooltip:'Đặt trước Lặp mãi mãi để chuẩn bị dùng tay cầm qua UART hoặc I²C. Ví dụ: Kết nối tay cầm PS4 → Lặp mãi mãi → kiểm tra nút X. Không đợi kết nối, không tự cho phép chạy hay khởi động motor. Ghép đôi Bluetooth với D1 là thao tác riêng.' },
   { type:TYPES.button, message0:'Nút %1 %2 ?', args0:[field('BUTTON', [['X','0'],['Tròn','1'],['Vuông','2'],['Tam giác','3'],['L1','4'],['R1','5'],['L2','6'],['R2','7'],['L3','10'],['R3','11'],['Lên','13'],['Xuống','14'],['Trái','15'],['Phải','16']]),field('STATE',[['Vừa nhấn','PRESS'],['Đang giữ','HELD'],['Vừa thả','RELEASE']])], output:'Boolean', colour:'#bd4d86', tooltip:'Ví dụ: Nút X Vừa nhấn? để tăng điểm một lần; Đang giữ? để chạy motor khi còn giữ; Vừa thả? để dừng khi buông nút. Vừa nhấn/thả chỉ đúng một lần cho mỗi lần nhấn/thả. Các khối đọc độc lập; không chạy bù lần nhấn/thả trong lúc Đợi.' },
 ]);
 const rootInit=Blockly.Blocks[TYPES.root].init;
@@ -25,6 +25,12 @@ Blockly.Blocks[TYPES.root].init=function() {
   this.isCopyable=()=>false;
   this.isDuplicatable=()=>false;
 };
+const connectInit = Blockly.Blocks[TYPES.connect].init;
+Blockly.Blocks[TYPES.connect].init = function() {
+  connectInit.call(this);
+  const f = this.getField('TRANSPORT');
+  if (f) f.isSerializable = () => f.getValue() !== 'UART';
+};
 
 // Stable IDs introduced by the stage-one preview: old project definitions, fields and generators are untouched.
 export const previewMotorTypes = new Map();
@@ -32,17 +38,20 @@ for (const {group,title,...definition} of robotBlocks.filter(b=>b.group==='motor
   const type='newmania_design_'+definition.type;
   const spec=structuredClone(definition);
   spec.type=type;
-  for (const arg of spec.args0||[]) if(arg.name==='MOTOR') arg.options=Array.from({length:4},(_,i)=>['M'+(i+1),'motor-'+(i+1)]);
+  for (const arg of spec.args0||[]) if(arg.name==='MOTOR') arg.options=Array.from({length:6},(_,i)=>['M'+(i+1),'motor-'+(i+1)]);
   spec.message0=spec.message0.replace('PWM','công suất');
   Blockly.defineBlocksWithJsonArray([spec]);
   if(spec.args0?.some(arg=>arg.name==='MOTOR')) {
     const init=Blockly.Blocks[type].init;
     Blockly.Blocks[type].init=function() {
       init.call(this);
-      this.getField('MOTOR').setOptions(()=>Array.from({length:4},(_,i)=>{
-        const id='motor-'+(i+1),device=this.workspace.codelabRobotDevices?.motors.find(m=>m.id===id);
-        return ['M'+(device?.port??i+1)+(device&&!device.enabled?' (tắt)':''),id];
-      }));
+      this.getField('MOTOR').setOptions(()=>{
+        const count=this.workspace?.codelabRobotDevices?.motors.length||(this.workspace?.codelabBoardId===V2_BOARD_ID?6:4);
+        return Array.from({length:count},(_,i)=>{
+          const id='motor-'+(i+1),device=this.workspace?.codelabRobotDevices?.motors.find(m=>m.id===id);
+          return ['M'+(device?.port??i+1)+(device&&!device.enabled?' (tắt)':''),id];
+        });
+      });
     };
   }
   previewMotorTypes.set(definition.type,type);
@@ -53,8 +62,8 @@ export const unsupported = new Map(
 );
 
 export const workspaceOptions = { maxInstances:{ [TYPES.root]:1, [TYPES.forever]:1, [TYPES.connect]:1 } };
-export function designToolbox() {
-  const toolbox=structuredClone(editorToolbox(FAST4WD_BOARD_ID));
+export function designToolbox(boardId = FAST4WD_BOARD_ID) {
+  const toolbox=structuredClone(editorToolbox(boardId));
   for (const category of toolbox.contents) {
     const seenMotors=new Set();
     category.contents=(category.contents||[]).flatMap(entry=>{

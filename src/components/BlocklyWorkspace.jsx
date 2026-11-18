@@ -4,7 +4,7 @@ import 'blockly/blocks';
 import * as Vietnamese from 'blockly/msg/vi';
 import { generateArduino } from '../generators/arduino.js';
 import '../blocks/robotics.js';
-import { FAST4WD_BOARD_ID } from '../boards/profiles.js';
+import { isNewmaniaBoard } from '../boards/profiles.js';
 import { editorToolbox } from '../blocks/beginner-toolbox.js';
 import { refreshRobotMotorLabels } from '../blocks/robot-devices.js';
 import '../blocks/beginner.js';
@@ -41,7 +41,7 @@ function BlocklyWorkspace({ boardId, editorMode, programModel, robotDevices, ini
     if (!hostRef.current) return undefined;
     const options = {
       ...(modelRef.current === NEWMANIA_MODEL ? workspaceOptions : {}),
-      toolbox: boardIdRef.current === FAST4WD_BOARD_ID ? (modelRef.current === NEWMANIA_MODEL ? designToolbox() : editorToolbox(boardIdRef.current, modeRef.current, robotDevicesRef.current)) : { kind: 'categoryToolbox', contents: [] },
+      toolbox: isNewmaniaBoard(boardIdRef.current) ? (modelRef.current === NEWMANIA_MODEL ? designToolbox(boardIdRef.current) : editorToolbox(boardIdRef.current, modeRef.current, robotDevicesRef.current)) : { kind: 'categoryToolbox', contents: [] },
       sounds: false,
       trashcan: false,
       move: { scrollbars: true, drag: true, wheel: true },
