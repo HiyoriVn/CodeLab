@@ -74,13 +74,13 @@ test('PS2 generates dedicated PS2 SPI transport while PS4 UART/I2C stay unchange
   ps2Button.setFieldValue('8', 'BUTTON'); // PS2 SELECT maps to internal Share bit.
   ps2Button.setFieldValue('HELD', 'STATE');
   const ps2Axis = ps2Proj.workspace.newBlock(TYPES.ps2Axis);
-  ps2Axis.setFieldValue('3', 'AXIS');
   const ps2Connected = ps2Proj.workspace.newBlock(TYPES.ps2Connected);
-  // Use each PS2 read block as a Boolean/number expression in separate programs.
   assert.equal(ps2Button.outputConnection.getCheck()[0], 'Boolean');
   assert.equal(ps2Axis.outputConnection.getCheck()[0], 'Number');
   assert.equal(ps2Connected.outputConnection.getCheck()[0], 'Boolean');
-  const root = ps2Proj.workspace.getBlocksByType(TYPES.root, false)[0];
+  // No dangling blocks: connect one PS2 expression at a time.
+  ps2Axis.dispose();
+  ps2Connected.dispose();
   const loop = ps2Proj.workspace.newBlock(TYPES.forever);
   ps2Proj.connect.nextConnection.connect(loop.previousConnection);
   const condition = ps2Proj.workspace.newBlock('controls_if');
@@ -91,13 +91,26 @@ test('PS2 generates dedicated PS2 SPI transport while PS4 UART/I2C stay unchange
   assert.match(ps2Result.code, /codelab::fast4wd::Ps4Transport::Ps2Spi/);
   assert.match(ps2Result.code, /newmania\.connectController\(\);/);
   assert.match(ps2Result.code, /newmania\.held\(Button::Share\)/);
-  // PS2 joystick & connection have dedicated block types and must generate C++.
   condition.getInput('IF0').connection.disconnect();
-  condition.getInput('IF0').connection.connect(ps2Connected.outputConnection);
+  ps2Button.dispose();
+  const connected = ps2Proj.workspace.newBlock(TYPES.ps2Connected);
+  condition.getInput('IF0').connection.connect(connected.outputConnection);
   const connectedCode = generateNewmania(ps2Proj.workspace, V2_BOARD_ID, devices);
   assert.deepEqual(connectedCode.warnings, []);
   assert.match(connectedCode.code, /newmania\.connected\(\)/);
-  // The unused expression is disconnected and must be removed for generator diagnostics.
+  condition.getInput('IF0').connection.disconnect();
+  connected.dispose();
+  const cmp = ps2Proj.workspace.newBlock('logic_compare');
+  const axis = ps2Proj.workspace.newBlock(TYPES.ps2Axis);
+  axis.setFieldValue('3', 'AXIS');
+  const zero = ps2Proj.workspace.newBlock('math_number');
+  zero.setFieldValue(0, 'NUM');
+  cmp.getInput('A').connection.connect(axis.outputConnection);
+  cmp.getInput('B').connection.connect(zero.outputConnection);
+  condition.getInput('IF0').connection.connect(cmp.outputConnection);
+  const axisCode = generateNewmania(ps2Proj.workspace, V2_BOARD_ID, devices);
+  assert.deepEqual(axisCode.warnings, []);
+  assert.match(axisCode.code, /newmania\.axis\(Axis::RightY\)/);
   ps2Proj.workspace.dispose();
 });
 
