@@ -100,18 +100,21 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
           const op=dropdown(b,'OP',{EQ:'==',NEQ:'!=',LT:'<',LTE:'<=',GT:'>',GTE:'>='});
           return out(hasEffects(b)?ordered(a.code,c.code,`left ${op} right`):`(${a.code} ${op} ${c.code})`,'boolean');
         }
-        case TYPES.button: {
-          const bit=Number(b.getFieldValue('BUTTON'));if(!buttonNames[bit])throw Error('Nút PS4 không hợp lệ.');
+        case TYPES.button:
+        case TYPES.ps2Button: {
+          const bit=Number(b.getFieldValue('BUTTON'));if(!buttonNames[bit])throw Error('Nút tay cầm không hợp lệ.');
           const state=dropdown(b,'STATE',{PRESS:'Pressed',HELD:'Held',RELEASE:'Released'});
           if(state==='Held')return out(`newmania.held(Button::${buttonNames[bit]})`,'boolean');
           if(!cursors.has(b.id))cursors.set(b.id,`student_button_${cursors.size}`);
           return out(`newmania.button(Button::${buttonNames[bit]}, ButtonState::${state}, ${cursors.get(b.id)})`,'boolean');
         }
-        case 'robot_ps4_axis': {
+        case 'robot_ps4_axis':
+        case TYPES.ps2Axis: {
           const axis=axisNames[Number(b.getFieldValue('AXIS'))];if(!axis)throw Error('Trục joystick không hợp lệ.');
           return out(`newmania.axis(Axis::${axis})`);
         }
-        case 'fast4wd_connected':return out('newmania.connected()','boolean');
+        case 'fast4wd_connected':
+        case TYPES.ps2Connected:return out('newmania.connected()','boolean');
         default:
           if(oldMotor.get(b.type)==='robot_motor_pwm')return out(`newmania.motorPwm(${motor(b)})`);
           throw Error(`Khối ${b.type} chưa có biểu thức C++ Newmania.`);
