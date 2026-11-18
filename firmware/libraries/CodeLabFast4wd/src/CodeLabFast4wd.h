@@ -273,6 +273,11 @@ class Robot : private robot::MotorInterface {
     if (blockly_) updateBlocklyLink(millis());
   }
 
+  // Board-level sensors may share Wire after PS4 I2C initialized it.
+  // UART and PS2 SPI never initialize Wire; IMU may do so on first use.
+  bool imuI2cBusReady() const {
+    return initialized_ && transport_ == Ps4Transport::I2c && busReady_;
+  }
   bool connected() const { return busReady_ && receiver_.snapshot(millis()).connected; }
   bool controllerArmed() const { return controller_.state() == robot::State::ARMED; }
   float axis(unsigned index) const {
