@@ -204,7 +204,7 @@ function App() {
   const openLesson = (event) => {
     if (deviceOperation.isBusy()) return;
     if (!LESSONS.some(lesson => lesson.id === event.target.value)) return;
-    const nextProject = { ...lessonProject(event.target.value), id:crypto.randomUUID(), updatedAt:new Date().toISOString() };
+    const nextProject = { ...lessonProject(event.target.value, isNewmaniaBoard(boardId) ? boardId : FAST4WD_BOARD_ID), id:crypto.randomUUID(), updatedAt:new Date().toISOString() };
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
     showToast(`Đã mở ${nextProject.name}`);
   };

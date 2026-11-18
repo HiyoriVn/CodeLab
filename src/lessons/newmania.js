@@ -1,4 +1,4 @@
-import { FAST4WD_BOARD_ID, getBoardProfile } from '../boards/profiles.js';
+import { FAST4WD_BOARD_ID, V2_BOARD_ID, isNewmaniaBoard, getBoardProfile } from '../boards/profiles.js';
 import { defaultRobotDevices } from '../boards/robot-devices.js';
 import { TYPES, NEWMANIA_MODEL, previewMotorTypes } from '../blocks/newmania.js';
 
@@ -14,7 +14,9 @@ export const LESSONS = [
 // Baseline sources: defaultRobotDevices, fast4wdConstructor, MotorLayout and
 // MecanumMixer: M1=FL, M2=FR, M3=RL, M4=RR. Motor API applies reversal itself.
 // Never embed physical GPIO or apply M1/M2 inversion a second time here.
-export function lessonProject(id) {
+export function lessonProject(id, targetBoardId = FAST4WD_BOARD_ID) {
+  const boardId = isNewmaniaBoard(targetBoardId) ? targetBoardId : FAST4WD_BOARD_ID;
+  const profile = getBoardProfile(boardId);
   const lesson = LESSONS.find(item => item.id === id);
   if (!lesson) throw new Error('Bài mẫu chưa được hỗ trợ.');
   let sequence = 0;
@@ -88,7 +90,9 @@ export function lessonProject(id) {
         VALUE:op('MULTIPLY',op('DIVIDE',get('m'+i),get('dinh')),num(100)),LOW:num(-100),HIGH:num(100),
       }))));
   } else if (id === 'servo_test') {
-    const servoSteps = ['1','2','3','4'].flatMap(ch => [
+    const servoCount = profile.capabilities.servoChannels || 4;
+    const channels = Array.from({ length: servoCount }, (_, i) => String(i + 1));
+    const servoSteps = channels.flatMap(ch => [
       b('beginner_message', {}, {VALUE:text('Test Servo S'+ch)}),
       b('robot_servo_write', {SERVO:ch}, {ANGLE:num(60)}),
       b('beginner_wait', {SECONDS:0.5}),
@@ -99,14 +103,14 @@ export function lessonProject(id) {
       b('robot_servo_disable', {SERVO:ch}),
       b('beginner_wait', {SECONDS:0.3}),
     ]);
-    setup=join(...servoSteps, b('beginner_message', {}, {VALUE:text('Hoan tat kiem tra Servo S1-S4')}));
+    setup=join(...servoSteps, b('beginner_message', {}, {VALUE:text(`Hoan tat kiem tra Servo S1-S${servoCount}`)}));
   }
   const root=b(TYPES.root,{}, {DO:id==='servo_test'
     ? setup
     : join(id==='serial_counter'?null:b(TYPES.connect),setup,b(TYPES.forever,{}, {DO:body}))});
   root.x=40;root.y=40;root.deletable=false;
-  const devices=defaultRobotDevices(getBoardProfile(FAST4WD_BOARD_ID));
-  return {name:lesson.label,boardId:FAST4WD_BOARD_ID,programModel:NEWMANIA_MODEL,editorMode:'beginner',
-    deviceConfigs:{[FAST4WD_BOARD_ID]:devices},
+  const devices=defaultRobotDevices(profile);
+  return {name:lesson.label,boardId,programModel:NEWMANIA_MODEL,editorMode:'beginner',
+    deviceConfigs:{[boardId]:devices},
     workspace:{...(variables.size?{variables:[...variables.values()]}:{}),blocks:{languageVersion:0,blocks:[root]}}};
 }

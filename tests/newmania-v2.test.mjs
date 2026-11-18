@@ -6,6 +6,7 @@ import * as Blockly from 'blockly';
 import { V2_BOARD_ID, FAST4WD_BOARD_ID, getBoardProfile } from '../src/boards/profiles.js';
 import { defaultRobotDevices } from '../src/boards/robot-devices.js';
 import { designToolbox, newmaniaWorkspace, previewMotorTypes, TYPES } from '../src/blocks/newmania.js';
+import { lessonProject } from '../src/lessons/newmania.js';
 import { generateNewmania } from '../src/generators/newmania.js';
 import { validatePackage, sha256 } from '../src/device/firmware-package.js';
 import { flashPackage } from '../src/device/browser-flash.js';
@@ -179,4 +180,29 @@ test('WASM compiler builds V2 8MB firmware package and flashPackage enforces 8MB
   assert.equal(v1.flashMB, 16);
   assert.equal(v1.capabilities.motorChannels, 4);
   assert.equal(v1.capabilities.servoChannels, 4);
+});
+
+test('Lesson 06 supports S1-S6 on V2 while keeping S1-S4 on V1', () => {
+  const v2Proj = lessonProject('servo_test', V2_BOARD_ID);
+  assert.equal(v2Proj.boardId, V2_BOARD_ID);
+  const w2 = new Blockly.Workspace();
+  w2.codelabBoardId = V2_BOARD_ID;
+  Blockly.serialization.workspaces.load(v2Proj.workspace, w2);
+  const out2 = generateNewmania(w2, v2Proj.boardId, v2Proj.deviceConfigs[V2_BOARD_ID]);
+  w2.dispose();
+  assert.deepEqual(out2.warnings, []);
+  for (const ch of [1, 2, 3, 4, 5, 6]) {
+    assert.match(out2.code, new RegExp(`newmania\\.servoWrite\\(${ch}, 90\\.0\\)`));
+    assert.match(out2.code, new RegExp(`newmania\\.servoDisable\\(${ch}\\)`));
+  }
+
+  const v1Proj = lessonProject('servo_test');
+  assert.equal(v1Proj.boardId, FAST4WD_BOARD_ID);
+  const w1 = new Blockly.Workspace();
+  Blockly.serialization.workspaces.load(v1Proj.workspace, w1);
+  const out1 = generateNewmania(w1, v1Proj.boardId, v1Proj.deviceConfigs[FAST4WD_BOARD_ID]);
+  w1.dispose();
+  assert.deepEqual(out1.warnings, []);
+  assert.match(out1.code, /newmania\.servoWrite\(4, 90\.0\)/);
+  assert.doesNotMatch(out1.code, /newmania\.servoWrite\(5,/);
 });
