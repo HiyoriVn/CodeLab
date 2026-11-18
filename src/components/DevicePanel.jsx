@@ -39,10 +39,7 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
     : localCompileState;
   const busy = deviceOperation.busy;
   const [message, setMessage] = useState('');
-  const [partitionMismatch, setPartitionMismatch] = useState(false);
   const isV2 = boardId === V2_BOARD_ID;
-
-  useEffect(() => { setPartitionMismatch(false); }, [boardId]);
 
   const refresh = async () => {
     if (!localBridge) {
@@ -112,46 +109,51 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
     }
   };
 
-  const uploadFromBrowser = async ({ forceNewPort = false, mode = 'normal' } = {}) => {
+  const uploadFromBrowser = async ({ forceNewPort = false } = {}) => {
     if (deviceOperation.isBusy() || !buildId || !build?.package?.segments || !newmaniaBoard) return;
-    if (mode === 'initialize' && !isV2) return;
     const release = deviceOperation.acquire();
     if (!release) return;
-    setPartitionMismatch(false);
-    setUploadState(mode === 'initialize' ? 'Đang khởi tạo…' : 'Đang nạp');
+    setUploadState('Đang nạp');
     setMessage(!forceNewPort && usbPort?.port ? `Đang dùng ${usbPort.portLabel}…` : 'Đang chọn USB…');
     try {
       await usbPort?.releaseForFlash?.();
       const selectedPort = usbPort ? await usbPort.selectPort({ forceNew: forceNewPort }) : await navigator.serial.requestPort();
-      const confirmPrompt = mode === 'initialize'
-        ? 'Thao tác này sẽ xóa toàn bộ firmware và dữ liệu trên Flash 8MB, bao gồm chương trình Arduino trước đó. Bạn có chắc chắn muốn khởi tạo lại mạch cho CodeLab?'
-        : 'Nạp chương trình sẽ thay thế chương trình hiện tại. Hãy ngắt nguồn động cơ và đảm bảo robot ở trạng thái an toàn trước khi tiếp tục.';
-      if (!window.confirm(confirmPrompt)) {
-        setMessage(mode === 'initialize' ? 'Đã hủy khởi tạo.' : 'Đã hủy nạp.');
+      if (!window.confirm('Nạp chương trình sẽ thay thế chương trình hiện tại. Hãy ngắt nguồn động cơ và đảm bảo robot ở trạng thái an toàn trước khi tiếp tục.')) {
+        setMessage('Đã hủy nạp.');
         setUploadState('Chưa nạp');
         return;
       }
       const log = (text) => setMessage((m) => (m + '\n' + text).slice(-6000));
       const progressCb = (_, written, total) => {
         const percent = total > 0 ? Math.min(100, Math.round((written / total) * 100)) : 0;
-        setUploadState(`${mode === 'initialize' ? 'Đang khởi tạo' : 'Đang nạp'} ${percent}%`);
+        setUploadState(`Đang nạp ${percent}%`);
       };
-      await flashPackage(selectedPort, build.package.segments, log, progressCb, undefined, {
-        expectedFlashSize: `${board.flashMB || 16}MB`,
-        mode,
-        confirmedInitialize: mode === 'initialize',
-      });
+      const expectedFlashSize = `${board.flashMB || 16}MB`;
+      try {
+        await flashPackage(selectedPort, build.package.segments, log, progressCb, undefined, {
+          expectedFlashSize,
+          mode: 'normal',
+        });
+      } catch (err) {
+        const isMismatch = isV2 && (err.code === 'PARTITION_MISMATCH' || String(err.message || '').includes('Bảng phân vùng hoặc cấu hình board trên mạch không khớp CodeLab'));
+        if (!isMismatch) throw err;
+        if (!window.confirm('Mạch mới hoặc từng nạp từ công cụ khác (như Arduino IDE) nên chưa có phân vùng CodeLab. Thao tác này sẽ xóa toàn bộ Flash 8MB và khởi tạo lại mạch cho CodeLab. Tiếp tục?')) {
+          setMessage('Đã hủy nạp.');
+          setUploadState('Chưa nạp');
+          return;
+        }
+        setUploadState('Đang khởi tạo…');
+        await flashPackage(selectedPort, build.package.segments, log, progressCb, undefined, {
+          expectedFlashSize,
+          mode: 'initialize',
+          confirmedInitialize: true,
+        });
+      }
       setUploadState('Hoàn tất');
-      setMessage(mode === 'initialize' ? 'Khởi tạo phân vùng và nạp chương trình thành công!' : 'Nạp chương trình thành công!');
+      setMessage('Nạp chương trình thành công!');
     } catch (error) {
       setUploadState('Thất bại');
-      const isMismatch = isV2 && (error.code === 'PARTITION_MISMATCH' || String(error.message || '').includes('Bảng phân vùng hoặc cấu hình board trên mạch không khớp CodeLab'));
-      if (isMismatch) {
-        setPartitionMismatch(true);
-        setMessage('Mạch chưa có phân vùng CodeLab hoặc đã được nạp từ công cụ khác (ví dụ Arduino IDE). Flash chưa bị xóa. Hãy chọn "Khởi tạo / Ghi đè phân vùng" để khởi tạo lại mạch cho CodeLab.');
-      } else {
-        setMessage(error.name === 'NotFoundError' ? 'Đã hủy chọn USB.' : `Nạp thất bại: ${formatSerialError(error)}`);
-      }
+      setMessage(error.name === 'NotFoundError' ? 'Đã hủy chọn USB.' : `Nạp thất bại: ${formatSerialError(error)}`);
     } finally {
       release();
     }
@@ -200,40 +202,25 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
       <section className="device-step" aria-labelledby="upload-step">
         <h4 id="upload-step">Bước 2 — Nạp chương trình</h4>
         <p role="status">{uploadState}</p>
-        {isV2 && <small>Nạp chương trình — chế độ an toàn mặc định (giữ nguyên NVS/phân vùng hiện có).</small>}
         <div className="device-actions">
           <button
             className="button button-primary"
-            onClick={() => uploadFromBrowser({ forceNewPort: false, mode: 'normal' })}
+            onClick={() => uploadFromBrowser({ forceNewPort: false })}
             disabled={!wasmEnabled || !buildId || !build?.package || busy || !supported}
             aria-describedby={!wasmEnabled ? 'upload-unavailable' : undefined}
           >
             {usbPort?.port ? `Nạp qua ${usbPort.portLabel}` : 'Chọn USB và nạp'}
           </button>
-          {isV2 && (
-            <button
-              className="button button-quiet"
-              onClick={() => uploadFromBrowser({ forceNewPort: false, mode: 'initialize' })}
-              disabled={!wasmEnabled || !buildId || !build?.package || busy || !supported}
-            >
-              Khởi tạo / Ghi đè phân vùng
-            </button>
-          )}
           {usbPort?.port && (
             <button
               className="button button-quiet"
-              onClick={() => uploadFromBrowser({ forceNewPort: true, mode: 'normal' })}
+              onClick={() => uploadFromBrowser({ forceNewPort: true })}
               disabled={!wasmEnabled || !buildId || !build?.package || busy || !supported}
             >
               Đổi USB
             </button>
           )}
         </div>
-        {isV2 && partitionMismatch && (
-          <p className="device-message" role="note">
-            Mạch mới hoặc từng nạp bằng Arduino IDE chưa có phân vùng CodeLab. Hãy bấm <strong>Khởi tạo / Ghi đè phân vùng</strong> để xóa Flash 8MB và cài đặt phân vùng chuẩn (không tự động xóa).
-          </p>
-        )}
         {!wasmEnabled && (
           <p id="upload-unavailable">
             {!localBridge ? 'Hãy chờ chức năng biên dịch trên website hoàn thiện.' : 'Chức năng nạp từ Blockly qua trình duyệt đang được phát triển.'}
