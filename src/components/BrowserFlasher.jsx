@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDeviceOperation } from '../device/useDeviceOperation.js';
-import { isNewmaniaBoard, getBoardProfile } from '../boards/profiles.js';
+import { isNewmaniaBoard, V2_BOARD_ID, getBoardProfile } from '../boards/profiles.js';
 import { validatePackage, sha256 } from '../device/firmware-package.js';
 import { flashPackage } from '../device/browser-flash.js';
 import { formatSerialError } from '../device/usb-port.js';
@@ -23,9 +23,11 @@ export default function BrowserFlasher({boardId,operation,usbPort}) {
     } catch(e) {if(generation===revision.current)setMessage(e.message);}
   };
   const newmaniaBoard = isNewmaniaBoard(boardId);
+  const isV2 = boardId === V2_BOARD_ID;
   const expectedFlashSize = `${getBoardProfile(boardId).flashMB || 16}MB`;
-  const flash=async()=>{
+  const flash=async(mode = 'normal')=>{
     if(deviceOperation.isBusy()||!supported||!segments||!newmaniaBoard)return;
+    if(mode==='initialize'&&!isV2)return;
     const release=deviceOperation.acquire(); if(!release)return;
     const log=text=>setMessage(m=>(m+'\n'+text).slice(-6000));
     setProgress(null);
@@ -33,10 +35,18 @@ export default function BrowserFlasher({boardId,operation,usbPort}) {
       setMessage(usbPort?.port ? `Đang dùng ${usbPort.portLabel}…` : 'Đang chọn USB…');
       await usbPort?.releaseForFlash?.();
       const port=usbPort ? await usbPort.selectPort() : await navigator.serial.requestPort();
-      if(!window.confirm('Nạp chương trình sẽ thay thế chương trình hiện tại. Hãy ngắt nguồn động cơ và đảm bảo robot ở trạng thái an toàn trước khi tiếp tục.')) {setMessage('Đã hủy nạp.');return;}
-      await flashPackage(port,segments,log,(_,written,total)=>{const percent=total>0?Math.min(100,Math.round(written/total*100)):0;setProgress(percent);setMessage('Đang nạp '+percent+'%');},undefined,{expectedFlashSize});
+      const confirmPrompt = mode === 'initialize'
+        ? 'Thao tác này sẽ xóa toàn bộ firmware và dữ liệu trên Flash 8MB, bao gồm chương trình Arduino trước đó. Bạn có chắc chắn muốn khởi tạo lại mạch cho CodeLab?'
+        : 'Nạp chương trình sẽ thay thế chương trình hiện tại. Hãy ngắt nguồn động cơ và đảm bảo robot ở trạng thái an toàn trước khi tiếp tục.';
+      if(!window.confirm(confirmPrompt)) {setMessage(mode==='initialize'?'Đã hủy khởi tạo.':'Đã hủy nạp.');return;}
+      await flashPackage(port,segments,log,(_,written,total)=>{const percent=total>0?Math.min(100,Math.round(written/total*100)):0;setProgress(percent);setMessage((mode==='initialize'?'Đang khởi tạo ':'Đang nạp ')+percent+'%');},undefined,{expectedFlashSize,mode,confirmedInitialize:mode==='initialize'});
     }
-    catch(e){log(e.name==='NotFoundError'?'Đã hủy chọn USB.':'Nạp thất bại: '+formatSerialError(e));}
+    catch(e){
+      if(e.name==='NotFoundError'){log('Đã hủy chọn USB.');}
+      else if(isV2&&(e.code==='PARTITION_MISMATCH'||String(e.message||'').includes('Bảng phân vùng hoặc cấu hình board trên mạch không khớp CodeLab'))){
+        log('Mạch chưa có phân vùng CodeLab hoặc đã được nạp từ công cụ khác (ví dụ Arduino IDE). Flash chưa bị xóa. Hãy chọn "Khởi tạo / Ghi đè phân vùng" để khởi tạo lại mạch cho CodeLab.');
+      }else{log('Nạp thất bại: '+formatSerialError(e));}
+    }
     finally{release();setProgress(null);}
   };
   return <details className="device-technical" onToggle={event=>{if(busy)event.currentTarget.open=true;}}>
@@ -47,7 +57,10 @@ export default function BrowserFlasher({boardId,operation,usbPort}) {
     <input aria-label="Gói firmware đã biên dịch" type="file" multiple accept=".json,.bin" disabled={busy||!newmaniaBoard} onChange={pick}/>
     <pre role="status" style={{whiteSpace:'pre-wrap',maxHeight:200,overflow:'auto'}}>{message}</pre>
     {busy && <progress aria-label="Tiến độ nạp firmware" max="100" value={progress??undefined}/>}
-    <p><button className="button button-primary" disabled={busy||!supported||!segments||!newmaniaBoard} onClick={flash}>Chọn USB và nạp firmware có sẵn</button></p>
-    <small>Không xóa toàn bộ flash. Ghi bootloader, bảng phân vùng, metadata OTA và app0; giữ vùng NVS/filesystem nếu layout hiện có trùng khớp. Không tự reset chạy robot sau nạp.</small>
+    <p className="device-actions">
+      <button className="button button-primary" disabled={busy||!supported||!segments||!newmaniaBoard} onClick={()=>flash('normal')}>Chọn USB và nạp firmware có sẵn</button>
+      {isV2 && <button className="button button-quiet" disabled={busy||!supported||!segments||!newmaniaBoard} onClick={()=>flash('initialize')}>Khởi tạo / Ghi đè phân vùng</button>}
+    </p>
+    <small>Nạp thường không xóa toàn bộ flash; giữ vùng NVS/filesystem nếu layout hiện có trùng khớp. Không tự reset chạy robot sau nạp.</small>
   </section></details>;
 }

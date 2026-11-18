@@ -64,6 +64,8 @@
   },
   "bootloader": "bootloader.bin",
   "bootloaderHash": "5403ba8cdf81cbb47f2debe13c0f5ff5903540075ccaf3fac65f0ee68213cb7d",
+  "bootloader8M": "bootloader-8m.bin",
+  "bootloader8MHash": "11e0d446204ff66d7fa903f50b3db73d07ac4b504832e2a7435f2d55b6d3d588",
   "partitionTable": "partitions.bin",
   "partitionTableHash": "1d9cca96de0fe07ad7fc0648b9878ddecd9ce565e38b589ad20fea698ed4c80c",
   "bootApp0": "boot_app0.bin",

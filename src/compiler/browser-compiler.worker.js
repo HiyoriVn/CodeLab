@@ -79,14 +79,20 @@ async function getToolchain(manifestUrl, onProgress) {
     const baseUrl = new URL(manifestUrl, self.location.href).toString();
 
     onProgress?.('Đang tải các tệp toolchain WebAssembly…');
-    const [clangBytes, ldBytes, sysrootGz, bootloader, partitionTable, bootApp0] = await Promise.all([
+    const [clangBytes, ldBytes, sysrootGz, bootloader, bootloader8M, partitionTable, bootApp0] = await Promise.all([
       fetchChunkedAsset(baseUrl, manifest.tools.clang.url, manifest.tools.clang.chunks, cacheName, onProgress),
       fetchChunkedAsset(baseUrl, manifest.tools.ld.url, manifest.tools.ld.chunks, cacheName, onProgress),
       fetchChunkedAsset(baseUrl, manifest.sysroot, manifest.sysrootChunks, cacheName, onProgress),
       fetchChunkedAsset(baseUrl, manifest.bootloader, undefined, cacheName, onProgress),
+      manifest.bootloader8M
+        ? fetchChunkedAsset(baseUrl, manifest.bootloader8M, undefined, cacheName, onProgress)
+        : Promise.resolve(null),
       fetchChunkedAsset(baseUrl, manifest.partitionTable, undefined, cacheName, onProgress),
       fetchChunkedAsset(baseUrl, manifest.bootApp0 || 'boot_app0.bin', undefined, cacheName, onProgress),
     ]);
+    if (bootloader8M && manifest.bootloader8MHash && (await sha256Hex(bootloader8M)) !== manifest.bootloader8MHash) {
+      throw new Error('Bootloader 8MB không khớp hash trong manifest.');
+    }
 
     onProgress?.('Đang biên dịch WebAssembly module (Clang + LD)…');
     const [clangMod, ldMod, sysrootTar] = await Promise.all([
@@ -113,6 +119,7 @@ async function getToolchain(manifestUrl, onProgress) {
       ldMod,
       vfs,
       bootloader,
+      bootloader8M,
       partitionTable,
       bootApp0,
       libraries: pocData.libraries,
@@ -148,7 +155,8 @@ self.onmessage = async (ev) => {
     }
 
     const tc = await getToolchain(toolchainUrl, (msg) => post({ type: 'progress', message: msg }));
-    const { vfs, clangMod, ldMod, manifest, bootloader, partitionTable, bootApp0, libraries, libraryRevision } = tc;
+    const { vfs, clangMod, ldMod, manifest, bootloader, bootloader8M, partitionTable, bootApp0, libraries, libraryRevision } = tc;
+    const selectedBootloader = flashSize === '8MB' ? (bootloader8M || bootloader) : bootloader;
 
     post({ type: 'progress', message: 'Đang chuẩn bị workspace biên dịch…' });
     vfs.resetDir('src');
@@ -263,7 +271,7 @@ self.onmessage = async (ev) => {
 
     post({ type: 'progress', message: 'Đang kiểm tra an toàn gói firmware (validatePackage)…' });
     const segBuffers = [
-      { name: 'bootloader.bin', address: 0x0, data: bootloader },
+      { name: 'bootloader.bin', address: 0x0, data: selectedBootloader },
       { name: 'partitions.bin', address: 0x8000, data: partitionTable },
       { name: 'boot_app0.bin', address: 0xe000, data: bootApp0 },
       { name: 'app.bin', address: 0x10000, data: appBin },
