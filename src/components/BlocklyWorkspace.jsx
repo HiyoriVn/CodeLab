@@ -159,7 +159,7 @@ function BlocklyWorkspace({ boardId, editorMode, programModel, robotDevices, ini
         flyout.codelabBoardId = boardId;
         flyout.codelabRobotDevices = robotDevices;
       }
-      workspace.updateToolbox(boardId === FAST4WD_BOARD_ID ? (programModel === NEWMANIA_MODEL ? designToolbox() : editorToolbox(boardId, editorMode, robotDevices)) : { kind: 'categoryToolbox', contents: [] });
+      workspace.updateToolbox(isNewmaniaBoard(boardId) ? (programModel === NEWMANIA_MODEL ? designToolbox(boardId) : editorToolbox(boardId, editorMode, robotDevices)) : { kind: 'categoryToolbox', contents: [] });
       refreshRobotMotorLabels(workspace);
       if (!workspace.codelabLoadFailed) onCodeChangeRef.current?.(generateArduino(workspace, boardId, robotDevices));
     }
