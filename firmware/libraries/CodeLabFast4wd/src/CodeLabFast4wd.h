@@ -4,6 +4,7 @@
 #include <CodeLabRobot.h>
 #include <I2CReceiver.h>
 #include <UartFrame.h>
+#include <Ps2Spi.h>
 #include "QuadMotors.h"
 #include "CodeLabV2Scheduler.hpp"
 
@@ -12,7 +13,7 @@
 #endif
 
 namespace codelab { namespace fast4wd {
-enum class Ps4Transport : uint8_t { I2c = 0, Uart = 1 };
+enum class Ps4Transport : uint8_t { I2c = 0, Uart = 1, Ps2Spi = 2 };
 enum class BoardVariant : uint8_t { V1 = 0, V2 = 1 };
 struct MotorLayout {
   uint8_t wheelAtPort[4] = {0, 1, 2, 3};
@@ -41,6 +42,8 @@ class Robot : private robot::MotorInterface {
   robot::Ps4ControlMapping controls_;
   ps4i2c::Receiver receiver_;
   ps4i2c::UartParser uartParser_;
+  ps4i2c::Ps2Spi ps2_;
+  uint8_t ps2Sequence_ = 0;
   Ps4Transport transport_ = Ps4Transport::I2c;
   bool busReady_ = false, initialized_ = false, blink_ = false;
   bool armAfterClear_ = false, stopRequested_ = false;
@@ -183,6 +186,17 @@ class Robot : private robot::MotorInterface {
 #endif
       return;
     }
+    if (transport_ == Ps4Transport::Ps2Spi) {
+      ps4i2c::Frame frame;
+      const auto result = ps2_.poll(now, frame);
+      if (result == ps4i2c::Ps2Spi::Result::Skipped) return;
+      frame.sequence = uint8_t(++ps2Sequence_ & 127U);
+      uint8_t bytes[ps4i2c::frameSize];
+      ps4i2c::encode(frame, bytes);
+      // Same validated freshness, neutral/recovery and motor watchdog as PS4.
+      receiver_.ingest(bytes, sizeof(bytes), millis());
+      return;
+    }
     if (uint32_t(now - polledAt_) < 6) return;
     polledAt_ = now;
     const size_t count = Wire.requestFrom(uint8_t(0x30), ps4i2c::frameSize);
@@ -233,13 +247,16 @@ class Robot : private robot::MotorInterface {
       Serial1.begin(ps4i2c::uartBaud, SERIAL_8N1, rxPin, txPin);
 #endif
       busReady_ = true;
+    } else if (transport_ == Ps4Transport::Ps2Spi) {
+      // SPI GPIO10..13 belongs exclusively to PS2 on Newmania V2.
+      busReady_ = (variant_ == BoardVariant::V2) && ps2_.begin();
     } else {
       busReady_ = Wire.begin(8, 9, uint32_t(100000));
       Wire.setTimeOut(20);
     }
     initialized_ = true;
     const bool motorReady = motors_.begin(variant_ == BoardVariant::V2);
-    const char* busName = (transport_ == Ps4Transport::Uart) ? "UART" : "I2C";
+    const char* busName = (transport_ == Ps4Transport::Uart) ? "UART" : (transport_ == Ps4Transport::Ps2Spi ? "PS2 SPI" : "I2C");
     if (blockly_) Serial.printf("Blockly %s=%u MCPWM=%u. Program starts at boot.\n", busName, unsigned(busReady_), unsigned(motorReady));
     else Serial.printf("4WD %s=%u MCPWM=%u. Options=ARM, Share=STOP.\n", busName, unsigned(busReady_), unsigned(motorReady));
   }
