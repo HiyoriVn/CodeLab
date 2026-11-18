@@ -14,7 +14,7 @@ const field = (name, options) => ({ type: 'field_dropdown', name, options });
 Blockly.defineBlocksWithJsonArray([
   { type:TYPES.root, message0:'Khi bắt đầu chương trình %1 %2', args0:[{type:'input_dummy'},{type:'input_statement',name:'DO'}], colour:'#e79b23', tooltip:'Chạy một lần sau khi board khởi động. Đây là khối gốc duy nhất của chương trình.' },
   { type:TYPES.forever, message0:'Lặp mãi mãi %1 %2', args0:[{type:'input_dummy'},{type:'input_statement',name:'DO'}], previousStatement:null, colour:'#e79b23', tooltip:'Đặt cuối luồng chính, bên trong Khi bắt đầu chương trình.' },
-  { type:TYPES.connect, message0:'Kết nối tay cầm PS4 qua %1', args0:[field('TRANSPORT', [['UART', 'UART'], ['I²C', 'I2C']])], previousStatement:null, nextStatement:null, colour:'#bd4d86', tooltip:'Đặt trước Lặp mãi mãi để chuẩn bị dùng tay cầm qua UART hoặc I²C. Ví dụ: Kết nối tay cầm PS4 → Lặp mãi mãi → kiểm tra nút X. Không đợi kết nối, không tự cho phép chạy hay khởi động motor. Ghép đôi Bluetooth với D1 là thao tác riêng.' },
+  { type:TYPES.connect, message0:'Kết nối tay cầm qua %1', args0:[field('TRANSPORT', [['PS4 UART', 'UART'], ['PS4 I²C', 'I2C'], ['PS2 SPI', 'PS2']])], previousStatement:null, nextStatement:null, colour:'#bd4d86', tooltip:'Trên V2 chọn PS4 UART (RX7/TX6), PS4 I²C (SDA8/SCL9) hoặc PS2 SPI (CLK12/CMD11/DAT13/ATT10). Ví dụ: Kết nối tay cầm qua PS2 SPI → Lặp mãi mãi → kiểm tra nút X. Đặt trước Lặp mãi mãi. Không tự khởi động motor; khi mất tín hiệu phải dừng.' },
   { type:TYPES.button, message0:'Nút %1 %2 ?', args0:[field('BUTTON', [['X','0'],['Tròn','1'],['Vuông','2'],['Tam giác','3'],['L1','4'],['R1','5'],['L2','6'],['R2','7'],['L3','10'],['R3','11'],['Lên','13'],['Xuống','14'],['Trái','15'],['Phải','16']]),field('STATE',[['Vừa nhấn','PRESS'],['Đang giữ','HELD'],['Vừa thả','RELEASE']])], output:'Boolean', colour:'#bd4d86', tooltip:'Ví dụ: Nút X Vừa nhấn? để tăng điểm một lần; Đang giữ? để chạy motor khi còn giữ; Vừa thả? để dừng khi buông nút. Vừa nhấn/thả chỉ đúng một lần cho mỗi lần nhấn/thả. Các khối đọc độc lập; không chạy bù lần nhấn/thả trong lúc Đợi.' },
 ]);
 const rootInit=Blockly.Blocks[TYPES.root].init;
@@ -29,7 +29,12 @@ const connectInit = Blockly.Blocks[TYPES.connect].init;
 Blockly.Blocks[TYPES.connect].init = function() {
   connectInit.call(this);
   const f = this.getField('TRANSPORT');
-  if (f) f.isSerializable = () => f.getValue() !== 'UART';
+  if (f) {
+    f.setOptions(() => this.workspace?.codelabBoardId === V2_BOARD_ID
+      ? [['PS4 UART','UART'],['PS4 I²C','I2C'],['PS2 SPI','PS2']]
+      : [['PS4 UART','UART'],['PS4 I²C','I2C']]);
+    f.isSerializable = () => f.getValue() !== 'UART';
+  }
 };
 
 // Stable IDs introduced by the stage-one preview: old project definitions, fields and generators are untouched.
@@ -78,7 +83,10 @@ export function designToolbox(boardId = FAST4WD_BOARD_ID) {
       if(unsupported.has(copy.type))copy.disabled=true;
       return [copy];
     });
-    if(category.name==='Tay cầm PS4')category.contents.unshift({kind:'block',type:TYPES.connect});
+    if(category.name==='Tay cầm PS4') {
+      category.contents.unshift({kind:'block',type:TYPES.connect});
+      if(boardId===V2_BOARD_ID)category.name='Tay cầm PS4 / PS2';
+    }
     if(category.contents.some(b=>b.disabled))category.contents.push({kind:'label',text:'LED hệ thống: đang dùng cho kết nối/an toàn'});
   }
   return toolbox;
@@ -102,14 +110,14 @@ export function designDiagnostics(workspace) {
   for(let b=root?.getInputTargetBlock('DO');b;b=b.getNextBlock())main.push(b);
   const loops=all.filter(b=>b.type===TYPES.forever), connections=all.filter(b=>b.type===TYPES.connect);
   if(loops.length>1)add(loops[1],'Chỉ dùng một Lặp mãi mãi trong luồng chính.');
-  if(connections.length>1)add(connections[1],'Chỉ dùng một Kết nối tay cầm PS4.');
+  if(connections.length>1)add(connections[1],'Chỉ dùng một Kết nối tay cầm.');
   for(const loop of loops)if(!main.includes(loop)||main.at(-1)!==loop)add(loop,'Đặt Lặp mãi mãi ở cuối luồng chính, trực tiếp trong khối gốc.');
-  for(const connect of connections)if(!main.includes(connect))add(connect,'Đặt Kết nối tay cầm PS4 trực tiếp trong khối gốc, trước vòng lặp.');
+  for(const connect of connections)if(!main.includes(connect))add(connect,'Đặt Kết nối tay cầm trực tiếp trong khối gốc, trước vòng lặp.');
   const ps4Used=all.some(b=>[TYPES.button,'robot_ps4_axis','fast4wd_connected'].includes(b.type));
-  if(ps4Used&&!connections.length)add(root,'Thêm Kết nối tay cầm PS4 trước khi sử dụng tay cầm.');
+  if(ps4Used&&!connections.length)add(root,'Thêm Kết nối tay cầm trước khi sử dụng tay cầm.');
   if(connections.length===1&&main.includes(connections[0]))for(const b of all.filter(b=>[TYPES.button,'robot_ps4_axis','fast4wd_connected'].includes(b.type))) {
     let outer=b;while(outer.getParent()&&outer.getParent()!==root)outer=outer.getParent();
-    if(main.includes(outer)&&main.indexOf(outer)<main.indexOf(connections[0]))add(b,'Đặt Kết nối tay cầm PS4 trước lệnh đọc tay cầm.');
+    if(main.includes(outer)&&main.indexOf(outer)<main.indexOf(connections[0]))add(b,'Đặt Kết nối tay cầm trước lệnh đọc tay cầm.');
   }
   for(const b of all) {
     if(b!==root&&!b.getParent()&&!b.isShadow())add(b,'Khối chưa nối vào chương trình; không được thực thi.');

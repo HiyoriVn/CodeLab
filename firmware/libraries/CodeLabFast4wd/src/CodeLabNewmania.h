@@ -58,6 +58,8 @@ class Board {
     if (!ps4Requested_) { clearEdges(); ps4Requested_ = true; }
     return true; // Enables student reads; pairing/link availability is separate.
   }
+  // Generic entry point for PS4 UART, PS4 I2C and PS2 SPI controllers.
+  bool connectController() { return connectPs4(); }
   bool ps4Requested() const { return ps4Requested_; }
   bool connected() const { return begun_ && robot_.connected(); }
 

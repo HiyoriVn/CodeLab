@@ -22,7 +22,7 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
   if(warnings.length)return {code:'',warnings,boardId};
   const issues=designDiagnostics(workspace);
   const usage=ps4Usage(workspace);
-  if(usage.dependent&&!devices.controller.enabled)issues.push({id:'PS4',message:'Bật cấu hình PS4 để dùng các khối tay cầm.'});
+  if(usage.dependent&&!devices.controller.enabled)issues.push({id:'controller',message:'Bật cấu hình tay cầm để dùng các khối điều khiển.'});
   if(issues.length)return {code:'',warnings:issues.map(i=>`${i.message} (${i.type??'cấu hình'} · ${i.id})`),boardId};
   let current;
   try {
@@ -183,7 +183,7 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
       switch(b.type) {
         // Compatibility-only STOP retained in confirmed copies. Not catalogued.
         case 'fast4wd_stop':return add('newmania.stop(); return Board::Step::DONE;',b);
-        case TYPES.connect:action='newmania.connectPs4();';break;
+        case TYPES.connect:action=b.getFieldValue('TRANSPORT')==='PS2' ? 'newmania.connectController();' : 'newmania.connectPs4();';break;
         case 'controls_flow_statements': {
           const loop=loopStack.at(-1);if(!loop)throw Error('Thoát/tiếp tục phải nằm trong một vòng lặp.');
           return add(`ctx.pc = ${dropdown(b,'FLOW',{BREAK:loop.breakPc,CONTINUE:loop.continuePc})}; return Board::Step::YIELD;`,b);
@@ -262,7 +262,10 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
     const body=cases.map(c=>`    case ${c.pc}: { // ${c.block.type} · ${c.block.id.replace(/[^\w-]/g,'_')}\n      ${c.body.replaceAll('\n','\n      ')}\n    }`).join('\n');
     const connectBlock = workspace.getBlocksByType(TYPES.connect, false)[0];
     const selectedTransport = connectBlock?.getFieldValue('TRANSPORT') || (devices.controller.transport === 'i2c' ? 'I2C' : 'UART');
-    const transportArg = selectedTransport === 'I2C' ? ', codelab::fast4wd::Ps4Transport::I2c' : '';
+    if (!['UART','I2C','PS2'].includes(selectedTransport)) throw Error('Phương thức kết nối tay cầm không hợp lệ.');
+    if (selectedTransport === 'PS2' && boardId !== V2_BOARD_ID) throw Error('PS2 SPI chỉ hỗ trợ Newmania V2 ESP32S3.');
+    const transportArg = selectedTransport === 'I2C' ? ', codelab::fast4wd::Ps4Transport::I2c'
+      : selectedTransport === 'PS2' ? ', codelab::fast4wd::Ps4Transport::Ps2Spi' : '';
     const variantArg = boardId === V2_BOARD_ID ? ', codelab::fast4wd::BoardVariant::V2' : '';
     const code=`// Newmania ESP32S3 Board — một chương trình chính, chờ không chặn.\n#include <CodeLabNewmania.h>\nusing namespace codelab::newmania;\nstatic Board newmania(${constructor}${variantArg});\n${declarations.join('\n')}\n\nstatic void resetStudent() {\n${reset.join('\n')}\n}\n\nstatic Board::Step studentProgram(Board::Context& ctx, uint32_t) {\n  switch (ctx.pc) {\n    case 0: ctx.pc = ${entry}; return Board::Step::YIELD;\n${body}\n    default: return Board::Step::DONE;\n  }\n}\n\nvoid setup() {\n  newmania.begin(${devices.controller.blink}, ${usage.dependent}, ${usage.buttons}UL, ${usage.axes}${transportArg});\n  newmania.registerProgram(${uidOf(root.id)}UL, studentProgram, resetStudent);\n}\n\nvoid loop() {\n  newmania.update();\n}\n`;
     return {code,warnings:[],boardId};

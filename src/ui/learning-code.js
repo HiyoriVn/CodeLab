@@ -44,7 +44,10 @@ export function learningCode(workspace) {
       switch (type) {
         case 'newmania_design_program': case 'beginner_start': emit(level,'Khi bắt đầu chương trình:'); body('DO'); break;
         case 'newmania_design_forever': case 'beginner_forever': emit(level,'Lặp mãi mãi:'); body('DO'); break;
-        case 'newmania_design_ps4_connect': emit(level,'Chuẩn bị đọc tay cầm PS4 từ D1 qua UART'); break;
+        case 'newmania_design_ps4_connect':
+          emit(level, f.TRANSPORT === 'PS2' ? 'Chuẩn bị đọc tay cầm PS2 qua SPI (GPIO12/11/13/10)'
+            : f.TRANSPORT === 'I2C' ? 'Chuẩn bị đọc tay cầm PS4 qua I²C (SDA8/SCL9)'
+            : 'Chuẩn bị đọc tay cầm PS4 từ D1 qua UART'); break;
         case 'variables_set': emit(level,`${variable(b)} ← ${e('VALUE')}`); break;
         case 'math_change': emit(level,`${variable(b)} ← ${variable(b)} + ${e('DELTA')}`); break;
         case 'beginner_wait': emit(level,`Đợi ${f.SECONDS} giây (vẫn phục vụ an toàn)`); break;
