@@ -29,7 +29,11 @@ test('PS2 controller appears only on Newmania V2 as a separate category and uses
   assert.ok(ps4Cat && ps2Cat, 'V2 toolbox must separate Tay cầm PS4 and Tay cầm PS2');
   assert.ok(ps4Cat.contents.some(b => b.type === TYPES.connect));
   assert.ok(ps2Cat.contents.some(b => b.type === TYPES.ps2Connect));
-  assert.ok(ps2Cat.contents.some(b => b.type === TYPES.button));
+  assert.ok(ps2Cat.contents.some(b => b.type === TYPES.ps2Button));
+  assert.ok(ps2Cat.contents.some(b => b.type === TYPES.ps2Axis));
+  assert.ok(ps2Cat.contents.some(b => b.type === TYPES.ps2Connected));
+  const ps4Only = new Set([TYPES.button, 'robot_ps4_axis', 'fast4wd_connected']);
+  assert.ok(ps2Cat.contents.every(b => !ps4Only.has(b.type)), 'PS2 toolbox must contain no PS4 read blocks');
 
   const { workspace, connect } = project(V2_BOARD_ID);
   assert.deepEqual(connect.getField('TRANSPORT').getOptions(false).map(([, value]) => value),
@@ -66,10 +70,34 @@ test('PS2 generates dedicated PS2 SPI transport while PS4 UART/I2C stay unchange
   workspace.dispose();
 
   const ps2Proj = project(V2_BOARD_ID, TYPES.ps2Connect);
+  const ps2Button = ps2Proj.workspace.newBlock(TYPES.ps2Button);
+  ps2Button.setFieldValue('8', 'BUTTON'); // PS2 SELECT maps to internal Share bit.
+  ps2Button.setFieldValue('HELD', 'STATE');
+  const ps2Axis = ps2Proj.workspace.newBlock(TYPES.ps2Axis);
+  ps2Axis.setFieldValue('3', 'AXIS');
+  const ps2Connected = ps2Proj.workspace.newBlock(TYPES.ps2Connected);
+  // Use each PS2 read block as a Boolean/number expression in separate programs.
+  assert.equal(ps2Button.outputConnection.getCheck()[0], 'Boolean');
+  assert.equal(ps2Axis.outputConnection.getCheck()[0], 'Number');
+  assert.equal(ps2Connected.outputConnection.getCheck()[0], 'Boolean');
+  const root = ps2Proj.workspace.getBlocksByType(TYPES.root, false)[0];
+  const loop = ps2Proj.workspace.newBlock(TYPES.forever);
+  ps2Proj.connect.nextConnection.connect(loop.previousConnection);
+  const condition = ps2Proj.workspace.newBlock('controls_if');
+  condition.getInput('IF0').connection.connect(ps2Button.outputConnection);
+  loop.getInput('DO').connection.connect(condition.previousConnection);
   const ps2Result = generateNewmania(ps2Proj.workspace, V2_BOARD_ID, devices);
   assert.deepEqual(ps2Result.warnings, [], ps2Result.code || ps2Result.warnings.join('\n'));
   assert.match(ps2Result.code, /codelab::fast4wd::Ps4Transport::Ps2Spi/);
   assert.match(ps2Result.code, /newmania\.connectController\(\);/);
+  assert.match(ps2Result.code, /newmania\.held\(Button::Share\)/);
+  // PS2 joystick & connection have dedicated block types and must generate C++.
+  condition.getInput('IF0').connection.disconnect();
+  condition.getInput('IF0').connection.connect(ps2Connected.outputConnection);
+  const connectedCode = generateNewmania(ps2Proj.workspace, V2_BOARD_ID, devices);
+  assert.deepEqual(connectedCode.warnings, []);
+  assert.match(connectedCode.code, /newmania\.connected\(\)/);
+  // The unused expression is disconnected and must be removed for generator diagnostics.
   ps2Proj.workspace.dispose();
 });
 
