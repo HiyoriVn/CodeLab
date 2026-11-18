@@ -183,7 +183,7 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
       switch(b.type) {
         // Compatibility-only STOP retained in confirmed copies. Not catalogued.
         case 'fast4wd_stop':return add('newmania.stop(); return Board::Step::DONE;',b);
-        case TYPES.connect:action='newmania.connectPs4();';break;
+        case TYPES.connect:action=b.getFieldValue('TRANSPORT')==='PS2' ? 'newmania.connectController();' : 'newmania.connectPs4();';break;
         case 'controls_flow_statements': {
           const loop=loopStack.at(-1);if(!loop)throw Error('Thoát/tiếp tục phải nằm trong một vòng lặp.');
           return add(`ctx.pc = ${dropdown(b,'FLOW',{BREAK:loop.breakPc,CONTINUE:loop.continuePc})}; return Board::Step::YIELD;`,b);
