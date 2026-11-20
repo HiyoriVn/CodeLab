@@ -431,7 +431,7 @@ dialog:has(.changelog){width:min(700px,94vw)}
 .code-dock .code-side{width:100%}
 .code-grip{position:absolute;left:0;top:0;bottom:0;width:9px;cursor:ew-resize;touch-action:none;z-index:2}
 .code-grip:hover,.code-grip:focus-visible{background:color-mix(in srgb,var(--bar) 40%,transparent)}
-.code-mode-note,.legacy-block-note{margin:0;padding:8px 12px;font-size:12px;line-height:1.5;border-bottom:1px solid var(--line);background:var(--pan)}
+.legacy-block-note{margin:0;padding:8px 12px;font-size:12px;line-height:1.5;border-bottom:1px solid var(--line);background:var(--pan)}
 .code-panel-header{flex-wrap:wrap}
 .code-panel-header select{min-width:0;max-width:100%;height:32px;font-size:12px}
 .main:has(.code-dock:not(.is-closing)) .zoom-ctl{right:22px}
