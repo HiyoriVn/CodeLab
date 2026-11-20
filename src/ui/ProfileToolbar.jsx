@@ -41,15 +41,15 @@ function ProfileToolbar({ editorMode, onMode, boardId, boards, onBoard, lessons,
         <Select labelId="tb-board-label" className="sel-board" value={boardId} options={boardOptions} onChange={onBoard} />
       </div>
       <div className="tb-field">
-        <span className="tb-label" id="tb-lesson-label">Bài mẫu</span>
+        <span className="tb-label" id="tb-lesson-label">Chương trình mẫu</span>
         <Select
           labelId="tb-lesson-label"
           className="sel-lesson"
           value=""
           options={lessonOptions}
           onChange={onLesson}
-          placeholder="Chọn bài mẫu..."
-          menuHeader="Mở bài mẫu"
+          placeholder="Chọn chương trình mẫu"
+          menuHeader="Mở chương trình mẫu"
         />
       </div>
       {status && <small className="tb-status" role="status">{status}</small>}

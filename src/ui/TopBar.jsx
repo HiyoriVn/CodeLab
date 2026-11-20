@@ -79,7 +79,7 @@ function TopBar({
 
       <button className="nb" data-genie="help" onClick={onHelp}>Hướng dẫn</button>
       <button className="nb" data-genie="changelog" onClick={onChangelog}>Changelog</button>
-      <input className="project-name" aria-label="Tên dự án" value={projectName} onChange={onRename} onBlur={onRenameCommit} />
+      <input className="project-name" aria-label="Tên dự án" size={Math.max(16, (projectName || '').length + 2)} value={projectName} onChange={onRename} onBlur={onRenameCommit} />
       <div className="spacer" />
 
       <button type="button" className="tm" role="switch" aria-checked={theme === 'dark'} aria-label="Giao diện tối" title={theme === 'dark' ? 'Chuyển sang sáng' : 'Chuyển sang tối'} onClick={() => onTheme(theme === 'dark' ? 'light' : 'dark')}>
