@@ -1,4 +1,3 @@
-import BrowserFlasher from './components/BrowserFlasher.jsx';
 import { useDeviceOperation } from './device/useDeviceOperation.js';
 import { useSharedUsbPort } from './device/usb-port.js';
 import { compileInBrowser } from './compiler/browser-compiler-client.js';
@@ -391,7 +390,6 @@ function App() {
       <Modal open={dialog === 'connect'} genie="connect" locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch chương trình, sau đó chọn USB và nạp vào robot. Để xem dữ liệu Serial, dùng nút Bảng lệnh.</p>
         <DevicePanel key={project.id + boardId} operation={deviceOperation} usbPort={usbPort} compileCache={{ state: compileState, activeCacheKey, effectiveBuild, onCompile: startCompile }} boardId={boardId} code={activeCode} warnings={isNewmaniaBoard(boardId) ? generatedCode.warnings : [...generatedCode.warnings, 'Dự án này sử dụng board khác; board gốc được giữ nguyên.']} onOpenSerial={toggleTerminal} />
-        <BrowserFlasher boardId={boardId} operation={deviceOperation} usbPort={usbPort} />
         <div className="dialog-actions"><button className="btn" disabled={deviceBusy} onClick={closeDialog}>Đóng</button></div>
       </Modal>
       <div className={`toast ${toast ? 'on' : ''}`} role="status">{toast}</div>

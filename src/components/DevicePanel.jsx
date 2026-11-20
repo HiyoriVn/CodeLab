@@ -237,22 +237,6 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
         <button className="button button-quiet" disabled={busy || !buildId} onClick={() => downloadDebugArtifact(build.package, 'elf')}>Tải app.elf</button>
         <button className="button button-quiet" disabled={busy || !buildId} onClick={() => downloadDebugArtifact(build.package, 'json')}>Tải thông tin debug</button>
       </details>}
-      {localBridge && <details className="device-technical">
-        <summary>Công cụ phát triển local</summary>
-        <div className="device-actions">
-        <button className="button button-quiet" onClick={refresh} disabled={busy}>Làm mới cổng</button>
-        <label>Cổng thiết bị
-          <select value={port} onChange={(event) => { setPort(event.target.value); setUploadState('Chưa nạp'); }} disabled={busy || !ports.length}>
-            <option value="">{ports.length ? 'Chọn cổng thiết bị…' : 'Chưa tìm thấy cổng'}</option>
-            {ports.map((item) => <option key={item.address} value={item.address}>{item.address === item.label ? item.address : `${item.address} — ${item.label}`}</option>)}
-          </select>
-        </label>
-        <button className="button button-quiet" onClick={upload} disabled={busy || !buildId || !port || warnings.length > 0}>Nạp qua bridge</button>
-        <p role="status">{build && !buildId ? 'Chưa nạp — chương trình đã thay đổi.' : uploadState}</p>
-        {uploadState === 'Đang nạp' && <progress aria-label="Đang nạp qua bridge" />}
-        <button className="button button-quiet" onClick={onOpenSerial} disabled={busy}>Mở Bảng lệnh</button>
-        </div>
-      </details>}
     </section>
   );
 }
