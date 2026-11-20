@@ -134,6 +134,16 @@ dialog ol{padding-left:20px;line-height:1.7;margin:0 0 16px}
 .device-technical pre{overflow-wrap:anywhere;overflow:auto;font-size:12px}
 .device-technical .button{max-width:100%;white-space:normal;height:auto;min-height:38px;padding:9px 12px;line-height:1.4}
 dialog:has(.device-panel){max-height:90dvh;overflow-y:auto;box-sizing:border-box}
+.upload-progress{display:flex;flex-direction:column;gap:6px}
+.upload-progress-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:600;color:color-mix(in srgb,var(--ink) 75%,transparent)}
+.upload-progress-head strong{font-variant-numeric:tabular-nums;color:var(--ink)}
+.upload-progress-track{height:10px;border-radius:999px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
+.upload-progress-fill{height:100%;border-radius:inherit;background:var(--bar);transition:width .25s ease,background-color .25s ease}
+.upload-progress.is-running .upload-progress-fill{background-image:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);background-size:60px 100%;background-repeat:no-repeat;animation:upload-shine 1.2s linear infinite}
+.upload-progress.is-done .upload-progress-fill{background:var(--ok)}
+.upload-progress.is-error .upload-progress-fill{background:#D32F2F}
+@keyframes upload-shine{from{background-position:-60px 0}to{background-position:calc(100% + 60px) 0}}
+@media (prefers-reduced-motion:reduce){.upload-progress.is-running .upload-progress-fill{animation:none}.upload-progress-fill{transition:none}}
 .robot-device-config fieldset{display:grid;gap:8px;margin:0 0 12px;border:1px solid currentColor;border-radius:8px;min-width:0}
 .robot-device-config label{display:flex;align-items:center;gap:6px;font-size:13px}
 .robot-device-config input:not([type=checkbox]),.robot-device-config select{min-width:0;max-width:100%}

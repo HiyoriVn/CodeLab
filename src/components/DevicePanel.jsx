@@ -30,6 +30,7 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
   const [port, setPort] = useState('');
   const [localCompileState, setLocalCompileState] = useState('Chưa biên dịch');
   const [uploadState, setUploadState] = useState('Chưa kết nối USB');
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [localBuild, setLocalBuild] = useState(null);
   const build = wasmEnabled && compileCache ? compileCache.effectiveBuild : localBuild;
   const buildId = build?.code === code && build?.boardId === boardId ? build.id : '';
@@ -114,6 +115,7 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
     const release = deviceOperation.acquire();
     if (!release) return;
     setUploadState('Đang nạp');
+    setUploadProgress({ percent: 0, status: 'running' });
     setMessage(!forceNewPort && usbPort?.port ? `Đang dùng ${usbPort.portLabel}…` : 'Đang chọn USB…');
     try {
       await usbPort?.releaseForFlash?.();
@@ -121,12 +123,19 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
       if (!window.confirm('Nạp chương trình sẽ thay thế chương trình hiện tại. Hãy ngắt nguồn động cơ và đảm bảo robot ở trạng thái an toàn trước khi tiếp tục.')) {
         setMessage('Đã hủy nạp.');
         setUploadState('Chưa nạp');
+        setUploadProgress(null);
         return;
       }
       const log = (text) => setMessage((m) => (m + '\n' + text).slice(-6000));
-      const progressCb = (_, written, total) => {
-        const percent = total > 0 ? Math.min(100, Math.round((written / total) * 100)) : 0;
+      const segmentSizes = build.package.segments.map((segment) => segment.data?.length || 0);
+      const totalSize = segmentSizes.reduce((sum, size) => sum + size, 0) || 1;
+      const progressCb = (fileIndex, written, total) => {
+        const fraction = total > 0 ? Math.min(1, written / total) : 0;
+        const doneBefore = segmentSizes.slice(0, fileIndex).reduce((sum, size) => sum + size, 0);
+        const overall = (doneBefore + fraction * (segmentSizes[fileIndex] || 0)) / totalSize;
+        const percent = Math.min(99, Math.round(overall * 100));
         setUploadState(`Đang nạp ${percent}%`);
+        setUploadProgress((current) => ({ percent: Math.max(current?.percent ?? 0, percent), status: 'running' }));
       };
       const expectedFlashSize = `${board.flashMB || 16}MB`;
       try {
@@ -140,9 +149,11 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
         if (!window.confirm('Mạch mới hoặc từng nạp từ công cụ khác (như Arduino IDE) nên chưa có phân vùng CodeLab. Thao tác này sẽ xóa toàn bộ Flash 8MB và khởi tạo lại mạch cho CodeLab. Tiếp tục?')) {
           setMessage('Đã hủy nạp.');
           setUploadState('Chưa nạp');
+          setUploadProgress(null);
           return;
         }
         setUploadState('Đang khởi tạo…');
+        setUploadProgress({ percent: 0, status: 'running' });
         await flashPackage(selectedPort, build.package.segments, log, progressCb, undefined, {
           expectedFlashSize,
           mode: 'initialize',
@@ -150,9 +161,11 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
         });
       }
       setUploadState('Hoàn tất');
+      setUploadProgress({ percent: 100, status: 'done' });
       setMessage('Nạp chương trình thành công!');
     } catch (error) {
       setUploadState('Thất bại');
+      setUploadProgress((current) => (error.name === 'NotFoundError' || !current ? null : { percent: current.percent, status: 'error' }));
       setMessage(error.name === 'NotFoundError' ? 'Đã hủy chọn USB.' : `Nạp thất bại: ${formatSerialError(error)}`);
     } finally {
       release();
@@ -227,6 +240,24 @@ function DevicePanel({ code, warnings, boardId, onOpenSerial, operation, usbPort
           </p>
         )}
       </section>
+      {uploadProgress && (
+        <div className={`upload-progress is-${uploadProgress.status}`}>
+          <div className="upload-progress-head">
+            <span>{uploadProgress.status === 'done' ? 'Nạp xong' : uploadProgress.status === 'error' ? 'Nạp thất bại' : 'Đang nạp chương trình'}</span>
+            <strong>{uploadProgress.percent}%</strong>
+          </div>
+          <div
+            className="upload-progress-track"
+            role="progressbar"
+            aria-label="Tiến độ nạp chương trình"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={uploadProgress.percent}
+          >
+            <div className="upload-progress-fill" style={{ width: `${uploadProgress.percent}%` }} />
+          </div>
+        </div>
+      )}
       {(message || (wasmEnabled && compileCache?.state?.cacheKey === compileCache?.activeCacheKey && compileCache?.state?.message)) && (
         <p className="device-message" role="alert">{message || compileCache.state.message}</p>
       )}
