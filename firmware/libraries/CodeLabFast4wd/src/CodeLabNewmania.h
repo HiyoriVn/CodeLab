@@ -2,6 +2,7 @@
 
 #include "Fast4wdSchedulerGate.h"
 #include "NewmaniaSupport.h"
+#include "Qmi8658.h"
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -62,6 +63,16 @@ class Board {
   bool connectController() { return connectPs4(); }
   bool ps4Requested() const { return ps4Requested_; }
   bool connected() const { return begun_ && robot_.connected(); }
+
+  // QMI8658B is only fitted on Newmania V2. Never touch I2C for other boards
+  // or until the student explicitly adds an IMU initialization block.
+  bool imuBegin() {
+    return begun_ && variant_ == fast4wd::BoardVariant::V2 &&
+      imu_.begin(robot_.imuI2cBusReady());
+  }
+  bool imuSample() { return imu_.sample(); }
+  bool imuReady() const { return imu_.ready(); }
+  float imuValue(ImuChannel channel) const { return imu_.value(channel); }
 
   bool registerProgram(uint32_t uid, v2::ScriptStep step, Reset reset = nullptr) {
     if (!uid || mainUid_ || !scheduler_.registerScript(uid, step)) return false;
@@ -391,6 +402,7 @@ class Board {
   double servoAngle_[6]{};
   uint32_t servoDuty_[6]{};
   fast4wd::Robot robot_;
+  Qmi8658 imu_;
   fast4wd::SchedulerGate gate_;
   v2::Scheduler scheduler_;
   uint32_t mainUid_ = 0, driveDeadline_ = 0, motionEpoch_ = 0;

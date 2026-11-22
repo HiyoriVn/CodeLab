@@ -28,6 +28,8 @@ export function learningCode(workspace) {
       case 'newmania_design_ps2_button': return `nút PS2 ${({8:'SELECT',9:'START',...buttons})[f.BUTTON] || f.BUTTON} ${{PRESS:'vừa nhấn',HELD:'đang giữ',RELEASE:'vừa thả'}[f.STATE]}?`;
       case 'newmania_design_ps2_axis': return 'PS2 ' + (['cần trái ngang','cần trái dọc','cần phải ngang','cần phải dọc'][f.AXIS] || 'joystick');
       case 'newmania_design_ps2_connected': return 'tay cầm PS2 đã kết nối?';
+      case 'newmania_imu_ready': return 'dữ liệu IMU hợp lệ?';
+      case 'newmania_imu_value': return 'IMU ' + ({AccX:'gia tốc X (g)',AccY:'gia tốc Y (g)',AccZ:'gia tốc Z (g)',GyroX:'gyro X (°/s)',GyroY:'gyro Y (°/s)',GyroZ:'gyro Z (°/s)'})[f.CHANNEL];
       case 'fast4wd_connected': return 'S3 nhận dữ liệu PS4 UART còn mới?';
       case 'beginner_serial_ready': return 'Serial có dữ liệu?';
       case 'codelab_serial_available': return 'số byte Serial sẵn có';
@@ -53,6 +55,8 @@ export function learningCode(workspace) {
             : 'Chuẩn bị đọc tay cầm PS4 từ D1 qua UART'); break;
         case 'newmania_design_ps2_connect':
           emit(level, 'Chuẩn bị đọc tay cầm PS2 qua SPI (GPIO12/11/13/10)'); break;
+        case 'newmania_imu_init': emit(level,'Khởi tạo IMU QMI8658B qua I²C (SDA8/SCL9, 0x6A)'); break;
+        case 'newmania_imu_sample': emit(level,'Lấy mẫu IMU khi dữ liệu sẵn sàng'); break;
         case 'variables_set': emit(level,`${variable(b)} ← ${e('VALUE')}`); break;
         case 'math_change': emit(level,`${variable(b)} ← ${variable(b)} + ${e('DELTA')}`); break;
         case 'beginner_wait': emit(level,`Đợi ${f.SECONDS} giây (vẫn phục vụ an toàn)`); break;

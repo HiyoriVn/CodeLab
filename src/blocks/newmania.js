@@ -8,7 +8,7 @@ import { editorToolbox } from './beginner-toolbox.js';
 import { FAST4WD_BOARD_ID, V2_BOARD_ID } from '../boards/profiles.js';
 import { lockCapHat } from './start-hat.js';
 
-export const TYPES = Object.freeze({ root: 'newmania_design_program', forever: 'newmania_design_forever', connect: 'newmania_design_ps4_connect', ps2Connect: 'newmania_design_ps2_connect', button: 'newmania_design_ps4_button', ps2Button: 'newmania_design_ps2_button', ps2Axis: 'newmania_design_ps2_axis', ps2Connected: 'newmania_design_ps2_connected' });
+export const TYPES = Object.freeze({ root: 'newmania_design_program', forever: 'newmania_design_forever', connect: 'newmania_design_ps4_connect', ps2Connect: 'newmania_design_ps2_connect', button: 'newmania_design_ps4_button', ps2Button: 'newmania_design_ps2_button', ps2Axis: 'newmania_design_ps2_axis', ps2Connected: 'newmania_design_ps2_connected', imuInit: 'newmania_imu_init', imuSample: 'newmania_imu_sample', imuReady: 'newmania_imu_ready', imuValue: 'newmania_imu_value' });
 loops.loopTypes.add(TYPES.forever);
 const field = (name, options) => ({ type: 'field_dropdown', name, options });
 Blockly.defineBlocksWithJsonArray([
@@ -19,6 +19,10 @@ Blockly.defineBlocksWithJsonArray([
   { type:TYPES.button, message0:'Nút PS4 %1 %2 ?', args0:[field('BUTTON', [['X','0'],['Tròn','1'],['Vuông','2'],['Tam giác','3'],['L1','4'],['R1','5'],['L2','6'],['R2','7'],['L3','10'],['R3','11'],['Lên','13'],['Xuống','14'],['Trái','15'],['Phải','16']]),field('STATE',[['Vừa nhấn','PRESS'],['Đang giữ','HELD'],['Vừa thả','RELEASE']])], output:'Boolean', colour:'#bd4d86', tooltip:'Ví dụ: Nút X Vừa nhấn? để tăng điểm một lần; Đang giữ? để chạy motor khi còn giữ; Vừa thả? để dừng khi buông nút. Các khối đọc độc lập.' },
   { type:TYPES.ps2Button, message0:'Nút PS2 %1 %2 ?', args0:[field('BUTTON', [['X','0'],['Tròn','1'],['Vuông','2'],['Tam giác','3'],['L1','4'],['R1','5'],['L2','6'],['R2','7'],['SELECT','8'],['START','9'],['L3','10'],['R3','11'],['Lên','13'],['Xuống','14'],['Trái','15'],['Phải','16']]),field('STATE',[['Vừa nhấn','PRESS'],['Đang giữ','HELD'],['Vừa thả','RELEASE']])], output:'Boolean', colour:'#8661b8', tooltip:'Đọc nút riêng của tay cầm PS2. START và SELECT có ánh xạ nút tương ứng trong driver. Giữ, nhấn và thả độc lập.' },
   { type:TYPES.ps2Connected, message0:'Tay cầm PS2 đã kết nối?', output:'Boolean', colour:'#8661b8', tooltip:'Đúng khi dữ liệu PS2 SPI còn mới. Mất tín hiệu trả sai và motor được dừng an toàn.' },
+  { type:TYPES.imuInit, message0:'Khởi tạo IMU QMI8658B', previousStatement:null, nextStatement:null, colour:'#27a0a0', tooltip:'Chỉ Newmania V2. Khởi tạo I²C GPIO8/9, địa chỉ 0x6A; dùng chung bus PS4 I²C nếu cần. Đặt trước vòng lặp.' },
+  { type:TYPES.imuSample, message0:'Đọc mẫu IMU', previousStatement:null, nextStatement:null, colour:'#27a0a0', tooltip:'Đọc cảm biến với chu kỳ tối thiểu 10ms, không chờ cảm biến khởi động. Dữ liệu sai hoặc cũ sẽ không được coi là hợp lệ.' },
+  { type:TYPES.imuReady, message0:'Dữ liệu IMU hợp lệ?', output:'Boolean', colour:'#27a0a0', tooltip:'Đúng khi QMI8658B có mẫu đủ mới (không quá 250ms); sai khi chưa khởi tạo hoặc lỗi I²C.' },
+  { type:TYPES.imuValue, message0:'IMU %1', args0:[field('CHANNEL', [['Gia tốc X (g)','AccX'], ['Gia tốc Y (g)','AccY'], ['Gia tốc Z (g)','AccZ'], ['Gyro X (°/s)','GyroX'], ['Gyro Y (°/s)','GyroY'], ['Gyro Z (°/s)','GyroZ']])], output:'Number', colour:'#27a0a0', tooltip:'Đọc giá trị trục cảm biến; gia tốc theo g, gyro theo độ/giây. Trả 0 khi dữ liệu không hợp lệ. Đây không phải góc yaw tuyệt đối.' },
 ]);
 const ps2AxisSource = robotBlocks.find(item => item.type === 'robot_ps4_axis');
 if (!ps2AxisSource) throw new Error('Missing axis schema');
@@ -73,7 +77,7 @@ export const unsupported = new Map(
   ['beginner_led','beginner_blink'].map(type=>[type,'GPIO47 đang dành cho kết nối/an toàn; block LED học sinh tiếp tục bị khóa.']),
 );
 
-export const workspaceOptions = { maxInstances:{ [TYPES.root]:1, [TYPES.forever]:1, [TYPES.connect]:1, [TYPES.ps2Connect]:1 } };
+export const workspaceOptions = { maxInstances:{ [TYPES.root]:1, [TYPES.forever]:1, [TYPES.connect]:1, [TYPES.ps2Connect]:1, [TYPES.imuInit]:1 } };
 export function designToolbox(boardId = FAST4WD_BOARD_ID) {
   const toolbox=structuredClone(editorToolbox(boardId, 'beginner', undefined, { newmania: true }));
   const nextContents=[];
@@ -107,6 +111,10 @@ export function designToolbox(boardId = FAST4WD_BOARD_ID) {
     if(category.contents.some(b=>b.disabled))category.contents.push({kind:'label',text:'LED hệ thống: đang dùng cho kết nối/an toàn'});
     nextContents.push(category);
   }
+  if(boardId===V2_BOARD_ID)nextContents.push({
+    kind:'category',name:'Cảm biến IMU',colour:'#27a0a0',
+    contents:[TYPES.imuInit,TYPES.imuSample,TYPES.imuReady,TYPES.imuValue].map(type=>({kind:'block',type})),
+  });
   toolbox.contents=nextContents;
   return toolbox;
 }
@@ -146,6 +154,12 @@ export function designDiagnostics(workspace) {
     let outer=b;while(outer.getParent()&&outer.getParent()!==root)outer=outer.getParent();
     if(main.includes(outer)&&main.indexOf(outer)<main.indexOf(connections[0]))add(b,'Đặt Kết nối tay cầm trước lệnh đọc tay cầm.');
   }
+  const imuInit = all.filter(b=>b.type===TYPES.imuInit);
+  const imuReads = all.filter(b=>[TYPES.imuSample,TYPES.imuReady,TYPES.imuValue].includes(b.type));
+  if(imuInit.length>1)add(imuInit[1],'Chỉ khởi tạo IMU một lần.');
+  if(imuReads.length&&!imuInit.length)add(imuReads[0],'Thêm Khởi tạo IMU trước khi đọc dữ liệu.');
+  if(imuInit.length&&(!main.includes(imuInit[0])||(loops.length&&main.indexOf(imuInit[0])>main.indexOf(loops[0]))))
+    add(imuInit[0],'Đặt Khởi tạo IMU trong luồng chính, trước vòng lặp.');
   for(const b of all) {
     if(b!==root&&!b.getParent()&&!b.isShadow())add(b,'Khối chưa nối vào chương trình; không được thực thi.');
     if(unsupported.has(b.type))add(b,unsupported.get(b.type));

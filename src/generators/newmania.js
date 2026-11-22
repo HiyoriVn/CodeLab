@@ -21,6 +21,9 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
   const warnings=robotDeviceWarnings(devices,profile);
   if(warnings.length)return {code:'',warnings,boardId};
   const issues=designDiagnostics(workspace);
+  const imuTypes=new Set([TYPES.imuInit,TYPES.imuSample,TYPES.imuReady,TYPES.imuValue]);
+  if(boardId!==V2_BOARD_ID && workspace.getAllBlocks(false).some(b=>imuTypes.has(b.type)))
+    issues.push({id:'IMU',type:'IMU',message:'Cảm biến IMU QMI8658B chỉ hỗ trợ Newmania V2 ESP32S3.'});
   const usage=ps4Usage(workspace);
   if(usage.dependent&&!devices.controller.enabled)issues.push({id:'controller',message:'Bật cấu hình tay cầm để dùng các khối điều khiển.'});
   if(issues.length)return {code:'',warnings:issues.map(i=>`${i.message} (${i.type??'cấu hình'} · ${i.id})`),boardId};
@@ -115,6 +118,8 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
         }
         case 'fast4wd_connected':
         case TYPES.ps2Connected:return out('newmania.connected()','boolean');
+        case TYPES.imuReady:return out('newmania.imuReady()','boolean');
+        case TYPES.imuValue:return out(`newmania.imuValue(ImuChannel::${dropdown(b,'CHANNEL',{AccX:'AccX',AccY:'AccY',AccZ:'AccZ',GyroX:'GyroX',GyroY:'GyroY',GyroZ:'GyroZ'})})`);
         default:
           if(oldMotor.get(b.type)==='robot_motor_pwm')return out(`newmania.motorPwm(${motor(b)})`);
           throw Error(`Khối ${b.type} chưa có biểu thức C++ Newmania.`);
@@ -188,6 +193,8 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
         case 'fast4wd_stop':return add('newmania.stop(); return Board::Step::DONE;',b);
         case TYPES.connect:action=b.getFieldValue('TRANSPORT')==='PS2' ? 'newmania.connectController();' : 'newmania.connectPs4();';break;
         case TYPES.ps2Connect:action='newmania.connectController();';break;
+        case TYPES.imuInit:action='newmania.imuBegin();';break;
+        case TYPES.imuSample:action='newmania.imuSample();';break;
         case 'controls_flow_statements': {
           const loop=loopStack.at(-1);if(!loop)throw Error('Thoát/tiếp tục phải nằm trong một vòng lặp.');
           return add(`ctx.pc = ${dropdown(b,'FLOW',{BREAK:loop.breakPc,CONTINUE:loop.continuePc})}; return Board::Step::YIELD;`,b);
