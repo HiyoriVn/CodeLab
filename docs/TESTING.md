@@ -1,5 +1,15 @@
 # Testing and verification strategy
 
+## ESP32 D1 PS4 MAC reset
+
+`node --test tests/ps4-mac.test.mjs` covers read-only MAC queries, noisy and split serial replies, MAC changes before reset, compatibility with the legacy reset byte, and reset error/timeout handling. The four serial tests, a MinGW smoke test of the firmware parser with mocked storage, and the Vite production build passed. The full suite passed 187/195 tests. Six HTTP bridge cases hit localhost `EACCES`, and two existing PS4 tooltip and UART expectations in unrelated files failed. Both D1 firmware compile attempts selected Bluepad32 4.1.0 and stopped before compilation with Windows `Illegal System DLL Relocation` launching Xtensa GCC. USB, reset, and pairing still need verification on a physical D1. [User flow and firmware variants](PS4-RECEIVER.md#reset-mac-tay-cầm-ps4-trên-esp32-d1).
+
+The advanced D1 uploader passed ten focused checks across MAC serial, device UI, D1 compile arguments, mock flash readback and I²C diagnostics. The Vite build passed. The bridge found Bluepad32 4.1.0 and PS4Bluepad32 on this machine, but both D1 builds reproduced the Windows loader error before GCC could compile either sketch. Running GCC with `--version` reproduced it independently of CodeLab. The advanced uploader has not been tested on a physical D1.
+
+## I2C diagnostic — 2026-11-20
+
+Owner confirms D1 SDA16/SCL17, S3 SDA8/SCL9, address0x30. Added standalone scanner/sequence-checked echo, deferred slave logs and compile-only tooling. Diagnostic/frame tests4/4 PASS; fast4wd/UART/generator/lesson regressions24/24 PASS. All3 target attempts fail before compiler startup with Windows Illegal System DLL Relocation; no target-compile PASS or current hardware claim. No COM access/upload. [Evidence and procedure](verification/I2C_DIAGNOSTIC_2026_11_20.md).
+
 ## ESP32-S3 WASM startup crash — 2026-11-14
 
 Constructor ABI mismatch reproduced and corrected: bundled Xtensa Clang needs

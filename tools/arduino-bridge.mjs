@@ -6,6 +6,8 @@ import { join, resolve, extname, sep } from 'node:path';
 import { getBoardProfile, DEFAULT_BOARD_ID } from '../src/boards/profiles.js';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { validateD1Config } from '../src/device/d1-firmware-config.js';
+import { buildD1Firmware } from './build-d1-firmware.mjs';
 
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.CODELAB_BRIDGE_PORT || 8787);
@@ -74,6 +76,7 @@ function getPorts(result) {
 
 export function createBridge({ execute = run } = {}) {
 const builds = new Map();
+let compilingD1 = false;
 const server = createServer(async (req, res) => {
   const origin = req.headers.origin;
   if (origin && !/^https?:\/\/(localhost|127\.0\.0\.1)(:(5173|4173|8787))?$/.test(origin)) {
@@ -88,6 +91,19 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/ports') {
       const result = await execute(['board', 'list', '--format', 'json'], 20_000);
       return send(res, result.ok ? 200 : 500, { ports: getPorts(result), error: result.error });
+    }
+    if (req.method === 'POST' && url.pathname === '/api/d1/compile') {
+      if (req.headers['content-type'] !== 'application/json') return send(res, 415, { error: 'Yêu cầu application/json.' });
+      const config = validateD1Config(await bodyJson(req));
+      if (compilingD1) return send(res, 409, { error: 'Arduino Bridge đang biên dịch D1.' });
+      compilingD1 = true;
+      try {
+        return send(res, 200, { segments: await buildD1Firmware(execute, config) });
+      } catch (error) {
+        return send(res, 422, { error: error.message });
+      } finally {
+        compilingD1 = false;
+      }
     }
     if (req.method === 'POST' && url.pathname === '/api/compile') {
       const payload = await bodyJson(req);

@@ -6,8 +6,8 @@
 
 | ESP32 D1 — slave | S3 Newmania — master |
 |---|---|
-| SDA GPIO22 | SDA GPIO8 |
-| SCL GPIO21 | SCL GPIO9 |
+| SDA GPIO16 | SDA GPIO8 |
+| SCL GPIO17 | SCL GPIO9 |
 | GND | GND |
 
 Không đấu chéo SDA/SCL, không dùng phương án UART21/22→21/18 của task trước. Test đầu chỉ USB, rút motor/servo, không DC ngoài; không nối5V giữa hai board. Pull-up tín hiệu phải về3.3V. Bus100kHz, địa chỉ mặc định **0x30**; đổi địa chỉ phải build cả hai cùng `-Address`.

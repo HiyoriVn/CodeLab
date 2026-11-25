@@ -163,3 +163,56 @@ export async function flashPackage(
     }
   });
 }
+
+export async function flashD1Firmware(port, segments, log, progress, load = () => import('esptool-js')) {
+  const addresses = [0x1000, 0x8000, 0xe000, 0x10000];
+  const limits = [0x7000, 0x1000, 0x2000, 0x140000];
+  if (!Array.isArray(segments) || segments.length !== addresses.length || addresses.some((address, i) => {
+    const segment = segments[i];
+    return segment?.address !== address || !(segment.data instanceof Uint8Array) || !segment.data.length || segment.data.length > limits[i];
+  })) {
+    throw new Error('Các phân đoạn firmware D1 không hợp lệ.');
+  }
+  const [boot, table, , app] = segments.map(({ data }) => data);
+  if ([boot, app].some((image) => image.length < 24 || image[0] !== 0xe9 || image[12] !== 0 || image[13] !== 0) ||
+    boot[3] >> 4 !== 2 || table[0] !== 0xaa || table[1] !== 0x50) {
+    throw new Error('Gói firmware không khớp ESP32 Classic 4 MB.');
+  }
+
+  return withSerialPort(port, async () => {
+    await stopSerialSession(port);
+    const { ESPLoader, Transport } = await load();
+    const transport = new Transport(port);
+    let failure;
+    try {
+      const loader = new ESPLoader({ transport, baudrate: 115200, terminal: { clean() {}, write: log, writeLine: log } });
+      await loader.main();
+      if (loader.chip?.CHIP_NAME !== 'ESP32') throw new Error('Sai chip. Hãy chọn ESP32 D1 Classic.');
+      if (await loader.detectFlashSize() !== '4MB') throw new Error('Bản nạp D1 này yêu cầu flash 4 MB.');
+
+      // ESP32 Classic eFuse block 0: FLASH_CRYPT_CNT and ABS_DONE_0/1.
+      const crypt = (await loader.readReg(0x3ff5a000) >>> 20) & 0x7f;
+      const secureBoot = (await loader.readReg(0x3ff5a018)) & 0x30;
+      if (loader.secureDownloadMode || secureBoot || (crypt.toString(2).replaceAll('0', '').length % 2)) {
+        throw new Error('D1 đang bật Secure Boot hoặc Flash Encryption.');
+      }
+
+      const current = await loader.readFlash(0x8000, table.length);
+      if (current.length !== table.length || (!current.every((byte) => byte === 0xff) && await sha256(current) !== await sha256(table))) {
+        throw new Error('Bảng phân vùng D1 đang dùng khác cấu hình chuẩn. Hãy kiểm tra cấu hình trong Arduino IDE.');
+      }
+      await loader.writeFlash({ fileArray: segments, flashMode: 'keep', flashFreq: 'keep', flashSize: 'keep', eraseAll: false, compress: true, reportProgress: progress });
+      for (const { address, data } of segments) {
+        if (await sha256(await loader.readFlash(address, data.length)) !== await sha256(data)) {
+          throw new Error(`Xác minh dữ liệu D1 thất bại tại 0x${address.toString(16)}.`);
+        }
+      }
+    } catch (error) {
+      failure = error;
+      throw error;
+    } finally {
+      try { await transport.disconnect(); }
+      catch (error) { if (!failure && !isPortAlreadyClosed(error)) throw error; }
+    }
+  });
+}

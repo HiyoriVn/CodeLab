@@ -15,6 +15,7 @@ import BlocklyWorkspace from './components/BlocklyWorkspace.jsx';
 import CodePreview from './components/CodePreview.jsx';
 import DevicePanel from './components/DevicePanel.jsx';
 import SerialMonitor from './components/SerialMonitor.jsx';
+import Ps4MacReset from './components/Ps4MacReset.jsx';
 import TopBar from './ui/TopBar.jsx';
 import Modal from './ui/Modal.jsx';
 import Dock from './ui/Dock.jsx';
@@ -307,6 +308,7 @@ function App() {
         projectName={project?.name || ''} onRename={renameProject} onRenameCommit={() => persist(projectStore)}
         onNew={createProject} onOpenFile={pickProjectFile} onSave={saveProjectFile}
         onHelp={() => setDialog('help')} onChangelog={() => setDialog('changelog')} onConnect={openDevice}
+        onResetMac={() => { if (!deviceOperation.isBusy()) setDialog('ps4-mac'); }} deviceBusy={deviceBusy}
         onToggleTerminal={toggleTerminal} onToggleCode={toggleCode}
         terminalOpen={terminalOpen} codeOpen={codeOpen}
         theme={theme} onTheme={changeTheme} barColor={barColor} onBarColor={changeBar}
@@ -370,6 +372,9 @@ function App() {
           <dl>{robotBlocks.map(({ type, title, tooltip }) => <div key={type}><dt><strong>{title}</strong></dt><dd>{tooltip}</dd></div>)}</dl>
         </details>
         <button className="btn p" onClick={closeDialog}>Đã hiểu</button>
+      </Modal>
+      <Modal open={dialog === 'ps4-mac'} genie="ps4-mac" locked={deviceBusy} onClose={closeDialog} title="Reset MAC tay cầm PS4">
+        <Ps4MacReset operation={deviceOperation} usbPort={usbPort} onClose={closeDialog} />
       </Modal>
       <Modal open={dialog === 'connect'} genie="connect" locked={deviceBusy} onClose={closeDialog} title="Kết nối thiết bị">
         <p>Biên dịch chương trình, sau đó chọn USB và nạp vào robot. Để xem dữ liệu Serial, dùng nút Bảng lệnh.</p>

@@ -1,4 +1,4 @@
-export function untar(data) {
+export function untar(data, { copy = true } = {}) {
   const files = new Map();
   const dec = new TextDecoder();
   const str = (o, n) => {
@@ -31,15 +31,23 @@ export function untar(data) {
       const m = /\d+ path=([^\n]*)\n/.exec(dec.decode(body));
       if (m) longName = m[1];
     } else if (type === '0' || type === '\0' || type === '7') {
-      files.set(name.replace(/^\.\//, ''), body.slice());
+      files.set(name.replace(/^\.\//, ''), copy ? body.slice() : body);
     }
     offset += 512 + Math.ceil(size / 512) * 512;
   }
   return files;
 }
 
-export async function gunzip(data) {
+export async function gunzip(data, maxBytes = Infinity) {
   if (data[0] !== 0x1f || data[1] !== 0x8b) return data;
-  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('gzip'));
+  let size = 0;
+  let stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('gzip'));
+  if (Number.isFinite(maxBytes)) {
+    stream = stream.pipeThrough(new TransformStream({ transform(chunk, controller) {
+      size += chunk.byteLength;
+      if (size > maxBytes) throw new Error('Gói biên dịch vượt kích thước cho phép sau giải nén.');
+      controller.enqueue(chunk);
+    } }));
+  }
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }

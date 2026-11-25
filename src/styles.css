@@ -109,6 +109,16 @@ dialog h3{margin:0 0 12px;font-size:18px}
 dialog p{margin:0 0 14px;line-height:1.6}
 dialog ol{padding-left:20px;line-height:1.7;margin:0 0 16px}
 .dialog-actions{margin-top:14px}
+.ps4-mac-actions{display:flex;flex-wrap:wrap;gap:8px}
+.d1-firmware{margin-top:16px;border-top:1px solid color-mix(in srgb,var(--ink) 18%,transparent);padding-top:12px}
+.d1-firmware summary{cursor:pointer;font-weight:600;margin-bottom:12px}
+.d1-firmware fieldset{margin:0 0 12px;padding:10px;border:1px solid color-mix(in srgb,var(--ink) 25%,transparent);border-radius:8px}
+.d1-pin-fields{display:flex;flex-wrap:wrap;gap:10px}
+.d1-pin-fields label{display:grid;gap:4px}
+.d1-confirm{display:block;margin:12px 0}
+.d1-toolchain{display:grid;gap:4px;margin-bottom:8px}
+.d1-flash-error{white-space:pre-wrap;overflow-wrap:anywhere}
+dialog:has(.d1-firmware){max-height:90dvh;overflow:auto;box-sizing:border-box}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;max-height:50vh;overflow:auto}
 .card{min-height:90px;border:1px solid var(--line);border-radius:12px;background:var(--pan);font-weight:600;padding:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;word-break:break-word}
 .card small{font-weight:500;opacity:.7}

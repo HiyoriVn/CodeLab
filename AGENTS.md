@@ -97,6 +97,8 @@
 
 ## Issue20 fast I2C demo — 2026-11-05
 
+- Current wiring correction — 2026-11-20: owner explicitly confirms D1 SDA16/SCL17 is correct. Preserve these existing source pins. Earlier SDA22/SCL21 references below and in historical hardware logs apply to the old setup only. S3 SDA8/SCL9 and slave0x30 remain unchanged. Diagnostic work is compile/host-only; no automatic upload or device access.
+
 - Latest user explicitly selects I2C for this demo, superseding prior UART preference here only: D1 SDA22/SCL21 slave0x30, S3 SDA8/SCL9 master. Keep existing UART workflows intact. Source is user's `Downloads/ps4ble_newmania_firmware.ino` (old0x55 ASCII), not just ZIP stock sample. Preserve external library pairing/MAC; no Web Pairing.
 - Use13-byte CodeLab frame with flags bit0 connected, bits1..7 BT-report sequence. Polling never refreshes sequence/deadline. Timeout>250ms neutralizes and faults; no reconnect auto-arm. Keep actuators mocked, no output35–37 or OPI change. User BOM now identifies N16R8 and RZ7899-MS; retain onboard-driver design, actual4-motor routing still unresolved.
 - Compile/host tests and user upload instructions only. No automatic flash/upload, COM access, load testing, toolchain install/update, commit/push. See `firmware/demos/newmania_ps4_i2c/README.md` for exact wiring/build/test instructions.
