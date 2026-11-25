@@ -12,9 +12,11 @@ export const TYPES = Object.freeze({ root: 'newmania_design_program', forever: '
 loops.loopTypes.add(TYPES.forever);
 const field = (name, options) => ({ type: 'field_dropdown', name, options });
 Blockly.defineBlocksWithJsonArray([
+  { type:'newmania_ps4_connect_mutator', message0:'Cấu hình nâng cao kết nối %1 %2', args0:[{type:'input_dummy'},{type:'input_statement',name:'STACK'}], colour:'#bd4d86', tooltip:'Kéo khối tùy chọn vào đây để bật cấu hình nâng cao cho khối kết nối tay cầm.' },
+  { type:'newmania_ps4_connect_i2c_pins', message0:'Tùy chỉnh chân I²C (SDA / SCL)', previousStatement:null, nextStatement:null, colour:'#bd4d86', tooltip:'Hiện ô nhập chân GPIO SDA và SCL cho kết nối PS4 I²C (mặc định SDA=8, SCL=9).' },
   { type:TYPES.root, message0:'Khi bắt đầu chương trình %1 %2', args0:[{type:'input_dummy'},{type:'input_statement',name:'DO'}], colour:'#e79b23', tooltip:'Chạy một lần sau khi board khởi động. Đây là khối gốc duy nhất của chương trình.' },
   { type:TYPES.forever, message0:'Lặp mãi mãi %1 %2', args0:[{type:'input_dummy'},{type:'input_statement',name:'DO'}], previousStatement:null, colour:'#e79b23', tooltip:'Đặt cuối luồng chính, bên trong Khi bắt đầu chương trình.' },
-  { type:TYPES.connect, message0:'Kết nối tay cầm qua %1', args0:[field('TRANSPORT', [['PS4 UART', 'UART'], ['PS4 I²C', 'I2C'], ['PS2 SPI', 'PS2']])], previousStatement:null, nextStatement:null, colour:'#bd4d86', tooltip:'Chọn PS4 UART hoặc PS4 I²C. Ví dụ: Kết nối tay cầm qua PS4 UART trước Lặp mãi mãi. Không tự khởi động motor; khi mất tín hiệu phải dừng.' },
+  { type:TYPES.connect, message0:'Kết nối tay cầm qua %1', args0:[field('TRANSPORT', [['PS4 UART', 'UART'], ['PS4 I²C', 'I2C'], ['PS2 SPI', 'PS2']])], previousStatement:null, nextStatement:null, colour:'#bd4d86', mutator:'newmania_ps4_connect_advanced', tooltip:'Chọn PS4 UART hoặc PS4 I²C. Nhấn biểu tượng bánh răng (⚙) để tùy chỉnh chân SDA/SCL cho I²C. Không tự khởi động motor; khi mất tín hiệu phải dừng.' },
   { type:TYPES.ps2Connect, message0:'Kết nối tay cầm PS2 qua SPI', previousStatement:null, nextStatement:null, colour:'#bd4d86', tooltip:'Trên V2 dùng PS2 SPI (CLK12/CMD11/DAT13/ATT10). Ví dụ: Kết nối tay cầm PS2 qua SPI → Lặp mãi mãi → kiểm tra nút X. Đặt trước Lặp mãi mãi. Không tự khởi động motor; khi mất tín hiệu phải dừng.' },
   { type:TYPES.button, message0:'Nút PS4 %1 %2 ?', args0:[field('BUTTON', [['X','0'],['Tròn','1'],['Vuông','2'],['Tam giác','3'],['L1','4'],['R1','5'],['L2','6'],['R2','7'],['L3','10'],['R3','11'],['Lên','13'],['Xuống','14'],['Trái','15'],['Phải','16']]),field('STATE',[['Vừa nhấn','PRESS'],['Đang giữ','HELD'],['Vừa thả','RELEASE']])], output:'Boolean', colour:'#bd4d86', tooltip:'Ví dụ: Nút X Vừa nhấn? để tăng điểm một lần; Đang giữ? để chạy motor khi còn giữ; Vừa thả? để dừng khi buông nút. Các khối đọc độc lập.' },
   { type:TYPES.ps2Button, message0:'Nút PS2 %1 %2 ?', args0:[field('BUTTON', [['X','0'],['Tròn','1'],['Vuông','2'],['Tam giác','3'],['L1','4'],['R1','5'],['L2','6'],['R2','7'],['SELECT','8'],['START','9'],['L3','10'],['R3','11'],['Lên','13'],['Xuống','14'],['Trái','15'],['Phải','16']]),field('STATE',[['Vừa nhấn','PRESS'],['Đang giữ','HELD'],['Vừa thả','RELEASE']])], output:'Boolean', colour:'#8661b8', tooltip:'Đọc nút riêng của tay cầm PS2. START và SELECT có ánh xạ nút tương ứng trong driver. Giữ, nhấn và thả độc lập.' },
@@ -32,6 +34,56 @@ Blockly.Blocks[TYPES.root].init=function() {
   this.isCopyable=()=>false;
   this.isDuplicatable=()=>false;
 };
+Blockly.Extensions.registerMutator(
+  'newmania_ps4_connect_advanced',
+  {
+    customI2cPins_: false,
+    saveExtraState() {
+      return this.customI2cPins_ ? { customI2cPins: true } : undefined;
+    },
+    loadExtraState(state) {
+      this.customI2cPins_ = Boolean(state?.customI2cPins);
+      this.updateShape_();
+    },
+    decompose(workspace) {
+      const container = workspace.newBlock('newmania_ps4_connect_mutator');
+      container.initSvg();
+      if (this.customI2cPins_) {
+        const item = workspace.newBlock('newmania_ps4_connect_i2c_pins');
+        item.initSvg();
+        container.getInput('STACK').connection.connect(item.previousConnection);
+      }
+      return container;
+    },
+    compose(container) {
+      let enabled = false;
+      for (let clause = container.getInputTargetBlock('STACK'); clause; clause = clause.nextConnection?.targetBlock()) {
+        if (clause.type === 'newmania_ps4_connect_i2c_pins') enabled = true;
+      }
+      const wasEnabled = this.customI2cPins_;
+      this.customI2cPins_ = enabled;
+      this.updateShape_();
+      if (enabled && !wasEnabled && this.getFieldValue('TRANSPORT') === 'UART') {
+        this.setFieldValue('I2C', 'TRANSPORT');
+      }
+    },
+    updateShape_() {
+      const existing = this.getInput('I2C_PINS');
+      if (this.customI2cPins_ && !existing) {
+        this.appendDummyInput('I2C_PINS')
+          .appendField('SDA')
+          .appendField(new Blockly.FieldNumber(8, 1, 48, 1), 'I2C_SDA')
+          .appendField('SCL')
+          .appendField(new Blockly.FieldNumber(9, 1, 48, 1), 'I2C_SCL');
+      } else if (!this.customI2cPins_ && existing) {
+        this.removeInput('I2C_PINS');
+      }
+    },
+  },
+  undefined,
+  ['newmania_ps4_connect_i2c_pins'],
+);
+
 const connectInit = Blockly.Blocks[TYPES.connect].init;
 Blockly.Blocks[TYPES.connect].init = function() {
   connectInit.call(this);

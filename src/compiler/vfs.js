@@ -4,12 +4,12 @@ const split = (path) => path.split('/').filter((p) => p && p !== '.');
 
 export class Vfs {
   constructor(files = new Map(), dirs = ['src', 'build', 'tmp']) {
-    const tree = {};
-    for (const d of dirs) tree[d] = {};
+    const tree = Object.create(null);
+    for (const d of dirs) tree[d] = Object.create(null);
     for (const [path, data] of files) {
       const parts = split(path);
       let node = tree;
-      for (const p of parts.slice(0, -1)) node = (node[p] ??= {});
+      for (const p of parts.slice(0, -1)) node = (node[p] ??= Object.create(null));
       node[parts[parts.length - 1]] = data;
     }
     const toInodes = (node) =>

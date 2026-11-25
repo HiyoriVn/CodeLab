@@ -132,3 +132,41 @@ test('lesson 05 native code verifies axes, signs, deadzone, normalization and wa
     settle(); assert(!newmania.running());
   `);
 });
+test('lesson 07 selects Newmania V2 board and generates PS2 SPI mecanum C++',()=>{
+  const project=lessonProject('ps2_mecanum');
+  assert.equal(project.boardId,'steam-mainboard-v2');
+  const code=sources.get('ps2_mecanum');
+  assert.match(code,/codelab::fast4wd::BoardVariant::V2/);
+  assert.match(code,/codelab::fast4wd::Ps4Transport::Ps2Spi/);
+  assert.match(code,/newmania\.connectController\(\)/);
+  assert.match(code,/newmania\.axis\(Axis::LeftY\)/);
+  assert.match(code,/newmania\.axis\(Axis::LeftX\)/);
+  assert.match(code,/newmania\.axis\(Axis::RightX\)/);
+  assert.match(code,/newmania\.held\(Button::L1\)/);
+  assert.match(code,/newmania\.held\(Button::L2\)/);
+  assert.match(code,/newmania\.held\(Button::R1\)/);
+  assert.match(code,/newmania\.held\(Button::R2\)/);
+  assert.match(code,/newmania\.servoWrite\(1,/);
+  assert.match(code,/newmania\.servoWrite\(2,/);
+});
+test('connect block advanced gear mutator configures custom I2C SDA/SCL pins and validates conflicts',()=>{
+  const project=lessonProject('ps4_connection','steam-mainboard-v2');
+  const w=new Blockly.Workspace(), restored=new Blockly.Workspace();
+  try {
+    Blockly.serialization.workspaces.load(project.workspace,w);
+    const connect=w.getBlocksByType('newmania_design_ps4_connect',false)[0];
+    connect.loadExtraState({customI2cPins:true});
+    connect.setFieldValue('I2C','TRANSPORT');
+    connect.setFieldValue(4,'I2C_SDA');
+    connect.setFieldValue(5,'I2C_SCL');
+    const saved=Blockly.serialization.workspaces.save(w);
+    Blockly.serialization.workspaces.load(saved,restored);
+    const res=generateArduino(restored,project.boardId,project.deviceConfigs[project.boardId]);
+    assert.deepEqual(res.warnings,[]);
+    assert.match(res.code,/codelab::fast4wd::Ps4Transport::I2c, 4, 5\)/);
+    assert.match(learningCode(saved),/SDA4\/SCL5/);
+    connect.setFieldValue(19,'I2C_SDA');
+    const bad=generateArduino(w,project.boardId,project.deviceConfigs[project.boardId]);
+    assert.ok(bad.warnings.some(m=>/GPIO19\/20/.test(m)));
+  } finally {w.dispose();restored.dispose();}
+});

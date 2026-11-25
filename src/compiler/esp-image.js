@@ -18,7 +18,7 @@ const FLASH_MAPS = [
   [0x42000000, 0x44000000], // IROM
   [0x3c000000, 0x3e000000], // DROM
 ];
-const isFlashAddr = (a) => FLASH_MAPS.some(([lo, hi]) => a >= lo && a < hi);
+const CLASSIC_FLASH_MAPS = [[0x3f400000, 0x3f800000], [0x400d0000, 0x40400000]];
 
 const MEMORY_MAP = [
   [0x00000000, 0x00010000, 'PADDING'],
@@ -103,6 +103,9 @@ class ByteWriter {
 export async function elfToImage(elfBytes, opts = {}) {
   const elf = parseElf(elfBytes);
   if (elf.machine !== EM_XTENSA) throw new Error(`Expected Xtensa ELF (94), got ${elf.machine}`);
+  const classic = opts.chip === 'ESP32';
+  const flashMaps = classic ? CLASSIC_FLASH_MAPS : FLASH_MAPS;
+  const isFlashAddr = (addr) => flashMaps.some(([lo, hi]) => addr >= lo && addr < hi);
 
   const loadable = elf.sections
     .filter(
@@ -132,14 +135,15 @@ export async function elfToImage(elfBytes, opts = {}) {
   const merged = [];
   for (const s of loadable) {
     const last = merged[merged.length - 1];
+    const gap = last ? s.addr - last.addr - last.data.length : -1;
     if (
       last &&
-      last.addr + last.data.length === s.addr &&
+      (gap === 0 || (classic && gap > 0 && gap <= 3 && isFlashAddr(last.addr) && isFlashAddr(s.addr))) &&
       memoryType(last.addr) === memoryType(s.addr)
     ) {
-      const combined = new Uint8Array(last.data.length + s.data.length);
+      const combined = new Uint8Array(last.data.length + gap + s.data.length);
       combined.set(last.data);
-      combined.set(s.data, last.data.length);
+      combined.set(s.data, last.data.length + gap);
       last.data = combined;
     } else {
       merged.push({ addr: s.addr, data: s.data.slice() });
@@ -198,6 +202,7 @@ export async function elfToImage(elfBytes, opts = {}) {
     flashSegs.shift();
   }
   for (const seg of ramSegs) writeSegment(seg);
+  if (classic && count > 16) throw new Error('ESP32 Classic image exceeds 16 segments');
 
   w.zeros(15 - (w.length % 16));
   w.bytes(Uint8Array.of(checksum & 0xff));
@@ -226,7 +231,7 @@ function writeHeader(image, segmentCount, entry, opts) {
   dv.setUint8(3, (SIZE[opts.flashSize ?? '16MB'] << 4) | FREQ[opts.flashFreq ?? '80m']);
   dv.setUint32(4, entry, true);
   dv.setUint8(8, 0xee);
-  dv.setUint16(12, ESP32S3_CHIP_ID, true);
+  dv.setUint16(12, opts.chip === 'ESP32' ? 0 : ESP32S3_CHIP_ID, true);
   dv.setUint8(14, 0);
   dv.setUint16(15, opts.minChipRevFull ?? 0, true);
   dv.setUint16(17, opts.maxChipRevFull ?? 99, true);

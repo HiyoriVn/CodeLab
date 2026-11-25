@@ -20,6 +20,7 @@ function TopBar({
   projects, activeProjectId, onSwitchProject,
   projectName, onRename, onRenameCommit,
   onNew, onOpenFile, onSave, onHelp, onChangelog, onConnect,
+  onResetMac, deviceBusy,
   onToggleTerminal, onToggleCode, terminalOpen, codeOpen,
   theme, onTheme, barColor, onBarColor, onLanguage,
 }) {
@@ -106,6 +107,7 @@ function TopBar({
 
       <button className="ib" data-genie="connect" onClick={onConnect} aria-label="Thiết bị" data-tip="Thiết bị"><img src={icon('ket-noi')} alt="" /></button>
       <button className="ib" data-genie="terminal" onClick={onToggleTerminal} aria-pressed={terminalOpen} aria-label="Bảng lệnh" data-tip="Bảng lệnh"><img src={icon('bang-lenh')} alt="" /></button>
+      <button type="button" className="nb" data-genie="ps4-mac" onClick={onResetMac} disabled={deviceBusy} aria-haspopup="dialog">Reset MAC</button>
       <button className="ib" data-genie="code" onClick={onToggleCode} aria-pressed={codeOpen} aria-label="Xem mã nguồn" data-tip="Xem mã nguồn"><img src={icon('hien-code')} alt="" /></button>
     </header>
   );

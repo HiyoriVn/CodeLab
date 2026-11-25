@@ -255,16 +255,16 @@ int main() {
   // 2. Verify Servo 2 (GPIO 13): 0 degrees -> 1000 us pulse -> duty 819
   assert(newmania.servoAttached(2));
   assert(newmania.servoAngle(2) == 0.0);
-  assert(newmania.servoDuty(2) == 819);
+  assert(newmania.servoDuty(2) == 410);
   assert(ledcAttachedPins[13]);
-  assert(ledcDutyPins[13] == 819);
+  assert(ledcDutyPins[13] == 410);
 
   // 3. Verify Servo 3 (GPIO 14): 180 degrees -> 2000 us pulse -> duty 1638
   assert(newmania.servoAttached(3));
   assert(newmania.servoAngle(3) == 180.0);
-  assert(newmania.servoDuty(3) == 1638);
+  assert(newmania.servoDuty(3) == 2048);
   assert(ledcAttachedPins[14]);
-  assert(ledcDutyPins[14] == 1638);
+  assert(ledcDutyPins[14] == 2048);
 
   // Servo 4 was not called -> untouched
   assert(!newmania.servoAttached(4));

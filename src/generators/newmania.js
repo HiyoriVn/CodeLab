@@ -270,7 +270,21 @@ export function generateNewmania(workspace, boardId, deviceConfig) {
     const selectedTransport = ps2Block ? 'PS2' : (ps4Block?.getFieldValue('TRANSPORT') || (devices.controller.transport === 'i2c' ? 'I2C' : 'UART'));
     if (!['UART','I2C','PS2'].includes(selectedTransport)) throw Error('Phương thức kết nối tay cầm không hợp lệ.');
     if (selectedTransport === 'PS2' && boardId !== V2_BOARD_ID) throw Error('PS2 SPI chỉ hỗ trợ Newmania V2 ESP32S3.');
-    const transportArg = selectedTransport === 'I2C' ? ', codelab::fast4wd::Ps4Transport::I2c'
+    let i2cPinsArg = '';
+    if (ps4Block?.getField('I2C_SDA') && ps4Block?.getField('I2C_SCL')) {
+      if (selectedTransport !== 'I2C') throw Error('Tùy chỉnh chân I²C chỉ áp dụng khi chọn phương thức PS4 I²C.');
+      const sda = Number(ps4Block.getFieldValue('I2C_SDA'));
+      const scl = Number(ps4Block.getFieldValue('I2C_SCL'));
+      if (!Number.isInteger(sda) || !Number.isInteger(scl) || sda < 1 || sda > 48 || scl < 1 || scl > 48) {
+        throw Error('Chân I²C SDA/SCL phải là số GPIO nguyên từ 1 đến 48.');
+      }
+      if (sda === scl) throw Error('Chân I²C SDA và SCL không được trùng nhau.');
+      if (sda === 19 || sda === 20 || scl === 19 || scl === 20) {
+        throw Error('Không dùng GPIO19/20 cho I²C vì đây là chân USB của ESP32-S3.');
+      }
+      i2cPinsArg = `, ${sda}, ${scl}`;
+    }
+    const transportArg = selectedTransport === 'I2C' ? `, codelab::fast4wd::Ps4Transport::I2c${i2cPinsArg}`
       : selectedTransport === 'PS2' ? ', codelab::fast4wd::Ps4Transport::Ps2Spi' : '';
     const variantArg = boardId === V2_BOARD_ID ? ', codelab::fast4wd::BoardVariant::V2' : '';
     const code=`// Newmania ESP32S3 Board — một chương trình chính, chờ không chặn.\n#include <CodeLabNewmania.h>\nusing namespace codelab::newmania;\nstatic Board newmania(${constructor}${variantArg});\n${declarations.join('\n')}\n\nstatic void resetStudent() {\n${reset.join('\n')}\n}\n\nstatic Board::Step studentProgram(Board::Context& ctx, uint32_t) {\n  switch (ctx.pc) {\n    case 0: ctx.pc = ${entry}; return Board::Step::YIELD;\n${body}\n    default: return Board::Step::DONE;\n  }\n}\n\nvoid setup() {\n  newmania.begin(${devices.controller.blink}, ${usage.dependent}, ${usage.buttons}UL, ${usage.axes}${transportArg});\n  newmania.registerProgram(${uidOf(root.id)}UL, studentProgram, resetStudent);\n}\n\nvoid loop() {\n  newmania.update();\n}\n`;

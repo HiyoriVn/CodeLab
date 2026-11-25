@@ -42,17 +42,20 @@ export function inspectElf(bytes, pcs = []) {
   };
 }
 
-export async function verifyImage(elfBytes, image, { embeddedElfHash = true } = {}) {
+export async function verifyImage(elfBytes, image, { embeddedElfHash = true, chip = 'ESP32-S3' } = {}) {
   const elf = parseElf(elfBytes), dv = new DataView(image.buffer, image.byteOffset, image.byteLength);
   const fail = message => { throw Error(message); };
-  if (image[0] !== 0xe9 || dv.getUint16(12, true) !== 9 || dv.getUint32(4, true) !== elf.entry) fail('Image header/entry mismatch');
+  const classic = chip === 'ESP32';
+  if (image[0] !== 0xe9 || dv.getUint16(12, true) !== (classic ? 0 : 9) || dv.getUint32(4, true) !== elf.entry) fail('Image header/entry mismatch');
   let offset = 24, checksum = 0xef;
   const segments = [];
   for (let i = 0; i < image[1]; i++) {
     const addr = dv.getUint32(offset, true), size = dv.getUint32(offset + 4, true);
     offset += 8;
     if (offset + size > image.length) fail('Truncated image segment');
-    if (addr >= 0x42000000 && addr < 0x44000000 || addr >= 0x3c000000 && addr < 0x3e000000) {
+    const mapped = classic ? (addr >= 0x400d0000 && addr < 0x40400000 || addr >= 0x3f400000 && addr < 0x3f800000)
+      : (addr >= 0x42000000 && addr < 0x44000000 || addr >= 0x3c000000 && addr < 0x3e000000);
+    if (mapped) {
       if (addr % 65536 !== offset % 65536) fail('Flash MMU alignment mismatch');
     }
     const data = image.subarray(offset, offset + size);

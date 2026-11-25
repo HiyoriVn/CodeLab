@@ -42,11 +42,11 @@ class Board {
 #endif
 
   void begin(bool blinkOnLoss = true, bool usesPs4 = false, uint32_t buttons = 0x1fcffU, uint8_t axes = 7,
-             fast4wd::Ps4Transport transport = kDefaultTransport) {
+             fast4wd::Ps4Transport transport = kDefaultTransport, int8_t i2cSda = 8, int8_t i2cScl = 9) {
     if (begun_) return;
     Serial.begin(115200);
     robot_.configureBlockly(usesPs4, buttons, axes);
-    robot_.begin(blinkOnLoss, transport); // Existing wiring, frequency, startup and safety.
+    robot_.begin(blinkOnLoss, transport, i2cSda, i2cScl); // Existing wiring, frequency, startup and safety.
     begun_ = true;
   }
 
@@ -218,7 +218,7 @@ class Board {
 
     const uint8_t index = channel - 1;
     const uint8_t pin = servoPin(index);
-    const double pulseUs = 1000.0 + (angle / 180.0) * 1000.0;
+    const double pulseUs = 500.0 + (angle / 180.0) * 2000.0;
     const uint32_t duty = static_cast<uint32_t>(std::round((pulseUs / 20000.0) * 16383.0));
 
     if (!servoAttached_[index]) {

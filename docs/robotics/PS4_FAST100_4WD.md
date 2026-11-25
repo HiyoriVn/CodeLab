@@ -36,7 +36,7 @@ V1 N8R2 có bốn cổng và V2 có sáu cổng để cấu hình theo mapping �
 
 | Hạng mục | fast100 |
 | --- | --- |
-| D1 nhận PS4 qua Bluetooth | I2C slave `0x30`, SDA22, SCL21, firmware D1 gửi frame CodeLab 13 byte có sequence |
+| D1 nhận PS4 qua Bluetooth | I2C slave `0x30`, SDA16, SCL17 (chủ dự án xác nhận 20/11/2026), firmware D1 gửi frame CodeLab 13 byte có sequence |
 | S3 | I2C master SDA8/SCL9, 100 kHz, chung GND với D1, tín hiệu 3,3 V |
 | Bốn kênh motor | M1 35/36, M2 37/38, M3 39/40, M4 41/42, MCPWM 1.000 Hz |
 | LED | GPIO47, sáng khi link còn mới, đổi mức mỗi 250 ms khi mất link |
