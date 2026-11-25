@@ -49,7 +49,7 @@ export function learningCode(workspace) {
         case 'newmania_design_forever': case 'beginner_forever': emit(level,'Lặp mãi mãi:'); body('DO'); break;
         case 'newmania_design_ps4_connect':
           emit(level, f.TRANSPORT === 'PS2' ? 'Chuẩn bị đọc tay cầm PS2 qua SPI (GPIO12/11/13/10)'
-            : f.TRANSPORT === 'I2C' ? 'Chuẩn bị đọc tay cầm PS4 qua I²C (SDA8/SCL9)'
+            : f.TRANSPORT === 'I2C' ? `Chuẩn bị đọc tay cầm PS4 qua I²C (SDA${f.I2C_SDA ?? 8}/SCL${f.I2C_SCL ?? 9})`
             : 'Chuẩn bị đọc tay cầm PS4 từ D1 qua UART'); break;
         case 'newmania_design_ps2_connect':
           emit(level, 'Chuẩn bị đọc tay cầm PS2 qua SPI (GPIO12/11/13/10)'); break;

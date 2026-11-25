@@ -230,7 +230,7 @@ class Robot : private robot::MotorInterface {
   Robot(const Robot&) = delete;
   Robot& operator=(const Robot&) = delete;
 
-  void begin(bool blinkOnLoss, Ps4Transport transport = Ps4Transport::I2c) {
+  void begin(bool blinkOnLoss, Ps4Transport transport = Ps4Transport::I2c, int8_t i2cSda = 8, int8_t i2cScl = 9) {
     if (initialized_) return;
     transport_ = transport;
     // GPIO47 is M6 IN2 on V2; never drive link LED on GPIO47 when running V2.
@@ -251,7 +251,7 @@ class Robot : private robot::MotorInterface {
       // SPI GPIO10..13 belongs exclusively to PS2 on Newmania V2.
       busReady_ = (variant_ == BoardVariant::V2) && ps2_.begin();
     } else {
-      busReady_ = Wire.begin(8, 9, uint32_t(100000));
+      busReady_ = Wire.begin(i2cSda, i2cScl, uint32_t(100000));
       Wire.setTimeOut(20);
     }
     initialized_ = true;
