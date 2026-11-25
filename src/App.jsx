@@ -34,18 +34,35 @@ const LEGACY_KEY = 'codelab.workspace.v1';
 const FILE_TYPE = 'codelab-project';
 const FILE_VERSION = 1;
 const emptyWorkspace = { blocks: { languageVersion: 0, blocks: [] } };
-function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = FAST4WD_BOARD_ID, editorMode = 'beginner', deviceConfigs) {
+function makeProject(name = 'Dự án mới', workspace = emptyWorkspace, boardId = V2_BOARD_ID, editorMode = 'beginner', deviceConfigs) {
   return { id: crypto.randomUUID(), name, workspace, boardId, editorMode, deviceConfigs, updatedAt: new Date().toISOString() };
 }
 function makeNewProject(name, workspace = newmaniaWorkspace()) {
-  const devices = defaultRobotDevices(getBoardProfile(FAST4WD_BOARD_ID));
-  return { ...makeProject(name, workspace, FAST4WD_BOARD_ID, 'beginner', { [FAST4WD_BOARD_ID]: devices }), programModel: NEWMANIA_MODEL };
+  const devices = defaultRobotDevices(getBoardProfile(V2_BOARD_ID));
+  return { ...makeProject(name, workspace, V2_BOARD_ID, 'beginner', { [V2_BOARD_ID]: devices }), programModel: NEWMANIA_MODEL };
+}
+const V2_MIGRATION_KEY = 'codelab.default-v2.migrated';
+function isBlankProject(project) {
+  const top = project?.workspace?.blocks?.blocks ?? [];
+  return top.length <= 1 && top.every((block) => !block.inputs && !block.next);
+}
+function migrateBlankToV2(saved) {
+  try {
+    if (localStorage.getItem(V2_MIGRATION_KEY)) return saved;
+    localStorage.setItem(V2_MIGRATION_KEY, '1');
+  } catch { return saved; }
+  const projects = saved.projects.map((item) => {
+    if (projectBoardId(item) !== FAST4WD_BOARD_ID || !isBlankProject(item)) return item;
+    return { ...item, boardId: V2_BOARD_ID,
+      deviceConfigs: { ...item.deviceConfigs, [V2_BOARD_ID]: item.deviceConfigs?.[V2_BOARD_ID] || defaultRobotDevices(getBoardProfile(V2_BOARD_ID)) } };
+  });
+  return { ...saved, projects };
 }
 function readProjects() {
   try {
     clearOldProjectsOnce(localStorage);
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved?.projects?.length) return saved;
+    if (saved?.projects?.length) return migrateBlankToV2(saved);
     const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
     const project = legacy ? makeProject('Chương trình robot của tôi', legacy, DEFAULT_BOARD_ID, 'advanced') : makeNewProject('Chương trình robot của tôi');
     return { activeId: project.id, projects: [project] };
@@ -205,7 +222,7 @@ function App() {
   const openLesson = (event) => {
     if (deviceOperation.isBusy()) return;
     if (!LESSONS.some(lesson => lesson.id === event.target.value)) return;
-    const nextProject = { ...lessonProject(event.target.value, isNewmaniaBoard(boardId) ? boardId : FAST4WD_BOARD_ID), id:crypto.randomUUID(), updatedAt:new Date().toISOString() };
+    const nextProject = { ...lessonProject(event.target.value, isNewmaniaBoard(boardId) ? boardId : V2_BOARD_ID), id:crypto.randomUUID(), updatedAt:new Date().toISOString() };
     persist({ activeId: nextProject.id, projects: [...snapshotProjects(), nextProject] });
     showToast(`Đã mở ${nextProject.name}`);
   };
@@ -318,8 +335,8 @@ function App() {
       <ProfileToolbar
         boardId={boardId}
         boards={[
-          { id: FAST4WD_BOARD_ID, name: 'Newmania ESP32S3 Board' },
           { id: V2_BOARD_ID, name: getBoardProfile(V2_BOARD_ID).name },
+          { id: FAST4WD_BOARD_ID, name: 'Newmania ESP32S3 Board' },
           ...(!isNewmaniaBoard(boardId) ? [{ id: boardId, name: `Board của dự án đã nhập: ${boardId}` }] : []),
         ]}
         onBoard={switchBoard}

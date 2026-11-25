@@ -16,8 +16,8 @@ export const LESSONS = [
 // Baseline sources: defaultRobotDevices, fast4wdConstructor, MotorLayout and
 // MecanumMixer: M1=FL, M2=FR, M3=RL, M4=RR. Motor API applies reversal itself.
 // Never embed physical GPIO or apply M1/M2 inversion a second time here.
-export function lessonProject(id, targetBoardId = FAST4WD_BOARD_ID) {
-  const boardId = (id === 'ps2_mecanum' || id === 'ps4_mecanum_servo') ? V2_BOARD_ID : (isNewmaniaBoard(targetBoardId) ? targetBoardId : FAST4WD_BOARD_ID);
+export function lessonProject(id, targetBoardId = V2_BOARD_ID) {
+  const boardId = (id === 'ps2_mecanum' || id === 'ps4_mecanum_servo') ? V2_BOARD_ID : (isNewmaniaBoard(targetBoardId) ? targetBoardId : V2_BOARD_ID);
   const profile = getBoardProfile(boardId);
   const lesson = LESSONS.find(item => item.id === id);
   if (!lesson) throw new Error('Bài mẫu chưa được hỗ trợ.');
